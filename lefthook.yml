@@ -1,0 +1,7 @@
+# lefthook.yml
+pre-commit:
+  commands:
+    format:
+      glob: "*.java"
+      run: ./mvnw -q spotless:check
+      fail_text: "Ejecuta ./mvnw spotless:apply"
