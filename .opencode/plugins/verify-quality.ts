@@ -1,55 +1,89 @@
+// .opencode/plugins/verify-quality.ts
 import type { Plugin } from "@opencode-ai/plugin"
+import path from "node:path"
 
 const MAX_ATTEMPTS = 3
-// Zona protegida: misma lista que protect-verify.sh de Claude Code
-const PROTECTED = /(^|\/)(config|\.claude|\.opencode|\.github)\/|(^|\/)pom\.xml$|(^|\/)\.env/
+// Rutas RELATIVAS a la raíz del repo: config/ de la raíz, no infrastructure/config/
+const PROTECTED = /^(config|\.claude|\.opencode|\.github)\/|^pom\.xml$|^verify-quality\.sh$|^\.env(\..*)?$/
 
 export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
-    const attempts = new Map<string, number>()
-    const running = new Set<string>()
+  const attempts = new Map<string, number>()
+  const running = new Set<string>()
 
-    return {
-        // ── Guía dura: bloquea editar la configuración de Verify ──────────────
-        "tool.execute.before": async (input, output) => {
-            if (!["edit", "write"].includes(input.tool)) return
-            const file = String(output.args?.filePath ?? "").replace(/\\/g, "/") // rutas Windows → /
-            if (PROTECTED.test(file)) {
-                throw new Error(`AC/DC: ${file} está protegido. Pide permiso a un humano.`)
-            }
-        },
+  return {
+    // Guía dura: zona protegida (≈ PreToolUse)
+    "tool.execute.before": async (input, output) => {
+      if (!["edit", "write"].includes(input.tool)) return
+      const raw = String(output.args?.filePath ?? "")
+      if (!raw) return
+      const rel = path.relative(directory, path.resolve(directory, raw)).replace(/\\/g, "/")
+      if (PROTECTED.test(rel)) {
+        throw new Error(`AC/DC: ${rel} está en la zona protegida. Pide permiso a un humano.`)
+      }
+    },
 
-        // ── Verify + Solve al terminar la sesión (≈ Stop de Claude Code) ─────
-        event: async ({ event }) => {
-            if (event.type !== "session.idle") return
-            const id = event.properties.sessionID
-            if (running.has(id)) return               // evita dos verificaciones a la vez
-            running.add(id)
-            try {
-                // Atajo: sin cambios en src/ no hay nada que verificar
-                const changes = await $`git status --porcelain -- src`.cwd(directory).quiet().nothrow()
-                if (changes.stdout.toString().trim() === "") return
+    // Formato tras cada edición (≈ PostToolUse)
+    "tool.execute.after": async (input) => {
+      if (!["edit", "write"].includes(input.tool)) return
+      await $`bash ./mvnw -q spotless:apply`.cwd(directory).quiet().nothrow()
+    },
 
-                const r = await $`bash ./verify-quality.sh --fast`.cwd(directory).quiet().nothrow()
-                if (r.exitCode === 0) { attempts.delete(id); return }
+    event: async ({ event }) => {
+      // Guide dinámico al crear la sesión (≈ SessionStart)
+      if (event.type === "session.created") {
+        const id = (event.properties as any).info?.id
+        if (!id) return
+        const r = await $`bash .claude/hooks/guide-context.sh`
+          .cwd(directory)
+          .env({ ...process.env, CLAUDE_PROJECT_DIR: directory })
+          .quiet().nothrow()
+        let ctx: string
+        try {
+          ctx = JSON.parse(r.stdout.toString()).hookSpecificOutput.additionalContext
+        } catch {
+          console.error("AC/DC SessionStart falló:", r.stderr.toString())
+          return
+        }
+        client.session.prompt({
+          path: { id },
+          body: { noReply: true, parts: [{ type: "text", text: `[AC/DC contexto de sesión]\n${ctx}` }] },
+        }).catch(() => {})
+        return
+      }
 
-                const n = (attempts.get(id) ?? 0) + 1
-                attempts.set(id, n)
-                if (n > MAX_ATTEMPTS + 1) return       // ya se escaló: no insistir más
+      // Verify + Solve al quedar inactiva la sesión (≈ Stop)
+      if (event.type !== "session.idle") return
+      const id = (event.properties as any).sessionID
+      if (running.has(id)) return
+      running.add(id)
 
-                const report = (r.stdout.toString() + r.stderr.toString()).slice(-3000)
-                const text = n > MAX_ATTEMPTS
-                    ? `[AC/DC] ${MAX_ATTEMPTS} intentos sin pasar Verify. DETENTE: no sigas modificando código. ` +
-                    `Resume para la persona qué falla y qué intentaste.\n${report}`
-                    : `[AC/DC Verify ${n}/${MAX_ATTEMPTS}] Falló:\n${report}\n` +
-                    `Corrige la causa. No desactives reglas, no bajes umbrales, no uses @Disabled ni borres tests.`
+      let text: string | undefined
+      try {
+        const changes = await $`git status --porcelain -- src`.cwd(directory).quiet().nothrow()
+        if (changes.stdout.toString().trim() === "") return
 
-                await client.session.prompt({
-                    path: { id },
-                    body: { parts: [{ type: "text", text }] },
-                })
-            } finally {
-                running.delete(id)
-            }
-        },
-    }
+        const r = await $`bash ./verify-quality.sh --fast`.cwd(directory).quiet().nothrow()
+        if (r.exitCode === 0) { attempts.delete(id); return }
+
+        const n = (attempts.get(id) ?? 0) + 1
+        attempts.set(id, n)
+        if (n > MAX_ATTEMPTS + 1) return
+
+        const report = (r.stdout.toString() + r.stderr.toString()).slice(-3000)
+        text = n > MAX_ATTEMPTS
+          ? `[AC/DC] ${MAX_ATTEMPTS} intentos sin pasar Verify. DETENTE: no sigas modificando código. ` +
+          `Resume para la persona qué falla y qué intentaste.\n${report}`
+          : `[AC/DC Verify ${n}/${MAX_ATTEMPTS}] Falló:\n${report}\n` +
+          `Corrige la causa. No desactives reglas, no bajes umbrales, no uses @Disabled ni borres tests.`
+      } finally {
+        running.delete(id)          // ← liberar ANTES de enviar el mensaje
+      }
+
+      if (text) {
+        // Sin await: si esperamos la respuesta del agente, perdemos el siguiente session.idle
+        client.session.prompt({ path: { id }, body: { parts: [{ type: "text", text }] } })
+          .catch(() => {})
+      }
+    },
+  }
 }
