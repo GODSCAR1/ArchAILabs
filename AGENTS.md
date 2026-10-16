@@ -1,37 +1,38 @@
 # AGENTS.md
 
-Reglas para cualquier colaborador (humano o agente). Léelas antes de proponer cambios.
-Cada regla indica quién la verifica; las marcadas "desde Sxx" se exigirán a partir de esa sección.
+Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automático: cúmplelas igual y no las describas como verificadas.
+
+## Comandos (tu shell en Windows es PowerShell: invoca los scripts con `bash`)
+- Compilar y probar: `bash ./mvnw -q test`. Formato: `bash ./mvnw spotless:apply`.
+- Verify: `bash ./verify-quality.sh --fast` (Spotless + tests).
 
 ## Arquitectura (hexagonal estricta)
-- `domain/` NUNCA importa Spring, JPA ni Jackson (`@Entity`, `@Repository`, `@Service`, `@Component` prohibidos ahí). Verificado con ArchUnit (desde S17).
-- `application/` depende solo de `domain/`; NUNCA de `infrastructure/`. Verificado con ArchUnit (desde S17).
+- `domain/` NUNCA importa Spring, JPA ni Jackson (`@Entity`, `@Repository`, `@Service`, `@Component` prohibidos ahí). (pendiente: ArchUnit en S17)
+- `application/` depende solo de `domain/`; NUNCA de `infrastructure/`. (pendiente: ArchUnit en S17)
 - Puertos de salida en `domain/port/` (solo interfaces); implementaciones en `infrastructure/adapters/`.
 - Los beans se ensamblan en `infrastructure/config/` con `@Bean`. Sin lógica de negocio en métodos `@Bean`.
-- NUNCA `ApplicationContext.getBean()` ni campos estáticos para acceder a beans fuera de `infrastructure/config/`. Verificado con ArchUnit (desde S17).
+- NUNCA `ApplicationContext.getBean()` ni campos estáticos para acceder a beans fuera de `infrastructure/config/`. (pendiente: ArchUnit en S17)
 - Lee el `package-info.java` de un paquete antes de añadir clases en él.
 
-## Estilo de código
-- Formato con Spotless (Google Java Format). No discutas formato: ejecuta `./mvnw spotless:apply`. Verificado con `spotless:check` (pre-commit y Verify).
-- Inyección SIEMPRE por constructor. NUNCA `@Autowired` en campos. Verificado con Checkstyle (desde S06).
+## Código y tests
+- Spring Boot 4 / Java 25: en tests usa `@MockitoBean` (no `@MockBean`) y `spring-boot-starter-webmvc-test` para `@WebMvcTest`.
 - Value objects como `record` inmutables que validan en el constructor.
-- Nombres de test: `should_<comportamiento>_when_<condición>`. Verificado con Checkstyle (desde S06).
-
-## Testing
+- Nombres de test: `should_<comportamiento>_when_<condición>`. (pendiente: Checkstyle en S06)
 - Todo método público de un caso de uso en `application/` tiene test unitario.
-- Mutation score mínimo (PIT): 75 % en `domain/`. Verificado con PIT `mutationThreshold` (desde S14).
 - Integración con Testcontainers; NUNCA mocks de base de datos para verificar queries.
-- NUNCA `@Disabled`, NUNCA borrar ni debilitar un test para poner el build en verde.
 
 ## Seguridad
-- NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). Verificado con Semgrep (desde S12).
-- Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código, `application.yml` ni archivos versionados. Verificado con Gitleaks (desde S12).
-- NUNCA SQL concatenado; siempre parámetros. Verificado con Semgrep (desde S12).
-- Toda dependencia nueva pasa OWASP Dependency-Check (desde S28) y la aprueba una persona.
+- NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)
+- Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código ni archivos versionados. (pendiente: Gitleaks en S12)
+- NUNCA SQL concatenado; siempre parámetros. (pendiente: Semgrep en S12)
 
 ## Verify (no negociable)
-- Antes de terminar cualquier tarea: `./verify-quality.sh --fast` en verde.
+- Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
-- PROHIBIDO para "arreglar" un fallo: desactivar reglas, bajar umbrales, añadir `@Disabled`, borrar o debilitar tests, excluir archivos.
-- PROHIBIDO editar: `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml`, `.env*`, `verify-quality.sh`. Si hace falta, detente y pide permiso a una persona.
-- PROHIBIDO `git commit --no-verify` y desactivar hooks.
+- PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
+- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`. Si hace falta, detente y pide permiso a una persona.
+
+## graphify
+- Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.
+- Las aristas `INFERRED`/`AMBIGUOUS` son hipótesis, y un nodo sin aristas no prueba que no se use (inyección por tipo, YAML): confírmalo en el código antes de borrar nada.
+- Tras modificar código, o si no encuentras algo recién creado, ejecuta `graphify update .` (sin coste de modelo).

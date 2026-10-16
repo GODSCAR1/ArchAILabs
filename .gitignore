@@ -32,3 +32,9 @@ build/
 ### VS Code ###
 .vscode/
 ${project.build.directory}/
+
+### Graphify (solo se versionan graph.json y GRAPH_REPORT.md, forzados)
+graphify-out/
+
+### Exports de sesiones de agentes
+session-*.md

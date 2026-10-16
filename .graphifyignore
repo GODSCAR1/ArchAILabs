@@ -1,0 +1,7 @@
+target/
+.opencode/node_modules/
+.idea/
+docs/evidencias/
+mvnw
+mvnw.cmd
+session-*.md
