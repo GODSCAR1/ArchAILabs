@@ -34,13 +34,42 @@ Diseño: `verify-quality.sh --fast` en `session.idle`, solo si cambió `src/`, r
 - Evidencias: `docs/evidencias/p3a-p3b-spotless-borra-import.md`, `p3b-repeticion-plugin-corregido.md`.
 
 ## 4. Alinear la tarea
-*(pendiente)*
+Tarea: crear producto (`POST /api/products`). `grill-me` falló al principio: en `.agents/skills` solo hay un stub que delega en `grilling`, y esa skill no estaba instalada. Con `grilling` instalada: **3 rondas, 19 preguntas**.
+- **Aprobación sin revisar:** la mayoría de las 19 recomendaciones se aceptaron tal cual. En la revisión A–H, hecha después, cambiaron dos decisiones que habrían llegado al código sin que nadie las eligiera:
+  - moneda: EUR con decimales → **COP entero > 0**;
+  - tests de integración: siempre → **solo en `--full`**.
+- Decisiones en `docs/decisiones/crear-producto.md`. Convención de puertos de entrada (`application/port/<Accion>UseCase` + `<Accion>Service`, adaptadores `in/` y `out/`) añadida a `AGENTS.md`: es lo que el agente habría tenido que adivinar.
+- Zona protegida (la edita la persona): `pom.xml` (JPA, validación, `spring-boot-starter-flyway` + `flyway-database-postgresql`, PostgreSQL, `spring-boot-testcontainers`, `testcontainers-junit-jupiter`/`-postgresql` en 2.x, failsafe) y `verify-quality.sh` (`--fast` = `mvn test`, `--full` = `mvn verify`; antes ignoraba el argumento).
+- Evidencia: `docs/evidencias/p4-grilling-crear-producto.md`.
 
 ## 5. Prompt
-*(pendiente)*
+`docs/prompt-crear-producto.md`, 5 partes. 8 criterios con un caso a cada lado de cada frontera: sku 2/3 y 64/65, name 120/121, price 0/1. Dos criterios eliminan decisiones silenciosas:
+- `1500.5 → 400 (no se trunca)`: Jackson convierte por defecto un decimal a entero (`ACCEPT_FLOAT_AS_INT`) y lo trunca sin error.
+- La carrera se prueba de forma determinista en el adaptador, saltándose la comprobación previa.
 
 ## 6. Implementar y revisar
-*(pendiente)*
+- Resultado: 26 tests unitarios y 18 de integración, `--fast` y `--full` en verde (también al ejecutarlos la persona; contrastado con `target/*-reports`). `domain/` y `application/` sin imports de Spring/jakarta. Cada 400/409 comprueba con `count(*)` que no se guardó nada. `MasterAcdcApplicationTests` → `MasterAcdcApplicationIT` (no lo apagó con `exclude`). El gate no tuvo que intervenir.
+- **Ejecutar verify uno mismo:** en Git Bash `$LASTEXITCODE` sale vacío (es de PowerShell); en bash es `$?`.
+- `/ponytail-review`: `opencode plugin @dietrichgebert/ponytail` instaló el paquete en la caché, pero **la sesión no expuso sus skills**. El agente encontró `SKILL.md` buscando en `~/.cache/opencode/packages` y lo siguió leyéndolo. Instalado ≠ cargado: comprueba que la skill aparece en la sesión antes de confiar en que se aplicó.
+- Hallazgos de ponytail (nada que recortar):
+  1. *Should fix:* la rama de desbordamiento de `Price.of` (`ArithmeticException` → 400) no tiene test; si alguien borra el `catch`, la respuesta pasa a ser 500 y la suite sigue en verde (y, cuando llegue PIT en S14, será un mutante superviviente). → **aceptado**.
+  2. *Nice:* `ProductName` cuenta unidades UTF-16 (un emoji vale 2) mientras PostgreSQL cuenta caracteres → `codePointCount`.
+  3. *Nice:* `contextLoads` incumple `should_…_when_…` (lo marcará Checkstyle en S06).
+- **Lo que ponytail descartó y yo mantengo:** `ProductRepositoryAdapter` convierte **cualquier** `DataIntegrityViolationException` en `DuplicateSkuException`. Hoy solo existe `uq_products_sku`, así que funciona; con el próximo `NOT NULL`/`CHECK`/FK, ese error saldrá como "SKU duplicado, 409". Ponytail lo vio y lo descartó por especulativo (su regla: "cada hallazgo necesita un caso concreto"). → traducir solo si la restricción violada es `uq_products_sku`.
+- Evidencias: `docs/evidencias/p6-implementacion-crear-producto.md`, `p6-ponytail-review.md`.
 
 ## 7. ¿Qué decidió el agente que yo no especifiqué? ¿Cómo lo capturo?
-*(pendiente — candidatas hasta ahora: resolver el conflicto persona/gate a favor del gate; dar por buena una tarea sin releer el archivo; describir como existente lo que el Guide solo anuncia)*
+| Decisión del agente | ¿Fue correcta? | Cómo capturarla |
+|---|---|---|
+| "Rojo" = 82 errores de compilación, no aserciones fallidas (vio el problema y lo descartó) | No: un test que no compila no demuestra que compruebe algo | Criterio: "los tests compilan contra stubs vacíos y fallan por aserción" |
+| No preguntó nada aunque el prompt decía "pregunta antes de suponer"; tomó 6 decisiones y las listó al final | La lista es honesta, pero llegó después | Guía blanda → no basta. Para decisiones de negocio: dejarlas cerradas en el documento de decisiones antes de lanzar (paso 4), no confiar en que pregunte |
+| `Location` relativo, `BigDecimal` en el DTO, `saveAndFlush`, nuevo paquete `domain/exception`, `@RestController` detectado por escaneo y casos de uso con `@Bean`, sin configuración de datasource | Sí, todas razonables | `domain/exception` y lo de escaneo frente a `@Bean` → `AGENTS.md` (son convenciones del repo, se repetirán) |
+| "Pega la salida completa" → la recortó con `...` y montó él mismo el resumen de tests | Los números eran ciertos, pero no es evidencia | Verify lo ejecuta la persona (o el CI); el resumen del agente es una afirmación |
+| `catch (DataIntegrityViolationException)` amplio | Funciona hoy, falla el día de mañana | Criterio en el siguiente cambio de esquema: "violación de una restricción distinta de `uq_products_sku` → no es 409" |
+
+Además, de los pasos 1–3:
+- El gate se impuso a la persona. La corrección por texto no bastó: hace falta un control (pausar el gate mientras el agente espera una respuesta).
+- El agente dio una tarea por hecha sin releer el archivo.
+- Describió como existente lo que la guía solo anuncia (`package-info`, etiquetas "ArchUnit").
+
+**Patrón común:** todo lo que se pidió como *instrucción* (preguntar, pegar la salida completa, no contradecir a la persona) se cumplió a medias. Lo que se pidió como *criterio verificable* (fronteras, `count(*)`, 1500.5) se cumplió entero. Lo que importa va en criterios o en gates, no en peticiones.
