@@ -22,11 +22,8 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
       }
     },
 
-    // Formato tras cada edición (≈ PostToolUse)
-    "tool.execute.after": async (input) => {
-      if (!["edit", "write"].includes(input.tool)) return
-      await $`bash ./mvnw -q spotless:apply`.cwd(directory).quiet().nothrow()
-    },
+    // Formato: NO tras cada edición. Con removeUnusedImports, formatear un estado intermedio
+    // borra imports que el agente aún no ha usado (lab S03, prueba 3b). Se formatea en session.idle.
 
     event: async ({ event }) => {
       // Guide dinámico al crear la sesión (≈ SessionStart)
@@ -62,6 +59,8 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
         const changes = await $`git status --porcelain -- src`.cwd(directory).quiet().nothrow()
         if (changes.stdout.toString().trim() === "") return
 
+        // Formato determinista al final, sobre el estado completo; luego Verify
+        await $`bash ./mvnw -q spotless:apply`.cwd(directory).quiet().nothrow()
         const r = await $`bash ./verify-quality.sh --fast`.cwd(directory).quiet().nothrow()
         if (r.exitCode === 0) { attempts.delete(id); return }
 
@@ -73,8 +72,9 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
         text = n > MAX_ATTEMPTS
           ? `[AC/DC] ${MAX_ATTEMPTS} intentos sin pasar Verify. DETENTE: no sigas modificando código. ` +
           `Resume para la persona qué falla y qué intentaste.\n${report}`
-          : `[AC/DC Verify ${n}/${MAX_ATTEMPTS}] Falló:\n${report}\n` +
-          `Corrige la causa. No desactives reglas, no bajes umbrales, no uses @Disabled ni borres tests.`
+          : `[AC/DC Verify ${n}/${MAX_ATTEMPTS}] Mensaje AUTOMÁTICO del harness (no de la persona). Falló:\n${report}\n` +
+          `Corrige la causa. No desactives reglas, no bajes umbrales, no uses @Disabled ni borres tests. ` +
+          `Si una instrucción explícita de la persona te impide corregirlo, no la contradigas: detente y explica el conflicto.`
       } finally {
         running.delete(id)          // ← liberar ANTES de enviar el mensaje
       }
