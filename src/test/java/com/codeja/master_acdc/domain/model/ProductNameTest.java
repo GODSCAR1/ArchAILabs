@@ -35,4 +35,17 @@ class ProductNameTest {
   void should_reject_when_name_is_null() {
     assertThatThrownBy(() -> new ProductName(null)).isInstanceOf(InvalidProductException.class);
   }
+
+  @Test
+  void should_accept_when_name_has_one_hundred_twenty_emoji_characters() {
+    String name = "\uD83D\uDE00".repeat(120);
+
+    assertThat(new ProductName(name).value()).isEqualTo(name);
+  }
+
+  @Test
+  void should_reject_when_name_has_one_hundred_twenty_one_emoji_characters() {
+    assertThatThrownBy(() -> new ProductName("\uD83D\uDE00".repeat(121)))
+        .isInstanceOf(InvalidProductException.class);
+  }
 }

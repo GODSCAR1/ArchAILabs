@@ -15,5 +15,5 @@ class MasterAcdcApplicationIT {
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
   @Test
-  void contextLoads() {}
+  void should_start_context_when_application_boots() {}
 }

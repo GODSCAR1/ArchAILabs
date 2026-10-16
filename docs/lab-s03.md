@@ -56,7 +56,13 @@ Tarea: crear producto (`POST /api/products`). `grill-me` falló al principio: en
   2. *Nice:* `ProductName` cuenta unidades UTF-16 (un emoji vale 2) mientras PostgreSQL cuenta caracteres → `codePointCount`.
   3. *Nice:* `contextLoads` incumple `should_…_when_…` (lo marcará Checkstyle en S06).
 - **Lo que ponytail descartó y yo mantengo:** `ProductRepositoryAdapter` convierte **cualquier** `DataIntegrityViolationException` en `DuplicateSkuException`. Hoy solo existe `uq_products_sku`, así que funciona; con el próximo `NOT NULL`/`CHECK`/FK, ese error saldrá como "SKU duplicado, 409". Ponytail lo vio y lo descartó por especulativo (su regla: "cada hallazgo necesita un caso concreto"). → traducir solo si la restricción violada es `uq_products_sku`.
-- Evidencias: `docs/evidencias/p6-implementacion-crear-producto.md`, `p6-ponytail-review.md`.
+- **Corrección de los 4 hallazgos** (un prompt corto de 5 partes):
+  - Criterio 1 (desbordamiento de `Price`) no podía salir en rojo porque el comportamiento ya existía: era un test de regresión. Para no aceptar un test que nunca se vio fallar, se hizo una **mutación manual**: quitar el `catch` → rojo (`ArithmeticException: Overflow`), restaurarlo → verde, y `git diff Price.java` vacío. Es lo mismo que hará PIT en S14.
+  - Criterio 4: el ejemplo "name null → NOT NULL" era irrealizable (NPE en `ProductJpaEntity.from`). El agente propuso una `UNIQUE(name)` temporal en el IT, con **el mismo SQLState 23505** y otro nombre, que obliga a discriminar por **nombre** de restricción y no por SQLState. Es mejor test que mi ejemplo. La restricción se borra en un `finally`.
+  - El adaptador ahora recorre las causas hasta `ConstraintViolationException.getConstraintName()` y solo traduce `uq_products_sku`; el resto se propaga.
+  - **Esta vez el agente preguntó dos veces**, antes de implementar. Diferencia con el primer prompt: allí el disparador era vago ("si necesitas una decisión que no está…"); aquí era concreto ("si algún criterio no se puede cumplir tal cual, detente"). Una condición de parada ligada a un criterio se cumple; una apelación general al criterio del agente, no.
+  - 26+4 unitarios y 19 IT en verde.
+- Evidencias: `docs/evidencias/p6-implementacion-crear-producto.md`, `p6-ponytail-review.md`, `p6-correccion-hallazgos.md`.
 
 ## 7. ¿Qué decidió el agente que yo no especifiqué? ¿Cómo lo capturo?
 | Decisión del agente | ¿Fue correcta? | Cómo capturarla |

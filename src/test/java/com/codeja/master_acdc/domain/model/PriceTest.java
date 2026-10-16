@@ -36,4 +36,10 @@ class PriceTest {
   void should_reject_when_price_is_null() {
     assertThatThrownBy(() -> Price.of(null)).isInstanceOf(InvalidProductException.class);
   }
+
+  @Test
+  void should_reject_when_price_exceeds_long_range() {
+    assertThatThrownBy(() -> Price.of(new BigDecimal("99999999999999999999")))
+        .isInstanceOf(InvalidProductException.class);
+  }
 }

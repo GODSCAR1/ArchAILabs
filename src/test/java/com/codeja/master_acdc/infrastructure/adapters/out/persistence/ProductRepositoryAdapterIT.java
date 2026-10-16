@@ -53,4 +53,23 @@ class ProductRepositoryAdapterIT {
     assertThat(jdbcTemplate.queryForObject("select count(*) from products", Integer.class))
         .isEqualTo(1);
   }
+
+  @Test
+  void should_propagate_data_integrity_violation_when_violated_constraint_is_not_unique_sku() {
+    jdbcTemplate.update("alter table products add constraint uq_products_name unique (name)");
+    try {
+      adapter.save(
+          Product.create(
+              new ProductName("Repeated"), new Sku("CAF-500"), Price.of(new BigDecimal("100"))));
+      Product other =
+          Product.create(
+              new ProductName("Repeated"), new Sku("TEA-100"), Price.of(new BigDecimal("200")));
+
+      assertThatThrownBy(() -> adapter.save(other))
+          .isInstanceOf(DataIntegrityViolationException.class)
+          .isNotInstanceOf(DuplicateSkuException.class);
+    } finally {
+      jdbcTemplate.update("alter table products drop constraint uq_products_name");
+    }
+  }
 }

@@ -12,10 +12,14 @@ public record ProductName(String value) {
       throw new InvalidProductException("name must not be null");
     }
     String normalized = value.trim();
-    if (normalized.isEmpty() || normalized.length() > MAX_LENGTH) {
+    if (normalized.isEmpty() || countCharacters(normalized) > MAX_LENGTH) {
       throw new InvalidProductException(
           "name must have between 1 and " + MAX_LENGTH + " characters");
     }
     value = normalized;
+  }
+
+  private static int countCharacters(String value) {
+    return value.codePointCount(0, value.length());
   }
 }
