@@ -1,0 +1,45 @@
+name: acdc
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  OPENSPEC_VERSION: "1.14.3"   # la misma que en local (generatedBy de los comandos)
+  OPENSPEC_TELEMETRY: "0"
+
+jobs:
+  specs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # historia completa para el diff BASE...HEAD de spec-guard
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @fission-ai/openspec@${{ env.OPENSPEC_VERSION }}
+      - run: openspec validate --all --strict --no-interactive
+      - run: openspec validate --archived --no-interactive
+      - run: bash scripts/spec-trace.sh
+      - name: spec-guard
+        if: github.event_name == 'pull_request'
+        run: bash scripts/spec-guard.sh origin/${{ github.base_ref }}
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @fission-ai/openspec@${{ env.OPENSPEC_VERSION }}
+      - run: chmod +x mvnw      # el bit de ejecución no viaja desde Windows
+      - run: bash ./verify-quality.sh --full   # unitarios + IT con Testcontainers (Docker del runner)
