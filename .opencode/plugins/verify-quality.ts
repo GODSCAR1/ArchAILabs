@@ -4,7 +4,7 @@ import path from "node:path"
 
 const MAX_ATTEMPTS = 3
 // Rutas RELATIVAS a la raíz del repo: config/ de la raíz, no infrastructure/config/
-const PROTECTED = /^(config|\.claude|\.opencode|\.github)\/|^pom\.xml$|^verify-quality\.sh$|^\.env(\..*)?$/
+const PROTECTED = /^(config|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^\.env(\..*)?$/
 
 export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
   const attempts = new Map<string, number>()
@@ -56,7 +56,7 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
 
       let text: string | undefined
       try {
-        const changes = await $`git status --porcelain -- src`.cwd(directory).quiet().nothrow()
+        const changes = await $`git status --porcelain -- src openspec`.cwd(directory).quiet().nothrow()
         if (changes.stdout.toString().trim() === "") return
 
         // Formato determinista al final, sobre el estado completo; luego Verify

@@ -1,0 +1,24 @@
+schema: spec-driven
+
+context: |
+  Proyecto: master-acdc, tienda en Java (paquete com.codeja.master_acdc) con arquitectura hexagonal
+  (domain, application, infrastructure). Hoy solo existe el catálogo de productos (Product, Sku).
+  Módulos nuevos: inventory (stock por producto) y ordering (pedidos).
+  Stack: Java 25, Spring Boot 4, JPA/Hibernate, PostgreSQL, Flyway, Testcontainers.
+  Errores HTTP con ProblemDetail (RFC 9457); cada error de negocio tiene un type propio.
+  ordering consulta y reserva stock mediante la API pública de inventory; inventory nunca depende de ordering.
+  Las liberaciones de stock y demás efectos posteriores entre módulos viajan por eventos de dominio.
+  El cliente se identifica con la cabecera X-Customer-Id (simplificación: no hay autenticación).
+  Language: es. Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+rules:
+  proposal:
+    - Incluye una sección "Non-goals".
+  specs:
+    - Cada escenario de API indica el código HTTP y, si es un error, el type del ProblemDetail.
+    - Cada escenario de rechazo indica qué queda sin cambios (pedido y stock).
+    - Nunca nombres clases, librerías ni tablas; eso va en design.md.
+  design:
+    - Lista en "Reglas de arquitectura" las dependencias entre módulos que comprobará ArchUnit.
+  tasks:
+    - "Cada tarea indica el test que la verifica; los escenarios se verifican con @DisplayName(<nombre exacto del escenario>)."

@@ -31,9 +31,14 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 - Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
-- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`. Si hace falta, detente y pide permiso a una persona.
+- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`. Si hace falta, detente y pide permiso a una persona.
 
 ## graphify
 - Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.
 - Las aristas `INFERRED`/`AMBIGUOUS` son hipótesis, y un nodo sin aristas no prueba que no se use (inyección por tipo, YAML): confírmalo en el código antes de borrar nada.
 - Tras modificar código, o si no encuentras algo recién creado, ejecuta `graphify update .` (sin coste de modelo).
+
+## Especificaciones (OpenSpec)
+- Todo cambio con comportamiento observable nuevo empieza con `/opsx:propose` (OpenCode: `/opsx-propose`). No implementes hasta que una persona haya revisado la propuesta.
+- `openspec/specs/` y `openspec/changes/archive/` están protegidos: el comportamiento cambia con un delta en `openspec/changes/<nombre>/`.
+- Nunca archives ni sincronices specs (`openspec archive`, `/opsx:sync`): lo hace una persona tras revisar el PR.

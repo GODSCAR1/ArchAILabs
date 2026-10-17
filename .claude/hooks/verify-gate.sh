@@ -6,7 +6,7 @@ SESSION=$(jq -r '.session_id' <<<"$INPUT")
 STATE="${TMPDIR:-/tmp}/acdc-$SESSION"          # contador de intentos POR SESIÓN
 cd "$CLAUDE_PROJECT_DIR"
 
-[[ -z $(git status --porcelain -- src) ]] && exit 0   # atajo: sin cambios en src/ → nada
+[[ -z $(git status --porcelain -- src openspec) ]] && exit 0   # atajo: sin cambios en src/ → nada
 
 if REPORT=$(./verify-quality.sh --fast 2>&1); then
   rm -f "$STATE"; exit 0
