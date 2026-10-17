@@ -5,3 +5,6 @@ pre-commit:
       glob: "*.java"
       run: ./mvnw -q spotless:check
       fail_text: "Ejecuta ./mvnw spotless:apply"
+    specs:
+      glob: "openspec/**"
+      run: openspec validate --all --strict --no-interactive
