@@ -3,6 +3,7 @@ package com.codeja.master_acdc.ordering.domain.model;
 import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductException;
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -29,5 +30,13 @@ public record Order(UUID id, UUID customerId, OrderStatus status, List<OrderLine
       }
     }
     return new Order(UUID.randomUUID(), customerId, OrderStatus.PENDING, lines);
+  }
+
+  /** Devuelve el pedido en estado CANCELLED si es cancelable (PENDING/PAID); si no, lanza. */
+  public Order cancel() {
+    if (status != OrderStatus.PENDING && status != OrderStatus.PAID) {
+      throw new OrderNotCancellableException(id, status);
+    }
+    return new Order(id, customerId, OrderStatus.CANCELLED, lines);
   }
 }

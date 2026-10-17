@@ -17,4 +17,12 @@ public interface StockRepository {
    *     suficiente
    */
   boolean discountIfAvailable(UUID productId, int quantity);
+
+  /**
+   * Devuelve {@code quantity} unidades al stock disponible del producto.
+   *
+   * @throws com.codeja.master_acdc.inventory.domain.exception.StockRecordNotFoundException si el
+   *     producto no tiene registro de stock
+   */
+  void release(UUID productId, int quantity);
 }

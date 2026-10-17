@@ -1,7 +1,9 @@
 package com.codeja.master_acdc.inventory.infrastructure.config;
 
 import com.codeja.master_acdc.inventory.api.InventoryFacade;
+import com.codeja.master_acdc.inventory.application.ReleaseStockService;
 import com.codeja.master_acdc.inventory.application.ReserveStockService;
+import com.codeja.master_acdc.inventory.application.port.ReleaseStockUseCase;
 import com.codeja.master_acdc.inventory.application.port.ReserveStockUseCase;
 import com.codeja.master_acdc.inventory.domain.port.StockRepository;
 import com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence.StockJpaRepository;
@@ -25,8 +27,16 @@ public class InventoryConfiguration {
   }
 
   @Bean
+  public ReleaseStockUseCase releaseStockUseCase(StockRepository stockRepository) {
+    return new ReleaseStockService(stockRepository);
+  }
+
+  @Bean
   public InventoryFacade inventoryFacade(
-      ReserveStockUseCase reserveStockUseCase, PlatformTransactionManager transactionManager) {
-    return new InventoryFacade(reserveStockUseCase, new TransactionTemplate(transactionManager));
+      ReserveStockUseCase reserveStockUseCase,
+      ReleaseStockUseCase releaseStockUseCase,
+      PlatformTransactionManager transactionManager) {
+    return new InventoryFacade(
+        reserveStockUseCase, releaseStockUseCase, new TransactionTemplate(transactionManager));
   }
 }

@@ -1,13 +1,19 @@
 package com.codeja.master_acdc.ordering.infrastructure.config;
 
 import com.codeja.master_acdc.inventory.api.InventoryFacade;
+import com.codeja.master_acdc.ordering.application.CancelOrderService;
 import com.codeja.master_acdc.ordering.application.CreateOrderService;
+import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
+import com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.StockReserver;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.SpringOrderCancelledPublisher;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.OrderCancelledListener;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.StockReserverAdapter;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaRepository;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderRepositoryAdapter;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -26,6 +32,17 @@ public class OrderingConfiguration {
     return new StockReserverAdapter(inventoryFacade);
   }
 
+  @Bean
+  public OrderCancelledPublisher orderCancelledPublisher(
+      ApplicationEventPublisher applicationEventPublisher) {
+    return new SpringOrderCancelledPublisher(applicationEventPublisher);
+  }
+
+  @Bean
+  public OrderCancelledListener orderCancelledListener(InventoryFacade inventoryFacade) {
+    return new OrderCancelledListener(inventoryFacade);
+  }
+
   /**
    * Envuelve el caso de uso en una transacción propia: la reserva de inventario (propagación
    * REQUIRED) se une a ella, de modo que pedido y stock se confirman o revierten juntos.
@@ -39,5 +56,16 @@ public class OrderingConfiguration {
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
     return (customerId, lines) ->
         transactionTemplate.execute(status -> delegate.create(customerId, lines));
+  }
+
+  @Bean
+  public CancelOrderUseCase cancelOrderUseCase(
+      OrderRepository orderRepository,
+      OrderCancelledPublisher orderCancelledPublisher,
+      PlatformTransactionManager transactionManager) {
+    CancelOrderService delegate = new CancelOrderService(orderRepository, orderCancelledPublisher);
+    TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+    return (orderId, customerId) ->
+        transactionTemplate.execute(status -> delegate.cancel(orderId, customerId));
   }
 }

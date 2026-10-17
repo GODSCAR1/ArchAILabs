@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.inventory.api;
 
+import com.codeja.master_acdc.inventory.application.port.ReleaseStockUseCase;
 import com.codeja.master_acdc.inventory.application.port.ReserveStockUseCase;
 import com.codeja.master_acdc.inventory.domain.model.ReservationResult;
 import com.codeja.master_acdc.inventory.domain.model.StockLine;
@@ -7,19 +8,24 @@ import java.util.List;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * API pública de reserva de inventario.
+ * API pública de reserva y liberación de inventario.
  *
- * <p>Envuelve la reserva en una transacción propia con propagación REQUIRED: se une a la del pedido
- * cuando existe y abre la suya cuando se invoca sola, de modo que la reserva es todo o nada.
+ * <p>Envuelve cada operación en una transacción propia con propagación REQUIRED: se une a la del
+ * pedido cuando existe y abre la suya cuando se invoca sola, de modo que cada operación es todo o
+ * nada.
  */
 public class InventoryFacade {
 
   private final ReserveStockUseCase reserveStockUseCase;
+  private final ReleaseStockUseCase releaseStockUseCase;
   private final TransactionTemplate transactionTemplate;
 
   public InventoryFacade(
-      ReserveStockUseCase reserveStockUseCase, TransactionTemplate transactionTemplate) {
+      ReserveStockUseCase reserveStockUseCase,
+      ReleaseStockUseCase releaseStockUseCase,
+      TransactionTemplate transactionTemplate) {
     this.reserveStockUseCase = reserveStockUseCase;
+    this.releaseStockUseCase = releaseStockUseCase;
     this.transactionTemplate = transactionTemplate;
   }
 
@@ -32,5 +38,9 @@ public class InventoryFacade {
           }
           return result;
         });
+  }
+
+  public void release(List<StockLine> lines) {
+    transactionTemplate.executeWithoutResult(status -> releaseStockUseCase.release(lines));
   }
 }

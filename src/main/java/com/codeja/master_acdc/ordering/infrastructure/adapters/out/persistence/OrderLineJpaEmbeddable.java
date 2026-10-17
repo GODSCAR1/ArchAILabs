@@ -19,4 +19,12 @@ public class OrderLineJpaEmbeddable {
     this.productId = productId;
     this.quantity = quantity;
   }
+
+  UUID productId() {
+    return productId;
+  }
+
+  int quantity() {
+    return quantity;
+  }
 }

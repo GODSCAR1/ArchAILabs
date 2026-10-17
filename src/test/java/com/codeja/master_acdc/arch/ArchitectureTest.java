@@ -30,7 +30,8 @@ class ArchitectureTest {
           .resideInAPackage("com.codeja.master_acdc.inventory.domain..")
           .should()
           .dependOnClassesThat()
-          .resideInAnyPackage(FRAMEWORKS);
+          .resideInAnyPackage(FRAMEWORKS)
+          .because("inventory.domain no debe depender de frameworks");
 
   @ArchTest
   static final ArchRule ordering_domain_has_no_framework_dependencies =
@@ -39,7 +40,8 @@ class ArchitectureTest {
           .resideInAPackage("com.codeja.master_acdc.ordering.domain..")
           .should()
           .dependOnClassesThat()
-          .resideInAnyPackage(FRAMEWORKS);
+          .resideInAnyPackage(FRAMEWORKS)
+          .because("ordering.domain no debe depender de frameworks");
 
   @ArchTest
   static final ArchRule inventory_application_depends_only_on_domain =
@@ -51,7 +53,8 @@ class ArchitectureTest {
           .resideInAnyPackage(
               "java..",
               "com.codeja.master_acdc.inventory.application..",
-              "com.codeja.master_acdc.inventory.domain..");
+              "com.codeja.master_acdc.inventory.domain..")
+          .because("inventory.application solo depende de inventory.domain");
 
   @ArchTest
   static final ArchRule ordering_application_depends_only_on_domain =
@@ -63,7 +66,8 @@ class ArchitectureTest {
           .resideInAnyPackage(
               "java..",
               "com.codeja.master_acdc.ordering.application..",
-              "com.codeja.master_acdc.ordering.domain..");
+              "com.codeja.master_acdc.ordering.domain..")
+          .because("ordering.application solo depende de ordering.domain");
 
   @ArchTest
   static final ArchRule inventory_api_is_only_used_by_ordering_infrastructure =
@@ -74,7 +78,8 @@ class ArchitectureTest {
               "com.codeja.master_acdc.inventory..")
           .should()
           .dependOnClassesThat()
-          .resideInAPackage("com.codeja.master_acdc.inventory.api..");
+          .resideInAPackage("com.codeja.master_acdc.inventory.api..")
+          .because("inventory.api solo puede usarse desde ordering.infrastructure");
 
   @ArchTest
   static final ArchRule inventory_does_not_depend_on_ordering =
@@ -83,7 +88,8 @@ class ArchitectureTest {
           .resideInAPackage("com.codeja.master_acdc.inventory..")
           .should()
           .dependOnClassesThat()
-          .resideInAPackage("com.codeja.master_acdc.ordering..");
+          .resideInAPackage("com.codeja.master_acdc.ordering..")
+          .because("inventory no debe depender de ordering");
 
   @ArchTest
   static final ArchRule no_application_context_get_bean_outside_config =
@@ -92,5 +98,16 @@ class ArchitectureTest {
           .resideOutsideOfPackage("..config..")
           .should()
           .callMethodWhere(
-              target(owner(assignableTo(ApplicationContext.class))).and(target(name("getBean"))));
+              target(owner(assignableTo(ApplicationContext.class))).and(target(name("getBean"))))
+          .because("no debe usarse getBean fuera de configuración");
+
+  @ArchTest
+  static final ArchRule ordering_domain_events_are_only_used_by_ordering =
+      noClasses()
+          .that()
+          .resideOutsideOfPackage("com.codeja.master_acdc.ordering..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("com.codeja.master_acdc.ordering.domain.event..")
+          .because("los eventos de dominio de ordering solo pueden usarse dentro de ordering");
 }

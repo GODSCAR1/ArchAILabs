@@ -1,6 +1,8 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
 import com.codeja.master_acdc.ordering.domain.model.Order;
+import com.codeja.master_acdc.ordering.domain.model.OrderLine;
+import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -46,5 +48,11 @@ public class OrderJpaEntity {
             line ->
                 entity.lines.add(new OrderLineJpaEmbeddable(line.productId(), line.quantity())));
     return entity;
+  }
+
+  Order toDomain() {
+    List<OrderLine> domainLines =
+        lines.stream().map(line -> new OrderLine(line.productId(), line.quantity())).toList();
+    return new Order(id, customerId, OrderStatus.valueOf(status), domainLines);
   }
 }

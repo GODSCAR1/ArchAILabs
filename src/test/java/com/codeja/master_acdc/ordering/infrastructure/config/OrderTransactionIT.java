@@ -3,6 +3,7 @@ package com.codeja.master_acdc.ordering.infrastructure.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
@@ -30,6 +31,7 @@ class OrderTransactionIT {
   private static final String B_TEXT = "22222222-2222-2222-2222-222222222222";
 
   @Autowired CreateOrderUseCase createOrderUseCase;
+  @Autowired CancelOrderUseCase cancelOrderUseCase;
   @Autowired JdbcTemplate jdbcTemplate;
 
   @Test
@@ -52,6 +54,40 @@ class OrderTransactionIT {
     assertThat(rowCount("order_lines")).isZero();
     assertThat(availableOf(A_TEXT)).isEqualTo(10);
     assertThat(availableOf(B_TEXT)).isEqualTo(1);
+  }
+
+  @Test
+  @Sql(
+      statements = {
+        "delete from order_lines",
+        "delete from orders",
+        "delete from stock",
+        "insert into stock (product_id, available) values ('" + A_TEXT + "', 5)",
+        "insert into orders (id, customer_id, status) values ('550e8400-e29b-41d4-a716-446655440001', '"
+            + CUSTOMER
+            + "', 'PENDING')",
+        "insert into order_lines (order_id, product_id, quantity) values ('550e8400-e29b-41d4-a716-446655440001', '"
+            + A_TEXT
+            + "', 3)"
+      })
+  void should_rollback_order_and_stock_when_release_fails() {
+    jdbcTemplate.update("delete from stock where product_id = ?", UUID.fromString(A_TEXT));
+
+    assertThatThrownBy(
+            () ->
+                cancelOrderUseCase.cancel(
+                    UUID.fromString("550e8400-e29b-41d4-a716-446655440001"),
+                    UUID.fromString(CUSTOMER)))
+        .isInstanceOf(
+            com.codeja.master_acdc.inventory.domain.exception.StockRecordNotFoundException.class);
+
+    assertThat(rowCount("orders")).isEqualTo(1);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select status from orders where id = ?",
+                String.class,
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440001")))
+        .isEqualTo("PENDING");
   }
 
   private static OrderLine line(String productId, int quantity) {

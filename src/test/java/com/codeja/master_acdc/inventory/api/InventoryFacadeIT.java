@@ -119,6 +119,22 @@ class InventoryFacadeIT {
     assertThat(availableOf(B_TEXT)).isEqualTo(1);
   }
 
+  @Test
+  @DisplayName("Stock liberado vuelve a estar disponible para reservar")
+  @Sql(
+      statements = {
+        "delete from stock",
+        "insert into stock (product_id, available) values ('" + A_TEXT + "', 7)"
+      })
+  void should_make_released_stock_available_for_reservation() {
+    facade.release(List.of(line(A_TEXT, 3)));
+
+    ReservationResult result = facade.reserve(List.of(line(A_TEXT, 10)));
+
+    assertThat(result).isEqualTo(ReservationResult.RESERVED);
+    assertThat(availableOf(A_TEXT)).isZero();
+  }
+
   private static StockLine line(String productId, int quantity) {
     return new StockLine(UUID.fromString(productId), quantity);
   }

@@ -9,10 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductException;
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
@@ -39,6 +42,7 @@ class OrderControllerTest {
 
   @Autowired MockMvc mockMvc;
 
+  @MockitoBean CancelOrderUseCase cancelOrderUseCase;
   @MockitoBean CreateOrderUseCase createOrderUseCase;
 
   @Test
@@ -152,5 +156,74 @@ class OrderControllerTest {
 
   private static String lines(String... lines) {
     return "{\"lines\":[" + String.join(",", lines) + "]}";
+  }
+
+  @Test
+  void should_respond_400_missing_customer_id_when_header_absent_on_cancel() throws Exception {
+    mockMvc
+        .perform(post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+  }
+
+  @Test
+  void should_respond_400_invalid_customer_id_when_header_not_uuid_on_cancel() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .header("X-Customer-Id", "no-es-uuid"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-customer-id"));
+  }
+
+  @Test
+  void should_respond_404_order_not_found_when_order_id_not_uuid() throws Exception {
+    mockMvc
+        .perform(post("/api/orders/{id}/cancellation", "no-uuid").header("X-Customer-Id", CUSTOMER))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
+  }
+
+  @Test
+  void should_respond_404_order_not_found_when_use_case_throws() throws Exception {
+    given(cancelOrderUseCase.cancel(any(), any())).willThrow(new OrderNotFoundException(null));
+
+    mockMvc
+        .perform(
+            post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .header("X-Customer-Id", CUSTOMER))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
+  }
+
+  @Test
+  void should_respond_409_order_not_cancellable_when_use_case_throws() throws Exception {
+    given(cancelOrderUseCase.cancel(any(), any()))
+        .willThrow(new OrderNotCancellableException(null));
+
+    mockMvc
+        .perform(
+            post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .header("X-Customer-Id", CUSTOMER))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-cancellable"));
+  }
+
+  @Test
+  void should_respond_200_cancelled_when_use_case_returns() throws Exception {
+    given(cancelOrderUseCase.cancel(any(), any()))
+        .willReturn(
+            new Order(
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                UUID.fromString(CUSTOMER),
+                OrderStatus.CANCELLED,
+                List.of(new OrderLine(UUID.fromString(A), 3))));
+
+    mockMvc
+        .perform(
+            post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .header("X-Customer-Id", CUSTOMER))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("CANCELLED"));
   }
 }
