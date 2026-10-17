@@ -175,7 +175,7 @@ Lo que el diseño hizo bien sin ayuda: actualización condicional en una sola se
 | 3 | `allow-cancel-processing` con `MODIFIED` incompleto → `verify-spec` lo detecta | ➖ no repetida | ✅ (lo paró la skill; `validate` y `archive` lo rechazan, comprobado a mano) |
 | 4 | Borrar el `@DisplayName` de un test de escenario → `spec-trace.sh` falla | ➖ no repetida | ✅ |
 | 5 | PR que edita `openspec/specs/` a mano → `spec-guard.sh` bloquea el merge | ✅ CI ([captura](evidencias/prueba-5-spec-guard.png)) | |
-| 6 | Misma funcionalidad con un prompt de una línea, sin OpenSpec, en otra rama → comparar los dos diffs | ⚠️ | |
+| 6 | Misma funcionalidad con un prompt de una línea, sin OpenSpec, en otra rama → comparar los dos diffs | ➖ no repetida | ✅ (rama `prueba-6-sin-spec`, `e3eb44b`) |
 
 ## Pruebas 1 y 2 — detalle
 
@@ -228,6 +228,32 @@ Con `specs` como required check, el PR de la prueba no se podía fusionar. Desde
 
 Es la demostración de que cada check cubre una cosa: el pre-commit y `validate` comprueban la **forma**, `spec-trace` la **existencia** de tests y `spec-guard` el **origen** del cambio.
 
+## Prueba 6 — detalle: la misma funcionalidad sin OpenSpec
+
+Rama `prueba-6-sin-spec`, creada desde `59c5e26` (antes de la Fase D), con la sección OpenSpec quitada de `AGENTS.md`. Sesión nueva de OpenCode, mismo modelo. Prompt completo: *"Añade la cancelación de pedidos."* Duración: unos 7 minutos.
+
+**Resultado según los gates: todo en verde.** `verify-quality.sh --fast` pasó (validate, spec-trace, formato y tests). No había escenarios nuevos que trazar, así que `spec-trace` no tenía nada que reclamar.
+
+**Resultado según la revisión: 5 defectos, 2 de ellos graves.**
+
+| Decisión | Con OpenSpec (Fase D) | Sin OpenSpec (prueba 6) | Consecuencia |
+|---|---|---|---|
+| Propiedad del pedido | `X-Customer-Id` obligatorio; pedido ajeno → 404 | **Ninguna.** `DELETE /api/orders/{id}` sin cabecera. El agente lo avisó como "riesgo" y siguió | **IDOR**: cualquiera que conozca un id cancela pedidos ajenos y mueve stock. Además, es incoherente con la creación, que sí exige la cabecera |
+| Concurrencia | `UPDATE … WHERE status IN (...)` condicional + IT con dos cancelaciones simultáneas | Leer → `cancel()` en memoria → `save()`. Sin lock ni actualización condicional, y sin test | **Doble liberación de stock**: dos cancelaciones simultáneas leen las dos PENDING, las dos liberan y las dos responden 200 (lost update) |
+| Estados cancelables | PENDING y PAID (frontera explícita), SHIPPED → 409 | Solo PENDING | Regla de negocio decidida en silencio; un PAID no se puede cancelar |
+| Producto sin fila de stock al liberar | 0 filas → excepción y rollback | `increase` ignora las filas afectadas | Stock perdido en silencio (el mismo hueco que encontramos en la revisión de la Fase D) |
+| Verbo y contrato | `POST /api/orders/{id}/cancellation` → 200 | `DELETE /api/orders/{id}` → 200 con el pedido | `DELETE` promete borrar el recurso, pero el pedido sigue existiendo con otro estado |
+| `{id}` que no es UUID | Especificado: 404 `order-not-found` | Sin especificar: error de conversión de Spring (`about:blank`) | Contrato de errores incompleto |
+| Mapeo de errores | `OrderNotCancellableException` propia | Reutiliza `InvalidOrderException` (la base de los 422) y la mapea a 409 `order-not-cancellable` | Cualquier otra `InvalidOrderException` sin handler específico saldría como "no cancelable" |
+| Comunicación entre módulos | Evento de dominio `OrderCancelled` (regla del `config.yaml`) | Llamada síncrona a `InventoryFacade.release` | Contradice una decisión del proyecto que el agente no leyó: estaba en `openspec/config.yaml`, no en `AGENTS.md` |
+| Tests | 15 escenarios trazados, rechazos probados contra Postgres (pedido y stock sin cambios) | 1 IT (camino feliz) y los rechazos con mocks | Ningún test puede demostrar "stock intacto" en un rechazo |
+
+**Lo que hizo bien:** respetó la hexagonal (puerto `StockReleaser` + adaptador hacia la fachada), validó la transición en el dominio (`Order.cancel()`), puso la liberación de stock dentro de la misma transacción y escribió tests en cada capa. El código es limpio. **El problema no es la calidad del código, son las decisiones que nadie tomó.**
+
+**Lectura:** las dos versiones pasan los mismos gates. La diferencia está en las decisiones que la spec obligó a tomar y revisar antes de escribir código (15 escenarios, más los 5 problemas de la revisión). Sin spec, el agente las tomó solo, y dos de ellas (propiedad y concurrencia) son defectos de seguridad e integridad que ningún gate del proyecto detecta: `spec-trace` solo comprueba escenarios que existen.
+
+Ruido del entorno, no atribuible al agente: la rama parte de antes de `.gitattributes` con `*.java eol=lf`, así que `git status` muestra más de 100 archivos modificados solo por finales de línea. El diff real (`--ignore-cr-at-eol`) son 18 archivos modificados (+205/−10) y 9 nuevos.
+
 ## Lecciones
 
 1. **La spec no sustituye a revisar el código; lo complementa.** Con 21 escenarios acordados, el agente aún tomó dos decisiones en silencio donde la spec tenía huecos (un 500 incluido).
@@ -240,3 +266,5 @@ Es la demostración de que cada check cubre una cosa: el pre-commit y `validate`
 8. **Patrones de ArchUnit con `..`** coinciden en cualquier punto del nombre del paquete: usar prefijos completos.
 9. **Un `MODIFIED` reemplaza el requisito completo.** OpenSpec 1.14.3 rechaza en `validate` y en `archive` un bloque que omite escenarios vivos; la skill también lo impide antes de escribir.
 10. **Ante un gate en rojo provocado por la persona, el agente debe detenerse y explicar, no "arreglar" contra la instrucción.** El mensaje del gate (`no la contradigas: detente y explica`) funcionó: 3 reintentos sin atajos y escalado a la persona.
+11. **Los gates verdes no prueban que el comportamiento sea el correcto.** Sin spec, la misma funcionalidad pasó los mismos gates con un IDOR y una doble liberación de stock. `spec-trace` solo comprueba los escenarios que existen; lo que nadie escribió, no lo comprueba nadie.
+12. **El contexto que el agente no lee no existe.** La regla "las liberaciones viajan por eventos" vivía en `openspec/config.yaml`; sin el flujo de OpenSpec, el agente nunca la leyó y llamó a inventory de forma síncrona.
