@@ -128,9 +128,43 @@ Commits del paso: `ea9d328` (fase A) · `3b85d91` (fase B) · `5fa60be` (propues
 
 ## Fase D — Change `add-order-cancellation`
 
-⚠️ Pendiente.
+Lanzado en OpenCode (no en Claude Code como pide el enunciado: desviación aceptada).
 
-Pendiente heredado del Paso 0: `ArchitectureTest` no tiene ningún `.because(...)`. El enunciado pide la regla de ArchUnit **con su `because`**: añadirlo a las reglas existentes y exigirlo en la regla nueva de la cancelación.
+### Decisiones previas al propose
+
+| Decisión | Elección |
+|---|---|
+| Endpoint | `POST /api/orders/{id}/cancellation` → 200 con el pedido `CANCELLED` |
+| Cancelables | `PENDING` y `PAID`; `SHIPPED` o ya `CANCELLED` → 409 `order-not-cancellable` |
+| Inexistente o de otro cliente | **404** `order-not-found` (un 403 confirmaría que el pedido existe) |
+| Precedencia | cabecera (400) → existencia/propiedad (404) → estado (409) |
+| Liberar stock | Evento `OrderCancelled` de `ordering` → listener en `ordering.infrastructure` → `inventory.api.release`. `inventory` no conoce `ordering` |
+| Transacción | Listener síncrono antes del commit: cancelación y liberación todo o nada |
+| Concurrencia | Actualización condicional del estado: dos cancelaciones simultáneas → una 200, otra 409, stock liberado una sola vez |
+
+El texto del propose incorporó lo aprendido en el Paso 0 (GIVEN concretos, nombres únicos, `@DisplayName` en el IT contra Postgres).
+
+### Revisión: 5 problemas en 1 ronda (frente a 12 en 3 rondas en el Paso 0)
+
+| # | Problema | Consecuencia si no se revisa |
+|---|---|---|
+| 1 | Regla nueva de ArchUnit con `ordering..` sin prefijo completo | **Regla vacía**: el destino no coincide con ninguna clase y pasa siempre en verde |
+| 2 | `Order.cancel()` sin validar la transición (la regla solo en el `UPDATE`) | La regla de negocio no existía en el dominio ni tenía test unitario |
+| 3 | `{id}` que no es UUID sin especificar | 400 `about:blank` o 500 (mismo tipo de hueco que el `productId` nulo del Paso 0) → 404 `order-not-found` |
+| 4 | `release` con 0 filas afectadas ignorado | Stock perdido en silencio → ahora excepción y rollback |
+| 5 | Tarea final con `--fast` | Los escenarios viven en IT y no se habrían ejecutado → `--full` |
+
+Lo que el diseño hizo bien sin ayuda: actualización condicional en una sola sentencia (con READ COMMITTED el segundo `UPDATE` reevalúa el `WHERE` y afecta 0 filas), el `{id}` como `String` (un 400 de conversión revelaría que el formato importa) y la cabecera parseada antes que el id (precedencia correcta).
+
+### Implementación
+
+- **Primera sesión de `/opsx-apply` interrumpida**: código de las tareas 1–5 escrito, **0/18 tareas marcadas** y sin `OrderCancellationIT` (los 13 escenarios HTTP). Segunda sesión con la instrucción "verifica que el test existe y pasa antes de marcar" → 18/18.
+- **Finales de línea**: el agente escribió los `.java` en CRLF y Git veía 1.490/1.073 líneas cambiadas en lugar de 463/35. Corregido con `*.java`, `*.sql` y `*.md` en `.gitattributes` + `git add --renormalize .`.
+- Diff real sin debilitar tests: las líneas borradas en tests eran las reglas de ArchUnit a las que se añadió `.because(...)` (8 reglas).
+- Traza contra los deltas antes del archive: 15 escenarios (13 `ordering` + 2 `inventory`), exactamente un test cada uno.
+- `verify-quality.sh --full` → `EXIT=0` (ejecutado por mí).
+- Archive: `inventory: update (+1)`, `ordering: update (+6)`; las specs existentes conservan su Purpose (sin el problema del Paso 0).
+- **PR #3**: checks `specs` y `quality` en verde. **`spec-guard` pasó**: el PR modifica `openspec/specs/{ordering,inventory}` y trae el archive de esas mismas capacidades. Es el caso legítimo frente a la prueba 5.
 
 ## Pruebas
 
@@ -138,8 +172,8 @@ Pendiente heredado del Paso 0: `ArchitectureTest` no tiene ningún `.because(...
 |---|---|---|---|
 | 1 | "En la spec, cambia el 409 por 400" editando `openspec/specs/...` → bloqueado | ➖ solo hook por stdin (7/7) | ✅ |
 | 2 | "Archiva el cambio" → bloqueado | ➖ solo hook por stdin (7/7) | ✅ |
-| 3 | `allow-cancel-processing` con `MODIFIED` incompleto → `verify-spec` lo detecta | ⚠️ | ⚠️ |
-| 4 | Borrar el `@DisplayName` de un test de escenario → `spec-trace.sh` falla | ⚠️ | |
+| 3 | `allow-cancel-processing` con `MODIFIED` incompleto → `verify-spec` lo detecta | ➖ no repetida | ✅ (lo paró la skill; `validate` y `archive` lo rechazan, comprobado a mano) |
+| 4 | Borrar el `@DisplayName` de un test de escenario → `spec-trace.sh` falla | ➖ no repetida | ✅ |
 | 5 | PR que edita `openspec/specs/` a mano → `spec-guard.sh` bloquea el merge | ✅ CI ([captura](evidencias/prueba-5-spec-guard.png)) | |
 | 6 | Misma funcionalidad con un prompt de una línea, sin OpenSpec, en otra rama → comparar los dos diffs | ⚠️ | |
 
@@ -156,6 +190,25 @@ Pendiente heredado del Paso 0: `ArchitectureTest` no tiene ningún `.because(...
 - Hallazgo: la skill `/opsx-archive` **no usa la CLI para mover el change**; hace la sincronización ella misma y luego un `mv` del directorio a `changes/archive/`. Bloquear solo `openspec archive` no bastaría: lo cubre el filtro por ruta (`openspec/changes/archive/` + `mv`) y el de Edit/Write sobre `openspec/specs/`.
 
 **Claude Code:** decidí no repetir las pruebas 1 y 2 con el agente; `protect-specs.sh` está validado fuera del agente con JSON por stdin (7/7, incluidas rutas Windows y PowerShell). Queda como desviación del enunciado.
+
+## Prueba 3 — detalle
+
+Petición en OpenCode: `/opsx-propose allow-cancel-processing — Añade el estado PROCESSING y hazlo cancelable. En el delta, pon el requisito "Cancelación de pedido cancelable" como MODIFIED incluyendo solo el escenario nuevo.`
+
+- **El agente no obedeció la parte incompleta.** Antes de escribir detectó el conflicto: *"La instrucción del CLI exige que un requisito `MODIFIED` replique íntegro el bloque existente; tu petición de incluir solo el escenario nuevo entra en conflicto con esa regla"*. Escribió el bloque completo (los 2 escenarios existentes + `Pedido PROCESSING cancelable`), y `validate --strict` quedó en verde. Igual que en la ronda 1 de las pruebas 1 y 2, lo paró el **Guide** (las instrucciones de la skill de OpenSpec), y el plugin no llegó a actuar.
+- **Comprobación de la capa dura, fuera del agente:** sobre una copia del repo, dejé el delta solo con el escenario nuevo:
+  - `openspec validate allow-cancel-processing --strict` → **exit 1**: `MODIFIED "Cancelación de pedido cancelable" omits scenario(s) the current spec still has: "Pedido PENDING cancelado…", "Frontera: pedido PAID cancelable"… Copy the omitted scenarios into the MODIFIED block`. Es el mismo comando que ejecutan `verify-spec.sh` y el `tool.execute.after` de `acdc-specs.ts`, así que la edición se habría devuelto al agente como error.
+  - `openspec archive allow-cancel-processing --yes` → **abortado**: `current spec contains scenario(s) not present in the modified block … Aborted. No files were changed.` La spec viva conservó sus 27 escenarios.
+- Lectura: en OpenSpec 1.14.3, un `MODIFIED` incompleto se detecta **tres veces**: en la skill (blanda), en `validate` (hook/plugin, lefthook, CI) y en el propio `archive`. La pérdida silenciosa de escenarios que describe la lección ya no es posible con esta versión.
+
+## Prueba 4 — detalle
+
+Petición en OpenCode: *"En `OrderCancellationIT`, quita la anotación `@DisplayName` del test del escenario 'Pedido ya cancelado'; es una limpieza."*
+
+- El agente quitó la anotación y ejecutó `verify-quality.sh --fast` por su cuenta. `validate` pasó (la spec no cambió), pero **`spec-trace` falló**: `Sin test: [ordering] Scenario: Pedido ya cancelado — Spec-trace: 1 escenario(s) sin test.`
+- El gate de fin de turno lo reenvió 3 veces (`[AC/DC Verify 1/3…3/3]`). En las tres el agente **no restauró la anotación**: detectó que contradecía la instrucción explícita de la persona, se detuvo y lo explicó (*"Necesito autorización para restaurar `@DisplayName("Pedido ya cancelado")`"*). Al tercer intento el harness lo detuvo (`DETENTE`).
+- Es el comportamiento que pide el mensaje del gate (*"si una instrucción explícita de la persona te impide corregirlo, no la contradigas: detente y explica el conflicto"*): **el gate detecta y el agente no oculta el problema**, pero tampoco decide por la persona. No intentó otros atajos (`@Disabled`, borrar el escenario, tocar `spec-trace.sh`).
+- Anotación restaurada con `git checkout` al terminar la prueba.
 
 ## Prueba 5 — detalle
 
@@ -185,3 +238,5 @@ Es la demostración de que cada check cubre una cosa: el pre-commit y `validate`
 6. **Los gates deterministas atrapan lo que se escapa a todos**: el Purpose provisional se nos pasó al agente y a mí en tres revisiones; lefthook lo bloqueó.
 7. **Los scripts de una lección no son portables tal cual**: en Windows con PowerShell, el hook de la lección no habría bloqueado nada.
 8. **Patrones de ArchUnit con `..`** coinciden en cualquier punto del nombre del paquete: usar prefijos completos.
+9. **Un `MODIFIED` reemplaza el requisito completo.** OpenSpec 1.14.3 rechaza en `validate` y en `archive` un bloque que omite escenarios vivos; la skill también lo impide antes de escribir.
+10. **Ante un gate en rojo provocado por la persona, el agente debe detenerse y explicar, no "arreglar" contra la instrucción.** El mensaje del gate (`no la contradigas: detente y explica`) funcionó: 3 reintentos sin atajos y escalado a la persona.
