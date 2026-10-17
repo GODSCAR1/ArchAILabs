@@ -24,7 +24,7 @@ El sistema SHALL aceptar pedidos en `POST /api/orders` identificando al cliente 
 #### Scenario: Frontera: cantidad una unidad por encima del stock
 - **GIVEN** el producto A con stock 10
 - **WHEN** el cliente envía un pedido con la línea (A, 11)
-- **THEN** el sistema responde 409 con type `https://api.master-acdc.dev/problems/insufficient-stock`
+- **THEN** el sistema responde 400 con type `https://api.master-acdc.dev/problems/insufficient-stock`
 - **AND** no se crea ningún pedido y el stock de A sigue en 10
 
 ### Requirement: Identificación de cliente obligatoria
@@ -91,16 +91,16 @@ El sistema SHALL rechazar la creación de pedido con código 422 y ProblemDetail
 - **AND** no se crea ningún pedido y el stock de A sigue en 10
 
 ### Requirement: Rechazo por stock insuficiente (todo o nada)
-El sistema SHALL rechazar la creación completa del pedido con código 409 y ProblemDetail type `https://api.master-acdc.dev/problems/insufficient-stock` cuando alguna línea no tiene stock suficiente. Ante este rechazo, el pedido no se crea y ningún stock queda reservado ni modificado, incluido el de las líneas que sí tenían stock suficiente.
+El sistema SHALL rechazar la creación completa del pedido con código 400 y ProblemDetail type `https://api.master-acdc.dev/problems/insufficient-stock` cuando alguna línea no tiene stock suficiente. Ante este rechazo, el pedido no se crea y ningún stock queda reservado ni modificado, incluido el de las líneas que sí tenían stock suficiente.
 
 #### Scenario: Una línea sin stock suficiente
 - **GIVEN** el producto A con stock 10 y el producto B con stock 1
 - **WHEN** el cliente envía un pedido con las líneas (A, 3) y (B, 2)
-- **THEN** el sistema responde 409 con type `https://api.master-acdc.dev/problems/insufficient-stock`
+- **THEN** el sistema responde 400 con type `https://api.master-acdc.dev/problems/insufficient-stock`
 - **AND** no se crea ningún pedido y el stock de A y B sigue en 10 y 1 respectivamente
 
 ### Requirement: Precedencia de errores de validación
-Cuando una petición acumule varios errores, el sistema SHALL aplicar la precedencia: cabecera (400) antes que cuerpo (422) antes que stock (409). Ante cualquier rechazo, el pedido no se crea y ningún stock queda reservado ni modificado.
+Cuando una petición acumule varios errores, el sistema SHALL aplicar la precedencia: cabecera (400) antes que cuerpo (422) antes que stock (400). Ante cualquier rechazo, el pedido no se crea y ningún stock queda reservado ni modificado.
 
 #### Scenario: Precedencia: error de cabecera antes que cuerpo y stock
 - **GIVEN** el producto A con stock 10 y el producto B con stock 1
@@ -121,10 +121,10 @@ Cuando una petición acumule varios errores, el sistema SHALL aplicar la precede
 - **AND** no se crea ningún pedido y el stock de B sigue en 1
 
 ### Requirement: Concurrencia sobre la última unidad
-Cuando dos creaciones de pedido concurrentes compitan por las últimas unidades de un producto, el sistema SHALL crear y reservar exactamente un pedido; el otro SHALL ser rechazado con 409 type `https://api.master-acdc.dev/problems/insufficient-stock`, sin crear pedido y sin modificar stock.
+Cuando dos creaciones de pedido concurrentes compitan por las últimas unidades de un producto, el sistema SHALL crear y reservar exactamente un pedido; el otro SHALL ser rechazado con 400 type `https://api.master-acdc.dev/problems/insufficient-stock`, sin crear pedido y sin modificar stock.
 
 #### Scenario: Dos pedidos concurrentes por la última unidad
 - **GIVEN** el producto A con stock 1
 - **WHEN** dos clientes envían concurrentemente cada uno un pedido con la línea (A, 1)
 - **THEN** exactamente un pedido se crea con 201 y reserva la unidad
-- **AND** el otro recibe 409 con type `https://api.master-acdc.dev/problems/insufficient-stock`, no se crea ningún segundo pedido y el stock de A queda en 0
+- **AND** el otro recibe 400 con type `https://api.master-acdc.dev/problems/insufficient-stock`, no se crea ningún segundo pedido y el stock de A queda en 0
