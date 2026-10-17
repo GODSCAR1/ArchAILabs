@@ -1,4 +1,9 @@
-## ADDED Requirements
+# ordering Specification
+
+## Purpose
+Permite a un cliente crear pedidos con líneas de producto y cantidad, reservando stock de forma todo o nada, y define los rechazos de la API con ProblemDetail.
+
+## Requirements
 
 ### Requirement: Creación de pedido válido
 El sistema SHALL aceptar pedidos en `POST /api/orders` identificando al cliente con la cabecera `X-Customer-Id` (UUID) y con una o varias líneas (producto y cantidad). Si todas las líneas tienen stock reservado con éxito, el sistema SHALL crear el pedido en estado PENDING y responder 201 con el cuerpo `id`, `customerId`, `status` y `lines`, sin cabecera `Location`. Los estados PAID y SHIPPED existen en el dominio pero no son alcanzables mediante la API en este cambio.
@@ -66,6 +71,15 @@ El sistema SHALL rechazar la creación de pedido con código 422 y ProblemDetail
 - **WHEN** el cliente envía un pedido con las líneas (A, 0) y (B, 2)
 - **THEN** el sistema responde 422 con type `https://api.master-acdc.dev/problems/invalid-quantity`
 - **AND** no se crea ningún pedido y el stock de A y B sigue sin cambios
+
+### Requirement: Producto obligatorio en cada línea
+El sistema SHALL rechazar la creación de pedido con código 422 y ProblemDetail type `https://api.master-acdc.dev/problems/invalid-line` cuando una línea no lleve `productId`. Ante este rechazo, el pedido no se crea y ningún stock queda reservado ni modificado.
+
+#### Scenario: Línea sin producto
+- **GIVEN** el producto A con stock 10
+- **WHEN** el cliente envía un pedido con la línea (sin `productId`, 2) y la línea (A, 1)
+- **THEN** el sistema responde 422 con type `https://api.master-acdc.dev/problems/invalid-line`
+- **AND** no se crea ningún pedido y el stock de A sigue en 10
 
 ### Requirement: Rechazo de producto desconocido en inventario
 El sistema SHALL rechazar la creación de pedido con código 422 y ProblemDetail type `https://api.master-acdc.dev/problems/unknown-product` cuando una línea referencie un producto sin registro de stock en inventario. Ante este rechazo, el pedido no se crea y ningún stock queda reservado ni modificado.

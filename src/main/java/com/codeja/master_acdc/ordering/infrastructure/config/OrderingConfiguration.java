@@ -1,0 +1,43 @@
+package com.codeja.master_acdc.ordering.infrastructure.config;
+
+import com.codeja.master_acdc.inventory.api.InventoryFacade;
+import com.codeja.master_acdc.ordering.application.CreateOrderService;
+import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
+import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
+import com.codeja.master_acdc.ordering.domain.port.StockReserver;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.StockReserverAdapter;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaRepository;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderRepositoryAdapter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+
+@Configuration
+public class OrderingConfiguration {
+
+  @Bean
+  public OrderRepository orderRepository(OrderJpaRepository orderJpaRepository) {
+    return new OrderRepositoryAdapter(orderJpaRepository);
+  }
+
+  @Bean
+  public StockReserver stockReserver(InventoryFacade inventoryFacade) {
+    return new StockReserverAdapter(inventoryFacade);
+  }
+
+  /**
+   * Envuelve el caso de uso en una transacción propia: la reserva de inventario (propagación
+   * REQUIRED) se une a ella, de modo que pedido y stock se confirman o revierten juntos.
+   */
+  @Bean
+  public CreateOrderUseCase createOrderUseCase(
+      OrderRepository orderRepository,
+      StockReserver stockReserver,
+      PlatformTransactionManager transactionManager) {
+    CreateOrderService delegate = new CreateOrderService(orderRepository, stockReserver);
+    TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+    return (customerId, lines) ->
+        transactionTemplate.execute(status -> delegate.create(customerId, lines));
+  }
+}
