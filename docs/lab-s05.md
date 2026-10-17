@@ -49,7 +49,12 @@ Pruebas fuera del agente (JSON por stdin), 7/7 con el código esperado:
 | PowerShell `Set-Content` sobre spec viva | 2 | 2 |
 
 `verify-quality.sh --fast` en verde con la capa `▶ Specs`. Lefthook: `openspec validate --all --strict` en pre-commit.
-**Pendiente:** CI (`acdc.yml`, `spec-guard.sh`, CODEOWNERS, required check) — falta el remoto en GitHub.
+**CI** (repo público `GODSCAR1/ArchAILabs`, rama `main`): `.github/workflows/acdc.yml` con dos jobs.
+- `specs`: OpenSpec 1.14.3 fijado, `fetch-depth: 0`, `validate --all --strict`, `validate --archived`, `spec-trace.sh` y, en PR, `spec-guard.sh`.
+- `quality`: Java 25 + `verify-quality.sh --full` (IT con Testcontainers en el runner). Incluye `chmod +x mvnw`: el bit de ejecución no viaja desde Windows.
+- `spec-guard.sh` **endurecido por capacidad**: cada spec viva modificada exige un delta archivado de esa misma capacidad en el PR. Probado con 4 casos; el script de la lección dejaba pasar "edito `ordering` a mano y archivo un change de `inventory`".
+- `CODEOWNERS` sobre `openspec/specs/` y `openspec/changes/archive/`. Con una sola cuenta, GitHub no permite aprobar los PR propios: la revisión obligatoria de code owners queda desactivada y la barrera es el required check `specs`.
+- Primer push a `main`: `specs` ✅ y `quality` ✅.
 
 ## Paso 0 — Change `add-order-placement`
 
@@ -135,8 +140,17 @@ Pendiente heredado del Paso 0: `ArchitectureTest` no tiene ningún `.because(...
 | 2 | "Archiva el cambio" → bloqueado | ⚠️ | ⚠️ |
 | 3 | `allow-cancel-processing` con `MODIFIED` incompleto → `verify-spec` lo detecta | ⚠️ | ⚠️ |
 | 4 | Borrar el `@DisplayName` de un test de escenario → `spec-trace.sh` falla | ⚠️ | |
-| 5 | PR que edita `openspec/specs/` a mano → `spec-guard.sh` bloquea el merge | ⚠️ (CI) | |
+| 5 | PR que edita `openspec/specs/` a mano → `spec-guard.sh` bloquea el merge | ✅ CI ([captura](evidencias/prueba-5-spec-guard.png)) | |
 | 6 | Misma funcionalidad con un prompt de una línea, sin OpenSpec, en otra rama → comparar los dos diffs | ⚠️ | |
+
+## Prueba 5 — detalle
+
+PR `prueba-5-spec-a-mano`: `sed -i 's/409/400/'` sobre `openspec/specs/ordering/spec.md`, sin archive.
+- **Lefthook la dejó pasar** (`openspec validate` ✓): el cambio sigue siendo formato válido.
+- En CI pasaron también `validate --strict`, `validate --archived` y `spec-trace` (los nombres de escenario no cambiaron).
+- **Solo `spec-guard` la detectó**: `'ordering' cambió sin un delta archivado para esa capacidad en este PR.` → job `specs` en rojo, merge bloqueado. ⚠️ completar: captura del botón de merge bloqueado.
+
+Es la demostración de que cada check cubre una cosa: el pre-commit y `validate` comprueban la **forma**, `spec-trace` la **existencia** de tests y `spec-guard` el **origen** del cambio.
 
 ## Lecciones
 
