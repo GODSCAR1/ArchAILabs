@@ -5,6 +5,8 @@ import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidLineException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
 import java.net.URI;
 import org.springframework.http.HttpStatus;
@@ -56,6 +58,16 @@ public class OrderExceptionHandler {
   @ExceptionHandler(InsufficientStockException.class)
   ProblemDetail handleInsufficientStock(InsufficientStockException exception) {
     return problem(HttpStatus.CONFLICT, "insufficient-stock", exception.getMessage());
+  }
+
+  @ExceptionHandler(OrderNotFoundException.class)
+  ProblemDetail handleOrderNotFound(OrderNotFoundException exception) {
+    return problem(HttpStatus.NOT_FOUND, "order-not-found", exception.getMessage());
+  }
+
+  @ExceptionHandler(OrderNotCancellableException.class)
+  ProblemDetail handleOrderNotCancellable(OrderNotCancellableException exception) {
+    return problem(HttpStatus.CONFLICT, "order-not-cancellable", exception.getMessage());
   }
 
   private static ProblemDetail problem(HttpStatus status, String slug, String detail) {

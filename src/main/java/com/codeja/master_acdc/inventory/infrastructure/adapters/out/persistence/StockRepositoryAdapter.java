@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence;
 
+import com.codeja.master_acdc.inventory.domain.exception.StockRecordNotFoundException;
 import com.codeja.master_acdc.inventory.domain.port.StockRepository;
 import java.util.Collection;
 import java.util.Set;
@@ -24,5 +25,12 @@ public class StockRepositoryAdapter implements StockRepository {
   @Override
   public boolean discountIfAvailable(UUID productId, int quantity) {
     return stockJpaRepository.discountIfAvailable(productId, quantity) > 0;
+  }
+
+  @Override
+  public void release(UUID productId, int quantity) {
+    if (stockJpaRepository.release(productId, quantity) == 0) {
+      throw new StockRecordNotFoundException(productId);
+    }
   }
 }

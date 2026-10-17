@@ -1,6 +1,20 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> {}
+public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> {
+
+  Optional<OrderJpaEntity> findByIdAndCustomerId(UUID id, UUID customerId);
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      "update OrderJpaEntity o set o.status = 'CANCELLED' "
+          + "where o.id = :orderId and o.customerId = :customerId "
+          + "and o.status in ('PENDING', 'PAID')")
+  int cancelIfCancelable(@Param("orderId") UUID orderId, @Param("customerId") UUID customerId);
+}

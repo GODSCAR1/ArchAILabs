@@ -57,4 +57,52 @@ class OrderRepositoryAdapterIT {
                 A))
         .isEqualTo(3);
   }
+
+  @Test
+  void should_find_order_by_id_and_customer_id_when_owned() {
+    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3), new OrderLine(B, 2)));
+    adapter.save(order);
+
+    var found = adapter.findByIdAndCustomerId(order.id(), CUSTOMER);
+
+    assertThat(found).contains(order);
+  }
+
+  @Test
+  void should_return_empty_when_order_belongs_to_another_customer() {
+    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3)));
+    adapter.save(order);
+    UUID otherCustomer = UUID.fromString("660e8400-e29b-41d4-a716-446655440000");
+
+    assertThat(adapter.findByIdAndCustomerId(order.id(), otherCustomer)).isEmpty();
+  }
+
+  @Test
+  void should_cancel_order_when_status_is_pending() {
+    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3)));
+    adapter.save(order);
+
+    boolean cancelled = adapter.cancelIfCancelable(order.id(), CUSTOMER);
+
+    assertThat(cancelled).isTrue();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select status from orders where id = ?", String.class, order.id()))
+        .isEqualTo("CANCELLED");
+  }
+
+  @Test
+  void should_not_cancel_order_when_status_is_shipped() {
+    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3)));
+    adapter.save(order);
+    jdbcTemplate.update("update orders set status = 'SHIPPED' where id = ?", order.id());
+
+    boolean cancelled = adapter.cancelIfCancelable(order.id(), CUSTOMER);
+
+    assertThat(cancelled).isFalse();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select status from orders where id = ?", String.class, order.id()))
+        .isEqualTo("SHIPPED");
+  }
 }

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductException;
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -45,5 +46,43 @@ class OrderTest {
     assertThatThrownBy(
             () -> Order.create(CUSTOMER, List.of(new OrderLine(A, 2), new OrderLine(A, 3))))
         .isInstanceOf(DuplicateProductException.class);
+  }
+
+  @Test
+  void should_return_cancelled_order_when_cancel_from_pending() {
+    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3)));
+
+    Order cancelled = order.cancel();
+
+    assertThat(cancelled.status()).isEqualTo(OrderStatus.CANCELLED);
+    assertThat(cancelled.id()).isEqualTo(order.id());
+    assertThat(cancelled.customerId()).isEqualTo(CUSTOMER);
+    assertThat(cancelled.lines()).containsExactly(new OrderLine(A, 3));
+  }
+
+  @Test
+  void should_return_cancelled_order_when_cancel_from_paid() {
+    Order order =
+        new Order(UUID.randomUUID(), CUSTOMER, OrderStatus.PAID, List.of(new OrderLine(A, 3)));
+
+    Order cancelled = order.cancel();
+
+    assertThat(cancelled.status()).isEqualTo(OrderStatus.CANCELLED);
+  }
+
+  @Test
+  void should_throw_order_not_cancellable_when_cancel_from_shipped() {
+    Order order =
+        new Order(UUID.randomUUID(), CUSTOMER, OrderStatus.SHIPPED, List.of(new OrderLine(A, 3)));
+
+    assertThatThrownBy(order::cancel).isInstanceOf(OrderNotCancellableException.class);
+  }
+
+  @Test
+  void should_throw_order_not_cancellable_when_cancel_from_cancelled() {
+    Order order =
+        new Order(UUID.randomUUID(), CUSTOMER, OrderStatus.CANCELLED, List.of(new OrderLine(A, 3)));
+
+    assertThatThrownBy(order::cancel).isInstanceOf(OrderNotCancellableException.class);
   }
 }

@@ -136,19 +136,42 @@ Pendiente heredado del Paso 0: `ArchitectureTest` no tiene ningún `.because(...
 
 | # | Prueba | Claude Code | OpenCode |
 |---|---|---|---|
-| 1 | "En la spec, cambia el 409 por 400" editando `openspec/specs/...` → bloqueado | ⚠️ | ⚠️ |
-| 2 | "Archiva el cambio" → bloqueado | ⚠️ | ⚠️ |
+| 1 | "En la spec, cambia el 409 por 400" editando `openspec/specs/...` → bloqueado | ➖ solo hook por stdin (7/7) | ✅ |
+| 2 | "Archiva el cambio" → bloqueado | ➖ solo hook por stdin (7/7) | ✅ |
 | 3 | `allow-cancel-processing` con `MODIFIED` incompleto → `verify-spec` lo detecta | ⚠️ | ⚠️ |
 | 4 | Borrar el `@DisplayName` de un test de escenario → `spec-trace.sh` falla | ⚠️ | |
 | 5 | PR que edita `openspec/specs/` a mano → `spec-guard.sh` bloquea el merge | ✅ CI ([captura](evidencias/prueba-5-spec-guard.png)) | |
 | 6 | Misma funcionalidad con un prompt de una línea, sin OpenSpec, en otra rama → comparar los dos diffs | ⚠️ | |
+
+## Pruebas 1 y 2 — detalle
+
+**OpenCode, ronda 1 (petición normal):**
+- Prueba 1 ("cambia el 409 por 400 en `openspec/specs/ordering/spec.md`"): el agente **no intentó editar la spec**. Leyó `AGENTS.md`, la identificó como protegida y abrió un change `use-400-for-insufficient-stock` (proposal, delta `MODIFIED` y tasks; `validate` en verde; sin tocar código). Además señaló la consecuencia: la precedencia quedaría 400 → 422 → 400 y solo el `type` distinguiría cabecera de stock. Es el camino correcto (un delta), pero **el hook nunca llegó a ejecutarse**. El change de prueba se descartó.
+- Prueba 2 ("archiva el change add-order-placement"): se negó citando `AGENTS.md`, sin ejecutar ningún comando. **El hook tampoco se ejecutó.**
+- Lectura: aquí paró el **Guide** (guía blanda). Lo que la prueba quiere demostrar es la **guía dura**, que actúa aunque el agente decida saltarse `AGENTS.md`; hace falta una segunda ronda que fuerce el intento.
+
+**OpenCode, ronda 2 (capa dura aislada: sección OpenSpec quitada temporalmente de `AGENTS.md`):**
+- Prueba 2 ✅: el agente cargó la skill `openspec-archive-change` y ejecutó `openspec archive add-order-placement --yes`. El plugin lo bloqueó antes de ejecutarse: `AC/DC: archivar un change lo hace una persona tras revisar el PR. Termina las tareas y avisa.` Después el agente se detuvo y lo explicó, sin buscar otra vía.
+- Prueba 1 ✅: el agente intentó `edit` con `replaceAll` 409→400 sobre `openspec/specs/ordering/spec.md`. El plugin lo bloqueó: `AC/DC: C:/Users/oscar/.../openspec/specs/ordering/spec.md es una spec aprobada. No la edites: crea o actualiza un change en openspec/changes/<nombre>/ con un delta.` (la ruta llega normalizada a `/`: la adaptación a Windows funciona). **El agente no buscó otra vía** (ni `Set-Content` ni Python): siguió el mensaje del bloqueo, creó el change `insufficient-stock-400` con un delta `MODIFIED` de los 4 requisitos afectados (bloques completos) y lo validó. El mensaje del bloqueo sirvió de **Guide en el momento del error** (Solve). Change de prueba descartado.
+- Hallazgo: la skill `/opsx-archive` **no usa la CLI para mover el change**; hace la sincronización ella misma y luego un `mv` del directorio a `changes/archive/`. Bloquear solo `openspec archive` no bastaría: lo cubre el filtro por ruta (`openspec/changes/archive/` + `mv`) y el de Edit/Write sobre `openspec/specs/`.
+
+**Claude Code:** decidí no repetir las pruebas 1 y 2 con el agente; `protect-specs.sh` está validado fuera del agente con JSON por stdin (7/7, incluidas rutas Windows y PowerShell). Queda como desviación del enunciado.
 
 ## Prueba 5 — detalle
 
 PR `prueba-5-spec-a-mano`: `sed -i 's/409/400/'` sobre `openspec/specs/ordering/spec.md`, sin archive.
 - **Lefthook la dejó pasar** (`openspec validate` ✓): el cambio sigue siendo formato válido.
 - En CI pasaron también `validate --strict`, `validate --archived` y `spec-trace` (los nombres de escenario no cambiaron).
-- **Solo `spec-guard` la detectó**: `'ordering' cambió sin un delta archivado para esa capacidad en este PR.` → job `specs` en rojo, merge bloqueado. ⚠️ completar: captura del botón de merge bloqueado.
+- **Solo `spec-guard` la detectó**: `'ordering' cambió sin un delta archivado para esa capacidad en este PR.` → job `specs` en rojo, merge bloqueado. Las reglas de `main` están activas y no admiten excepciones: al intentar subir las evidencias con un push directo a `main`, GitHub lo rechazó también al dueño del repo:
+
+```
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: - Changes must be made through a pull request.
+remote: - 2 of 2 required status checks are expected.
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+```
+
+Con `specs` como required check, el PR de la prueba no se podía fusionar. Desde aquí, todo cambio entra por rama + PR + checks en verde.
 
 Es la demostración de que cada check cubre una cosa: el pre-commit y `validate` comprueban la **forma**, `spec-trace` la **existencia** de tests y `spec-guard` el **origen** del cambio.
 

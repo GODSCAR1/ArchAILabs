@@ -3,3 +3,6 @@
 graphify-out/graph.json merge=graphify
 *.sh text eol=lf
 *.ts text eol=lf
+*.java text eol=lf
+*.sql text eol=lf
+*.md text eol=lf

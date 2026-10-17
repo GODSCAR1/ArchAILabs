@@ -4,5 +4,6 @@ package com.codeja.master_acdc.ordering.domain.model;
 public enum OrderStatus {
   PENDING,
   PAID,
-  SHIPPED
+  SHIPPED,
+  CANCELLED
 }
