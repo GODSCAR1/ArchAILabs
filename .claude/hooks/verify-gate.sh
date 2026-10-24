@@ -4,9 +4,14 @@ set -uo pipefail
 INPUT=$(cat)
 SESSION=$(jq -r '.session_id' <<<"$INPUT")
 STATE="${TMPDIR:-/tmp}/acdc-$SESSION"          # contador de intentos POR SESIÓN
-cd "$CLAUDE_PROJECT_DIR"
+# Raíz del árbol en el que trabaja el agente (cwd del JSON); $CLAUDE_PROJECT_DIR falla en worktrees
+CWD=$(jq -r '.cwd // empty' <<<"$INPUT")
+cd "$(git -C "${CWD:-$CLAUDE_PROJECT_DIR}" rev-parse --show-toplevel 2>/dev/null || echo "$CLAUDE_PROJECT_DIR")"
 
 [[ -z $(git status --porcelain -- src openspec) ]] && exit 0   # atajo: sin cambios en src/ → nada
+
+# Formato determinista sobre el estado COMPLETO del turno (no tras cada edición: lab S03)
+./mvnw -q spotless:apply >/dev/null 2>&1 || true   # corrige, no juzga: el veredicto es spotless:check de Verify
 
 if REPORT=$(./verify-quality.sh --fast 2>&1); then
   rm -f "$STATE"; exit 0

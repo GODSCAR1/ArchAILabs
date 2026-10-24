@@ -28,6 +28,20 @@ jobs:
         if: github.event_name == 'pull_request'
         run: bash scripts/spec-guard.sh origin/${{ github.base_ref }}
 
+  style:
+    # Capa 1 (formato + estilo): rápido y vinculante. Marcar como required status check en main.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - run: chmod +x mvnw      # el bit de ejecución no viaja desde Windows
+      # Solo check: CI nunca reescribe ni hace commit (lo revisado debe ser lo mergeado)
+      - run: ./mvnw -B -ntp spotless:check checkstyle:check
+
   quality:
     runs-on: ubuntu-latest
     steps:
