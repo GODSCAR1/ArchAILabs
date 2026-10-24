@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+  "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<!-- Toda supresión lleva su justificación. Zona protegida: solo la edita una persona. -->
+<suppressions>
+  <!-- Tests de Spring (@SpringBootTest, @WebMvcTest): JUnit crea la clase de test, así que la inyección
+       en campos con @Autowired es el patrón estándar. La regla aplica solo a src/main. -->
+  <suppress id="noFieldInjection" files="[\\/]src[\\/]test[\\/]"/>
+</suppressions>

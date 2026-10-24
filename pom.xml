@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>4.1.1</version>
-    <relativePath/> <!-- lookup parent from repository -->
+    <relativePath/>
+    <!-- lookup parent from repository -->
   </parent>
   <groupId>com.codeja</groupId>
   <artifactId>master-acdc</artifactId>
@@ -29,6 +29,8 @@
   <properties>
     <java.version>25</java.version>
     <spotless.version>3.10.4</spotless.version>
+    <checkstyle-plugin.version>3.6.0</checkstyle-plugin.version>
+    <checkstyle.version>14.3.0</checkstyle.version>
     <pit.mutationThreshold>75</pit.mutationThreshold>
   </properties>
   <dependencies>
@@ -104,11 +106,58 @@
         <version>${spotless.version}</version>
         <configuration>
           <java>
-            <googleJavaFormat/>
+            <googleJavaFormat>
+              <version>1.36.1</version>
+              <!-- fijada: una subida es una decisión -->
+              <style>GOOGLE</style>
+              <reflowLongStrings>true</reflowLongStrings>
+            </googleJavaFormat>
             <removeUnusedImports/>
             <importOrder/>
+            <formatAnnotations/>
           </java>
+          <pom>
+            <sortPom/>
+          </pom>
         </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>validate</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${checkstyle-plugin.version}</version>
+        <configuration>
+          <configLocation>config/checkstyle.xml</configLocation>
+          <suppressionsLocation>config/checkstyle-suppressions.xml</suppressionsLocation>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+          <consoleOutput>true</consoleOutput>
+          <failOnViolation>true</failOnViolation>
+          <!-- red de seguridad: una regla en warning también rompe -->
+          <violationSeverity>warning</violationSeverity>
+        </configuration>
+        <dependencies>
+          <!-- obligatoria: la versión que trae el plugin no parsea Java moderno -->
+          <dependency>
+            <groupId>com.puppycrawl.tools</groupId>
+            <artifactId>checkstyle</artifactId>
+            <version>${checkstyle.version}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+            <phase>validate</phase>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

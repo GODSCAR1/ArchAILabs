@@ -1,0 +1,95 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+  "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+  Ruleset AC/DC — capa 1 (estilo). El formato es de Spotless: aquí NO hay reglas de formato.
+  Todas en error: si una regla no merece romper el build, no merece estar.
+  Cada regla tiene su línea y su motivo en AGENTS.md. El ruleset crece cuando un agente repite un error.
+  Zona protegida: solo lo edita una persona.
+-->
+<module name="Checker">
+  <property name="severity" value="error"/>
+  <property name="charset" value="UTF-8"/>
+
+  <module name="SuppressWarningsFilter"/>
+  <module name="FileLength">
+    <property name="max" value="500"/>
+    <message key="maxLen.file" value="Archivo de {0} líneas (máx. {1}): divide la clase por responsabilidades."/>
+  </module>
+
+  <module name="TreeWalker">
+    <module name="SuppressWarningsHolder"/>
+
+    <!-- ===== Base (lección 33) ===== -->
+    <module name="AvoidStarImport">
+      <message key="import.avoidStar" value="Import con * ({0}): importa cada clase explícitamente."/>
+    </module>
+    <module name="MethodLength">
+      <property name="max" value="40"/>
+      <message key="maxLen.method" value="Método de {0} líneas (máx. {1}): extrae los pasos a métodos privados con nombre."/>
+    </module>
+    <module name="ParameterNumber">
+      <property name="max" value="5"/>
+      <message key="maxParam" value="Más de {0} parámetros ({1}): agrupa los relacionados en un record u objeto de dominio."/>
+    </module>
+    <module name="CyclomaticComplexity">
+      <property name="max" value="10"/>
+      <message key="cyclomaticComplexity" value="Complejidad ciclomática {0} (máx. {1}): extrae ramas a métodos con nombre o sustituye los if encadenados por un switch o polimorfismo."/>
+    </module>
+    <module name="EmptyCatchBlock">
+      <message key="catch.block.empty" value="catch vacío: trata la excepción, tradúcela a una excepción de dominio o deja que se propague. Nunca la ignores."/>
+    </module>
+    <module name="IllegalCatch">
+      <message key="illegal.catch" value="No captures {0}: captura la excepción concreta y tradúcela a una excepción de dominio, o deja que se propague al manejador global (@RestControllerAdvice)."/>
+    </module>
+    <module name="MissingSwitchDefault">
+      <message key="missing.switch.default" value="switch sin default: usa una expresión switch (case X -> ...) para que el compilador exija cubrir todos los valores, o añade un default que falle."/>
+    </module>
+    <module name="EqualsHashCode">
+      <message key="equals.noHashCode" value="equals() sin hashCode(): implementa ambos (o usa un record)."/>
+    </module>
+    <module name="IllegalImport">
+      <property name="illegalPkgs" value="sun, lombok.experimental"/>
+      <property name="illegalClasses" value="org.junit.jupiter.api.Disabled"/>
+      <message key="import.illegal" value="Import prohibido ({0}). @Disabled: no desactives tests; arregla el código o el test."/>
+    </module>
+
+    <!-- ===== Reglas propias ===== -->
+
+    <!-- 1. Inyección por constructor (en tests se permite: ver checkstyle-suppressions.xml) -->
+    <module name="MatchXpath">
+      <property name="id" value="noFieldInjection"/>
+      <property name="query" value="//VARIABLE_DEF[./MODIFIERS/ANNOTATION/IDENT[@text='Autowired']]"/>
+      <message key="matchxpath.match" value="Usa inyección por constructor (campo private final + constructor), no @Autowired en campos."/>
+    </module>
+
+    <!-- 2. Logging: SLF4J, nunca la consola -->
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="noSystemOut"/>
+      <property name="format" value="System\.(out|err)\.print"/>
+      <property name="ignoreComments" value="true"/>
+      <property name="message" value="Usa un Logger SLF4J (LoggerFactory.getLogger(MiClase.class)), no System.out ni System.err."/>
+    </module>
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="noPrintStackTrace"/>
+      <property name="format" value="\.printStackTrace\(\s*\)"/>
+      <property name="ignoreComments" value="true"/>
+      <property name="message" value="No uses printStackTrace(): registra con log.error(&quot;contexto&quot;, e) o deja que la excepción se propague."/>
+    </module>
+
+    <!-- 3. Tests desactivados, también con nombre completo (evade IllegalImport) y variantes condicionales -->
+    <module name="RegexpSinglelineJava">
+      <property name="id" value="noDisabledTests"/>
+      <property name="format" value="@(org\.junit\.jupiter\.api\.(condition\.)?)?Disabled(If|OnOs|OnJre|ForJreRange|IfSystemProperty|IfEnvironmentVariable|InNativeImage)?\b"/>
+      <property name="ignoreComments" value="true"/>
+      <property name="message" value="No desactives tests: arregla el código o el test. Si el test ya no aplica, elimínalo en un PR con justificación."/>
+    </module>
+
+    <!-- 4. Nombres de test (regla propia: el agente nombró 12 tests sin _when_ en el lab S05) -->
+    <module name="MatchXpath">
+      <property name="id" value="testMethodName"/>
+      <property name="query" value="//METHOD_DEF[./MODIFIERS/ANNOTATION/IDENT[@text='Test' or @text='ParameterizedTest' or @text='RepeatedTest']]/IDENT[not(matches(@text, '^should_[a-z0-9]+(_[a-z0-9]+)*_when_[a-z0-9]+(_[a-z0-9]+)*$'))]"/>
+      <message key="matchxpath.match" value="Nombre de test: should_&lt;comportamiento&gt;_when_&lt;condición&gt; en snake_case minúscula (p. ej. should_reject_order_when_status_is_shipped). La frase legible va en @DisplayName."/>
+    </module>
+  </module>
+</module>

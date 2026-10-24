@@ -126,7 +126,7 @@ class InventoryFacadeIT {
         "delete from stock",
         "insert into stock (product_id, available) values ('" + A_TEXT + "', 7)"
       })
-  void should_make_released_stock_available_for_reservation() {
+  void should_make_stock_available_for_reservation_when_released() {
     facade.release(List.of(line(A_TEXT, 3)));
 
     ReservationResult result = facade.reserve(List.of(line(A_TEXT, 10)));
