@@ -63,10 +63,12 @@ class OrderTransactionIT {
         "delete from orders",
         "delete from stock",
         "insert into stock (product_id, available) values ('" + A_TEXT + "', 5)",
-        "insert into orders (id, customer_id, status) values ('550e8400-e29b-41d4-a716-446655440001', '"
+        "insert into orders (id, customer_id, status) values"
+            + " ('550e8400-e29b-41d4-a716-446655440001', '"
             + CUSTOMER
             + "', 'PENDING')",
-        "insert into order_lines (order_id, product_id, quantity) values ('550e8400-e29b-41d4-a716-446655440001', '"
+        "insert into order_lines (order_id, product_id, quantity) values"
+            + " ('550e8400-e29b-41d4-a716-446655440001', '"
             + A_TEXT
             + "', 3)"
       })
