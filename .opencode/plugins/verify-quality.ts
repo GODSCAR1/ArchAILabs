@@ -2,6 +2,17 @@
 import type { Plugin } from "@opencode-ai/plugin"
 import path from "node:path"
 
+// Rutas que toca una herramienta de edición. OpenCode edita con edit/write (filePath) y, según el
+// modelo, con apply_patch (patchText con "*** Add|Update|Delete File: <ruta>" y "*** Move to: <ruta>").
+function editedPaths(tool: string, args: any): string[] {
+  if (tool === "edit" || tool === "write") return args?.filePath ? [String(args.filePath)] : []
+  if (tool === "apply_patch" || tool === "patch") {
+    const text = String(args?.patchText ?? args?.patch ?? "")
+    return [...text.matchAll(/^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+?)\s*$/gm)].map(m => m[1])
+  }
+  return []
+}
+
 const MAX_ATTEMPTS = 3
 // Rutas RELATIVAS a la raíz del repo: config/ de la raíz, no infrastructure/config/
 const PROTECTED = /^(config|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^\.env(\..*)?$/
@@ -13,12 +24,11 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
   return {
     // Guía dura: zona protegida (≈ PreToolUse)
     "tool.execute.before": async (input, output) => {
-      if (!["edit", "write"].includes(input.tool)) return
-      const raw = String(output.args?.filePath ?? "")
-      if (!raw) return
-      const rel = path.relative(directory, path.resolve(directory, raw)).replace(/\\/g, "/")
-      if (PROTECTED.test(rel)) {
-        throw new Error(`AC/DC: ${rel} está en la zona protegida. Pide permiso a un humano.`)
+      for (const raw of editedPaths(input.tool, output.args)) {
+        const rel = path.relative(directory, path.resolve(directory, raw)).replace(/\\/g, "/")
+        if (PROTECTED.test(rel)) {
+          throw new Error(`AC/DC: ${rel} está en la zona protegida. Pide permiso a un humano.`)
+        }
       }
     },
 
