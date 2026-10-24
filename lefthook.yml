@@ -1,10 +1,15 @@
-# lefthook.yml
+# lefthook.yml — capa 1 (formato + estilo) y specs
 pre-commit:
+  parallel: true
   commands:
     format:
       glob: "*.java"
-      run: ./mvnw -q spotless:check
-      fail_text: "Ejecuta ./mvnw spotless:apply"
+      run: ./mvnw -q spotless:apply
+      stage_fixed: true        # el formato es determinista: se corrige y se vuelve a añadir
+    style:
+      glob: "*.java"
+      run: ./mvnw -q checkstyle:check
+      fail_text: "Checkstyle: revisa las violaciones de arriba (archivo:línea y qué hacer)"
     specs:
       glob: "openspec/**"
       run: openspec validate --all --strict --no-interactive
