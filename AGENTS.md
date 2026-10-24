@@ -4,7 +4,7 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 
 ## Comandos (tu shell en Windows es PowerShell: invoca los scripts con `bash`)
 - Compilar y probar: `bash ./mvnw -q test`. Formato: `bash ./mvnw spotless:apply`.
-- Verify: `bash ./verify-quality.sh --fast` (Spotless + tests).
+- Verify: `bash ./verify-quality.sh --fast` (specs + Spotless + Checkstyle + tests). Solo estilo: `bash ./mvnw -q checkstyle:check`.
 
 ## Arquitectura (hexagonal estricta)
 - `domain/` NUNCA importa Spring, JPA ni Jackson (`@Entity`, `@Repository`, `@Service`, `@Component` prohibidos ahí). (pendiente: ArchUnit en S17)
@@ -18,9 +18,20 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 ## Código y tests
 - Spring Boot 4 / Java 25: en tests usa `@MockitoBean` (no `@MockBean`) y `spring-boot-starter-webmvc-test` para `@WebMvcTest`.
 - Value objects como `record` inmutables que validan en el constructor.
-- Nombres de test: `should_<comportamiento>_when_<condición>`. (pendiente: Checkstyle en S06)
+- Nombres de test: `should_<comportamiento>_when_<condición>` (ver "Estilo").
 - Todo método público de un caso de uso en `application/` tiene test unitario.
 - Integración con Testcontainers; NUNCA mocks de base de datos para verificar queries.
+
+## Estilo (Checkstyle: `config/checkstyle.xml`, todas las reglas rompen el build)
+El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu turno y en el pre-commit. Checkstyle comprueba el estilo tras cada edición y te devuelve archivo, línea y qué hacer.
+- Inyección por constructor (campo `private final` + constructor); NUNCA `@Autowired` en campos de `src/main`. Motivo: dependencias explícitas, clases testeables sin Spring. (En tests de Spring sí se permite.)
+- Logging con SLF4J; NUNCA `System.out`, `System.err` ni `printStackTrace()`. Motivo: la consola no tiene nivel, contexto ni correlación, y `printStackTrace` suele acompañar a una excepción tragada.
+- NUNCA captures `Exception`, `RuntimeException` ni `Throwable`, ni dejes un `catch` vacío: captura la excepción concreta y tradúcela a una de dominio, o deja que se propague al manejador global. Motivo: el atajo típico "para que compile" esconde fallos.
+- NUNCA desactives un test (`@Disabled` con o sin import, `@DisabledIf…`, `@DisabledOnOs`…). Motivo: poner el build en verde desactivando un test es bajar el umbral.
+- Tests: `should_<comportamiento>_when_<condición>` en snake_case minúscula; la frase legible va en `@DisplayName` (que además traza el escenario de la spec). Motivo: el agente nombró 12 tests sin `_when_` en el lab S05.
+- Métodos ≤ 40 líneas, ≤ 5 parámetros, complejidad ciclomática ≤ 10, archivos ≤ 500 líneas: extrae métodos con nombre o agrupa parámetros en un record. Motivo: el código generado tiende a resolverlo todo en un método largo con `if` anidados.
+- `switch` sobre enums: usa una expresión `switch` (`case X -> ...`) para que el compilador exija cubrir todos los valores. `equals` siempre con `hashCode`. Sin imports con `*`.
+- NUNCA añadas `@SuppressWarnings("checkstyle:...")` ni edites `config/checkstyle*.xml`: si una regla no aplica, detente y explica por qué; una persona decide la supresión y la justifica.
 
 ## Seguridad
 - NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)

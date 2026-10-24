@@ -29,14 +29,15 @@ public class CreateOrderService implements CreateOrderUseCase {
     List<OrderLine> ordered =
         order.lines().stream().sorted(comparing(OrderLine::productId)).toList();
 
-    switch (stockReserver.reserve(ordered)) {
+    // Expresión switch: el compilador exige cubrir todos los valores de ReservationOutcome.
+    return switch (stockReserver.reserve(ordered)) {
+      case RESERVED -> save(order);
       case INSUFFICIENT_STOCK -> throw new InsufficientStockException();
       case UNKNOWN_PRODUCT -> throw new UnknownProductException();
-      case RESERVED -> {
-        // sin acción: la reserva se aplicó
-      }
-    }
+    };
+  }
 
+  private Order save(Order order) {
     orderRepository.save(order);
     return order;
   }

@@ -74,7 +74,7 @@ class OrderCancellationIT {
             + B
             + "', 2)"
       })
-  void should_cancel_pending_order_and_release_all_stock_lines() throws Exception {
+  void should_release_all_stock_lines_when_pending_order_is_cancelled() throws Exception {
     cancel(PENDING_ORDER, CUSTOMER)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.customerId").value(CUSTOMER))
@@ -103,7 +103,7 @@ class OrderCancellationIT {
             + A
             + "', 1)"
       })
-  void should_cancel_paid_order() throws Exception {
+  void should_cancel_order_when_status_is_paid() throws Exception {
     cancel(PAID_ORDER, CUSTOMER)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CANCELLED"));
@@ -129,7 +129,7 @@ class OrderCancellationIT {
             + A
             + "', 1)"
       })
-  void should_reject_shipped_order() throws Exception {
+  void should_reject_cancellation_when_status_is_shipped() throws Exception {
     cancel(SHIPPED_ORDER, CUSTOMER)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-cancellable"));
@@ -155,7 +155,7 @@ class OrderCancellationIT {
             + A
             + "', 3)"
       })
-  void should_reject_already_cancelled_order() throws Exception {
+  void should_reject_cancellation_when_order_is_already_cancelled() throws Exception {
     cancel(CANCELLED_ORDER, CUSTOMER)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-cancellable"));
@@ -167,7 +167,7 @@ class OrderCancellationIT {
   @Test
   @DisplayName("Pedido inexistente")
   @Sql(statements = {CLEANUP, "insert into stock (product_id, available) values ('" + A + "', 10)"})
-  void should_reject_missing_order() throws Exception {
+  void should_return_not_found_when_order_does_not_exist() throws Exception {
     cancel("00000000-0000-0000-0000-000000000000", CUSTOMER)
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -178,7 +178,7 @@ class OrderCancellationIT {
   @Test
   @DisplayName("Cancelación con id de pedido que no es UUID")
   @Sql(statements = {CLEANUP, "insert into stock (product_id, available) values ('" + A + "', 10)"})
-  void should_reject_non_uuid_order_id() throws Exception {
+  void should_return_not_found_when_order_id_is_not_uuid() throws Exception {
     cancel("no-uuid", CUSTOMER)
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -203,7 +203,7 @@ class OrderCancellationIT {
             + A
             + "', 1)"
       })
-  void should_reject_order_owned_by_another_customer() throws Exception {
+  void should_return_not_found_when_order_belongs_to_another_customer() throws Exception {
     cancel(OTHER_ORDER, CUSTOMER)
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -229,7 +229,7 @@ class OrderCancellationIT {
             + A
             + "', 1)"
       })
-  void should_reject_missing_customer_header() throws Exception {
+  void should_reject_cancellation_when_customer_header_is_missing() throws Exception {
     cancel(PENDING_ORDER, null)
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
@@ -255,7 +255,7 @@ class OrderCancellationIT {
             + A
             + "', 1)"
       })
-  void should_reject_invalid_customer_header() throws Exception {
+  void should_reject_cancellation_when_customer_header_is_not_uuid() throws Exception {
     cancel(PENDING_ORDER, "no-es-uuid")
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-customer-id"));
@@ -267,7 +267,7 @@ class OrderCancellationIT {
   @Test
   @DisplayName("Precedencia: cabecera antes que existencia")
   @Sql(statements = {CLEANUP})
-  void should_prioritize_customer_header_over_order_existence() throws Exception {
+  void should_report_missing_header_when_order_also_does_not_exist() throws Exception {
     cancel("00000000-0000-0000-0000-000000000000", null)
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
@@ -290,7 +290,7 @@ class OrderCancellationIT {
             + A
             + "', 1)"
       })
-  void should_prioritize_order_ownership_over_order_status() throws Exception {
+  void should_report_not_found_when_shipped_order_belongs_to_another_customer() throws Exception {
     cancel(SHIPPED_ORDER, CUSTOMER)
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));

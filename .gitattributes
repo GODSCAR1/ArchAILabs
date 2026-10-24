@@ -6,3 +6,4 @@ graphify-out/graph.json merge=graphify
 *.java text eol=lf
 *.sql text eol=lf
 *.md text eol=lf
+.git-blame-ignore-revs text eol=lf
