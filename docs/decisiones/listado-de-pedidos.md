@@ -1,6 +1,6 @@
 # ADR: listado de pedidos por estado (lab S08)
 
-- **Estado:** propuesto (pendiente de revisión humana)
+- **Estado:** aceptado
 - **Fecha:** 2026-10-24
 - **Contexto de origen:** change `add-paid-orders-listing`; medición y alternativas en `docs/lab-s08.md`.
 
@@ -58,3 +58,11 @@ Restricciones:
   para una respuesta de solo lectura con cuatro campos.
 - **`@ManyToOne` hacia `Customer`:** frágil sin FK (ver Contexto).
 - **Añadir la FK:** rompe los pedidos históricos sin cliente.
+
+## Protección (lab S08, paso 5)
+- Guide: sección "Persistencia (JPA)" en `AGENTS.md`.
+- Verify: Checkstyle `toOneLazy` y `noEagerFetch`; `OrderSummaryQueryAdapterQueryCountTest` (≤ 2 con 120 pedidos) en el
+  fast loop; segunda capa en `verify-quality.sh` que exige `open-in-view=false`, `default_batch_fetch_size=50` y prohíbe
+  `enable_lazy_load_no_trans`.
+- Zona protegida: `src/main/resources/application*` en `protect-verify.sh` y en el plugin de OpenCode. No basta sola:
+  el agente la sorteó por el shell (prueba 4); la segunda capa en Verify es la que no depende del guard.
