@@ -24,3 +24,24 @@ Sentencias repetidas (incluye calentamiento):
 5. Al escribir el test en rojo, el gate `session.idle` lo ejecutó (fast loop), falló y el agente "corrigió" `src/main`
    (join fetch de lines + findAllById) pese a la instrucción "no toques src/main": el gate pesa más que el prompt.
    Su arreglo da 2 consultas; guardado en `docs/alt-agente.patch`.
+6. A agrupa las líneas (`order_id = any (?)` en PostgreSQL) pero NO los clientes: `findById` en un bucle es una consulta
+   explícita, no una carga perezosa de Hibernate. Consecuencia de no mapear `@ManyToOne` (sin FK).
+7. B: 2 consultas constantes; el join devuelve 1.000 filas para 500 pedidos (2 líneas c/u). `findAllById` genera un `IN`
+   con un parámetro por id: comprobar el límite de 1.000 elementos de Oracle antes de usarlo en RSI.
+8. C: Hibernate traduce `count(l)` de un embeddable a `count((l.product_id, l.quantity))`. Con `left join`, un pedido sin
+   líneas produce la fila `(NULL, NULL)`, que para `count` NO es nula → **confirmado: `lineCount = 1` en vez de 0**
+   (test `OrderSummaryQueryAdapterIT.should_count_zero_lines_when_order_has_no_lines` en rojo). Los tests de la spec y el
+   de consultas pasaban: ninguno cubría el caso. Corregido con `count(l.productId)` (cuenta solo valores no nulos).
+
+## Paso 3: alternativas (ramas `lab/s08-alt-a|b|c`, cada una desde `lab/s08-baseline`)
+Medición: `OrderSummaryQueryAdapterQueryCountTest` (120 pedidos) + `OrderSummaryProfilingIT` (7 y 500).
+
+| Alternativa | Qué cambia | 7 | 120 (test) | 500 | Tiempo (500) | Entidades (500) | Filas leídas (500) | ¿Una colección por consulta? | ¿Pasa ≤ 2? |
+|---|---|---|---|---|---|---|---|---|---|
+| Línea base | — | 15 | 241 | 1.001 | 1.009 ms | 1.000 | 1.500 | — | ❌ |
+| A. Batch global | `default_batch_fetch_size=50` | 9 | 124 | 511 | 499 ms | 1.000 | 1.500 | — | ❌ |
+| B. Entity Graph | `@EntityGraph(attributePaths = "lines")` + `findAllById` | 2 | 2 | 2 | 36 ms | 1.000 | 1.000 + 500 | ✅ (solo `lines`) | ✅ |
+| C. Proyección | JPQL `select new OrderSummaryRow(...)` con `left join` + `group by` | 1 | 1 | 1 | 7 ms | 0 | 500 (agregadas en la BD) | ✅ (sin colecciones) | ✅ |
+
+- La solución espontánea del agente (`docs/alt-agente.patch`: `left join fetch` en JPQL + `findAllById`) equivale a B: 2 consultas.
+- B y C: test de consultas en verde. C: `verify-quality.sh --full` → exit=0 (incluido el cliente huérfano con `left join`).

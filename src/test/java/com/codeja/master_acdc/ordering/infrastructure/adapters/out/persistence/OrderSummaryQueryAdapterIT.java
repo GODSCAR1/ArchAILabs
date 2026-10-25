@@ -90,6 +90,20 @@ class OrderSummaryQueryAdapterIT {
             });
   }
 
+  @Test
+  void should_count_zero_lines_when_order_has_no_lines() {
+    insertCustomer();
+    insertOrder(PAID, "PAID");
+
+    assertThat(adapter.findByStatus(OrderStatus.PAID))
+        .singleElement()
+        .satisfies(
+            summary -> {
+              assertThat(summary.lineCount()).isZero();
+              assertThat(summary.totalUnits()).isZero();
+            });
+  }
+
   private void insertCustomer() {
     jdbcTemplate.update("insert into customers (id, name) values (?, ?)", CUSTOMER, "Ada Lovelace");
   }

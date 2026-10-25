@@ -12,7 +12,13 @@ public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> 
 
   Optional<OrderJpaEntity> findByIdAndCustomerId(UUID id, UUID customerId);
 
-  List<OrderJpaEntity> findByStatus(String status);
+  @Query(
+      "select new"
+          + " com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryRow(o.id,"
+          + " c.name, count(l.productId), coalesce(sum(l.quantity), 0)) from OrderJpaEntity o left"
+          + " join CustomerJpaEntity c on c.id = o.customerId left join o.lines l where o.status ="
+          + " :status group by o.id, c.name")
+  List<OrderSummaryRow> findByStatus(@Param("status") String status);
 
   @Modifying(flushAutomatically = true)
   @Query(

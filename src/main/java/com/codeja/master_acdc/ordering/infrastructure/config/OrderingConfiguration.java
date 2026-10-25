@@ -14,7 +14,6 @@ import com.codeja.master_acdc.ordering.domain.port.StockReserver;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.SpringOrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.OrderCancelledListener;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.StockReserverAdapter;
-import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.CustomerJpaRepository;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaRepository;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderRepositoryAdapter;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryQueryAdapter;
@@ -33,9 +32,8 @@ public class OrderingConfiguration {
   }
 
   @Bean
-  public OrderSummaryQuery orderSummaryQuery(
-      OrderJpaRepository orderJpaRepository, CustomerJpaRepository customerJpaRepository) {
-    return new OrderSummaryQueryAdapter(orderJpaRepository, customerJpaRepository);
+  public OrderSummaryQuery orderSummaryQuery(OrderJpaRepository orderJpaRepository) {
+    return new OrderSummaryQueryAdapter(orderJpaRepository);
   }
 
   @Bean
