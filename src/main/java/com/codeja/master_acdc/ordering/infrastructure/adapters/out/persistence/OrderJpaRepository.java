@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> {
 
   Optional<OrderJpaEntity> findByIdAndCustomerId(UUID id, UUID customerId);
+
+  List<OrderJpaEntity> findByStatus(String status);
 
   @Modifying(flushAutomatically = true)
   @Query(

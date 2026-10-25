@@ -4,7 +4,9 @@ import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductExceptio
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidLineException;
+import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderStatusException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException;
+import com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
@@ -28,6 +30,16 @@ public class OrderExceptionHandler {
   @ExceptionHandler(InvalidCustomerIdException.class)
   ProblemDetail handleInvalidCustomerId(InvalidCustomerIdException exception) {
     return problem(HttpStatus.BAD_REQUEST, "invalid-customer-id", exception.getMessage());
+  }
+
+  @ExceptionHandler(MissingOrderStatusException.class)
+  ProblemDetail handleMissingOrderStatus(MissingOrderStatusException exception) {
+    return problem(HttpStatus.BAD_REQUEST, "missing-order-status", exception.getMessage());
+  }
+
+  @ExceptionHandler(InvalidOrderStatusException.class)
+  ProblemDetail handleInvalidOrderStatus(InvalidOrderStatusException exception) {
+    return problem(HttpStatus.BAD_REQUEST, "invalid-order-status", exception.getMessage());
   }
 
   @ExceptionHandler(EmptyOrderException.class)
