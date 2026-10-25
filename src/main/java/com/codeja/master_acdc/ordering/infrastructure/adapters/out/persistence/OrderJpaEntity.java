@@ -27,7 +27,7 @@ public class OrderJpaEntity {
   @Column(nullable = false, length = 16)
   private String status;
 
-  @ElementCollection(fetch = FetchType.EAGER)
+  @ElementCollection(fetch = FetchType.LAZY)
   @CollectionTable(name = "order_lines", joinColumns = @JoinColumn(name = "order_id"))
   private List<OrderLineJpaEmbeddable> lines = new ArrayList<>();
 
