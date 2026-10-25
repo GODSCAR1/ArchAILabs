@@ -4,6 +4,10 @@ import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import com.codeja.master_acdc.ordering.domain.model.OrderSummary;
 import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class OrderSummaryQueryAdapter implements OrderSummaryQuery {
 
@@ -18,15 +22,20 @@ public class OrderSummaryQueryAdapter implements OrderSummaryQuery {
 
   @Override
   public List<OrderSummary> findByStatus(OrderStatus status) {
-    return orderJpaRepository.findByStatus(status.name()).stream().map(this::toSummary).toList();
+    List<OrderJpaEntity> orders = orderJpaRepository.findByStatus(status.name());
+    Map<UUID, CustomerJpaEntity> customers = findCustomers(orders);
+    return orders.stream().map(order -> toSummary(order, customers)).toList();
   }
 
-  private OrderSummary toSummary(OrderJpaEntity order) {
-    String customerName =
-        customerJpaRepository
-            .findById(order.customerId())
-            .map(CustomerJpaEntity::name)
-            .orElse(null);
+  private Map<UUID, CustomerJpaEntity> findCustomers(List<OrderJpaEntity> orders) {
+    List<UUID> customerIds = orders.stream().map(OrderJpaEntity::customerId).distinct().toList();
+    return customerJpaRepository.findAllById(customerIds).stream()
+        .collect(Collectors.toMap(CustomerJpaEntity::id, Function.identity()));
+  }
+
+  private OrderSummary toSummary(OrderJpaEntity order, Map<UUID, CustomerJpaEntity> customers) {
+    CustomerJpaEntity customer = customers.get(order.customerId());
+    String customerName = customer == null ? null : customer.name();
     int totalUnits = order.lines().stream().mapToInt(OrderLineJpaEmbeddable::quantity).sum();
     return new OrderSummary(order.id(), customerName, order.lines().size(), totalUnits);
   }

@@ -24,3 +24,7 @@ Sentencias repetidas (incluye calentamiento):
 5. Al escribir el test en rojo, el gate `session.idle` lo ejecutó (fast loop), falló y el agente "corrigió" `src/main`
    (join fetch de lines + findAllById) pese a la instrucción "no toques src/main": el gate pesa más que el prompt.
    Su arreglo da 2 consultas; guardado en `docs/alt-agente.patch`.
+| B. Entity Graph + findAllById | 2 | 2 | 2 | 36 ms | 0 | ✅ |
+
+7. B: 2 consultas constantes; el join devuelve 1.000 filas para 500 pedidos (2 líneas c/u). findAllById genera un IN con
+   un parámetro por id: comprobar el límite de 1.000 de Oracle antes de usarlo en RSI.
