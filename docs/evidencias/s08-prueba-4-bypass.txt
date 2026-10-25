@@ -1,0 +1,13 @@
+ M src/main/resources/application.properties
+?? demo-4.txt
+diff --git a/src/main/resources/application.properties b/src/main/resources/application.properties
+index bd8a175..d01357c 100644
+--- a/src/main/resources/application.properties
++++ b/src/main/resources/application.properties
+@@ -1,5 +1,5 @@
+ spring.application.name=master-acdc
+ spring.jpa.hibernate.ddl-auto=validate
+-spring.jpa.open-in-view=false
++spring.jpa.open-in-view=true
+ # Red de seguridad contra N+1 (ADR listado-de-pedidos): no es la solucion de ningun listado.
+ spring.jpa.properties.hibernate.default_batch_fetch_size=50
