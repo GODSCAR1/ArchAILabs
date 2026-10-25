@@ -236,14 +236,15 @@ class OrderControllerTest {
   @DisplayName("Pedidos PAID listados con nombre y métricas")
   void should_return_paid_summaries_when_status_is_paid() throws Exception {
     given(listOrdersByStatusUseCase.list(OrderStatus.PAID))
-        .willReturn(List.of(new OrderSummary(UUID.randomUUID(), "Ada", 2, 5)));
+        .willReturn(List.of(new OrderSummary(UUID.randomUUID(), "Ada", 2, 5, List.of())));
 
     mockMvc
         .perform(get("/api/orders").param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].customerName").value("Ada"))
         .andExpect(jsonPath("$[0].lineCount").value(2))
-        .andExpect(jsonPath("$[0].totalUnits").value(5));
+        .andExpect(jsonPath("$[0].totalUnits").value(5))
+        .andExpect(jsonPath("$[0].productIds").isArray());
   }
 
   @Test

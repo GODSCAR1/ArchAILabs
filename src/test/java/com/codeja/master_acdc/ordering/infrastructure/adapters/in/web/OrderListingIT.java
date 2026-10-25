@@ -56,7 +56,9 @@ class OrderListingIT {
         .andExpect(jsonPath("$[0].id").value(PAID.toString()))
         .andExpect(jsonPath("$[0].customerName").value("Ada Lovelace"))
         .andExpect(jsonPath("$[0].lineCount").value(2))
-        .andExpect(jsonPath("$[0].totalUnits").value(5));
+        .andExpect(jsonPath("$[0].totalUnits").value(5))
+        .andExpect(jsonPath("$[0].productIds").isArray())
+        .andExpect(jsonPath("$[0].productIds.length()").value(2));
   }
 
   @Test

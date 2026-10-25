@@ -1,0 +1,286 @@
+ M src/main/java/com/codeja/master_acdc/ordering/domain/model/OrderSummary.java
+ M src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderSummaryResponse.java
+ M src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaRepository.java
+ M src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapter.java
+ M src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryRow.java
+ M src/test/java/com/codeja/master_acdc/ordering/application/ListOrdersByStatusServiceTest.java
+ M src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderControllerTest.java
+ M src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderListingIT.java
+ M src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterIT.java
+?? demo-1.txt
+?? diff-main.txt
+?? profiling-a.log
+?? profiling-b.log
+?? profiling-c.log
+?? profiling.log
+ .../ordering/domain/model/OrderSummary.java        |  9 ++++++-
+ .../adapters/in/web/OrderSummaryResponse.java      | 10 ++++++--
+ .../out/persistence/OrderJpaRepository.java        |  6 ++---
+ .../out/persistence/OrderSummaryQueryAdapter.java  | 28 +++++++++++++++-------
+ .../adapters/out/persistence/OrderSummaryRow.java  |  3 ++-
+ .../application/ListOrdersByStatusServiceTest.java |  2 +-
+ .../adapters/in/web/OrderControllerTest.java       |  5 ++--
+ .../adapters/in/web/OrderListingIT.java            |  4 +++-
+ .../persistence/OrderSummaryQueryAdapterIT.java    |  1 +
+ 9 files changed, 48 insertions(+), 20 deletions(-)
+diff --git a/src/main/java/com/codeja/master_acdc/ordering/domain/model/OrderSummary.java b/src/main/java/com/codeja/master_acdc/ordering/domain/model/OrderSummary.java
+index eab7b7e..ec8f2d6 100644
+--- a/src/main/java/com/codeja/master_acdc/ordering/domain/model/OrderSummary.java
++++ b/src/main/java/com/codeja/master_acdc/ordering/domain/model/OrderSummary.java
+@@ -1,5 +1,12 @@
+ package com.codeja.master_acdc.ordering.domain.model;
+ 
++import java.util.List;
+ import java.util.UUID;
+ 
+-public record OrderSummary(UUID id, String customerName, int lineCount, int totalUnits) {}
++public record OrderSummary(
++    UUID id, String customerName, int lineCount, int totalUnits, List<UUID> productIds) {
++
++  public OrderSummary {
++    productIds = List.copyOf(productIds);
++  }
++}
+diff --git a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderSummaryResponse.java b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderSummaryResponse.java
+index 9618cf8..c1337b3 100644
+--- a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderSummaryResponse.java
++++ b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderSummaryResponse.java
+@@ -1,12 +1,18 @@
+ package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
+ 
+ import com.codeja.master_acdc.ordering.domain.model.OrderSummary;
++import java.util.List;
+ import java.util.UUID;
+ 
+-public record OrderSummaryResponse(UUID id, String customerName, int lineCount, int totalUnits) {
++public record OrderSummaryResponse(
++    UUID id, String customerName, int lineCount, int totalUnits, List<UUID> productIds) {
+ 
+   static OrderSummaryResponse from(OrderSummary summary) {
+     return new OrderSummaryResponse(
+-        summary.id(), summary.customerName(), summary.lineCount(), summary.totalUnits());
++        summary.id(),
++        summary.customerName(),
++        summary.lineCount(),
++        summary.totalUnits(),
++        summary.productIds());
+   }
+ }
+diff --git a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaRepository.java b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaRepository.java
+index 2415f2e..21abd81 100644
+--- a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaRepository.java
++++ b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaRepository.java
+@@ -15,9 +15,9 @@ public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID>
+   @Query(
+       "select new"
+           + " com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryRow(o.id,"
+-          + " c.name, count(l.productId), coalesce(sum(l.quantity), 0)) from OrderJpaEntity o left"
+-          + " join CustomerJpaEntity c on c.id = o.customerId left join o.lines l where o.status ="
+-          + " :status group by o.id, c.name")
++          + " c.name, l.productId, case when l.productId is null then 0 else 1 end,"
++          + " coalesce(l.quantity, 0)) from OrderJpaEntity o left join CustomerJpaEntity c on c.id"
++          + " = o.customerId left join o.lines l where o.status = :status")
+   List<OrderSummaryRow> findByStatus(@Param("status") String status);
+ 
+   @Modifying(flushAutomatically = true)
+diff --git a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapter.java b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapter.java
+index 188d5cf..c139b79 100644
+--- a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapter.java
++++ b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapter.java
+@@ -3,7 +3,11 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
+ import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
+ import com.codeja.master_acdc.ordering.domain.model.OrderSummary;
+ import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
++import java.util.LinkedHashMap;
+ import java.util.List;
++import java.util.Map;
++import java.util.UUID;
++import java.util.stream.Collectors;
+ 
+ public class OrderSummaryQueryAdapter implements OrderSummaryQuery {
+ 
+@@ -15,14 +19,20 @@ public class OrderSummaryQueryAdapter implements OrderSummaryQuery {
+ 
+   @Override
+   public List<OrderSummary> findByStatus(OrderStatus status) {
+-    return orderJpaRepository.findByStatus(status.name()).stream()
+-        .map(
+-            row ->
+-                new OrderSummary(
+-                    row.id(),
+-                    row.customerName(),
+-                    Math.toIntExact(row.lineCount()),
+-                    Math.toIntExact(row.totalUnits())))
+-        .toList();
++    Map<UUID, List<OrderSummaryRow>> rowsByOrder =
++        orderJpaRepository.findByStatus(status.name()).stream()
++            .collect(
++                Collectors.groupingBy(
++                    OrderSummaryRow::id, LinkedHashMap::new, Collectors.toList()));
++    return rowsByOrder.values().stream().map(this::toSummary).toList();
++  }
++
++  private OrderSummary toSummary(List<OrderSummaryRow> rows) {
++    OrderSummaryRow first = rows.getFirst();
++    int lineCount = rows.stream().mapToInt(OrderSummaryRow::lineCount).sum();
++    int totalUnits = rows.stream().mapToInt(OrderSummaryRow::totalUnits).sum();
++    List<UUID> productIds =
++        rows.stream().map(OrderSummaryRow::productId).filter(id -> id != null).toList();
++    return new OrderSummary(first.id(), first.customerName(), lineCount, totalUnits, productIds);
+   }
+ }
+diff --git a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryRow.java b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryRow.java
+index 1e7ace0..5ba0d3b 100644
+--- a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryRow.java
++++ b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryRow.java
+@@ -2,4 +2,5 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
+ 
+ import java.util.UUID;
+ 
+-public record OrderSummaryRow(UUID id, String customerName, long lineCount, long totalUnits) {}
++public record OrderSummaryRow(
++    UUID id, String customerName, UUID productId, int lineCount, int totalUnits) {}
+diff --git a/src/test/java/com/codeja/master_acdc/ordering/application/ListOrdersByStatusServiceTest.java b/src/test/java/com/codeja/master_acdc/ordering/application/ListOrdersByStatusServiceTest.java
+index a0073f6..896ad71 100644
+--- a/src/test/java/com/codeja/master_acdc/ordering/application/ListOrdersByStatusServiceTest.java
++++ b/src/test/java/com/codeja/master_acdc/ordering/application/ListOrdersByStatusServiceTest.java
+@@ -17,7 +17,7 @@ class ListOrdersByStatusServiceTest {
+   @Test
+   void should_delegate_status_and_return_summaries_when_listing_orders() {
+     OrderSummaryQuery query = Mockito.mock(OrderSummaryQuery.class);
+-    OrderSummary summary = new OrderSummary(UUID.randomUUID(), "Ada", 2, 5);
++    OrderSummary summary = new OrderSummary(UUID.randomUUID(), "Ada", 2, 5, List.of());
+     given(query.findByStatus(OrderStatus.PAID)).willReturn(List.of(summary));
+ 
+     List<OrderSummary> result = new ListOrdersByStatusService(query).list(OrderStatus.PAID);
+diff --git a/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderControllerTest.java b/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderControllerTest.java
+index 3a3c71d..274bc45 100644
+--- a/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderControllerTest.java
++++ b/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderControllerTest.java
+@@ -236,14 +236,15 @@ class OrderControllerTest {
+   @DisplayName("Pedidos PAID listados con nombre y métricas")
+   void should_return_paid_summaries_when_status_is_paid() throws Exception {
+     given(listOrdersByStatusUseCase.list(OrderStatus.PAID))
+-        .willReturn(List.of(new OrderSummary(UUID.randomUUID(), "Ada", 2, 5)));
++        .willReturn(List.of(new OrderSummary(UUID.randomUUID(), "Ada", 2, 5, List.of())));
+ 
+     mockMvc
+         .perform(get("/api/orders").param("status", "PAID"))
+         .andExpect(status().isOk())
+         .andExpect(jsonPath("$[0].customerName").value("Ada"))
+         .andExpect(jsonPath("$[0].lineCount").value(2))
+-        .andExpect(jsonPath("$[0].totalUnits").value(5));
++        .andExpect(jsonPath("$[0].totalUnits").value(5))
++        .andExpect(jsonPath("$[0].productIds").isArray());
+   }
+ 
+   @Test
+diff --git a/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderListingIT.java b/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderListingIT.java
+index f69fc3a..65702f0 100644
+--- a/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderListingIT.java
++++ b/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in/web/OrderListingIT.java
+@@ -56,7 +56,9 @@ class OrderListingIT {
+         .andExpect(jsonPath("$[0].id").value(PAID.toString()))
+         .andExpect(jsonPath("$[0].customerName").value("Ada Lovelace"))
+         .andExpect(jsonPath("$[0].lineCount").value(2))
+-        .andExpect(jsonPath("$[0].totalUnits").value(5));
++        .andExpect(jsonPath("$[0].totalUnits").value(5))
++        .andExpect(jsonPath("$[0].productIds").isArray())
++        .andExpect(jsonPath("$[0].productIds.length()").value(2));
+   }
+ 
+   @Test
+diff --git a/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterIT.java b/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterIT.java
+index 19e94f1..e51d809 100644
+--- a/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterIT.java
++++ b/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterIT.java
+@@ -57,6 +57,7 @@ class OrderSummaryQueryAdapterIT {
+               assertThat(summary.customerName()).isEqualTo("Ada Lovelace");
+               assertThat(summary.lineCount()).isEqualTo(2);
+               assertThat(summary.totalUnits()).isEqualTo(5);
++              assertThat(summary.productIds()).containsExactlyInAnyOrder(PRODUCT_A, PRODUCT_B);
+             });
+   }
+ 
+23:14:42.578 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryQueryAdapterQueryCountTest]: OrderSummaryQueryAdapterQueryCountTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+23:14:42.698 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+23:14:42.702 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+23:14:42.767 [main] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+23:14:43.028 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+23:14:43.401 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+23:14:43.403 [main] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+23:14:43.426 [main] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 29.4.0
+  API Version: 1.54
+  Operating System: Docker Desktop
+  Total Memory: 15888 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+23:14:43.510 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Creating container for image: testcontainers/ryuk:0.14.0
+23:14:43.599 [main] INFO org.testcontainers.utility.RegistryAuthLocator -- Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+23:14:43.759 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 is starting: c18ed6d690c63980c441cabe8c0c558731a7cf25000ddf61c54748f2462e422e
+23:14:44.329 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 started in PT0.8185071S
+23:14:44.339 [main] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+23:14:44.339 [main] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+23:14:44.340 [main] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+23:14:44.550 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.codeja.master_acdc.MasterAcdcApplication for test class com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryQueryAdapterQueryCountTest
+23:14:44.552 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryQueryAdapterQueryCountTest]: OrderSummaryQueryAdapterQueryCountTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+23:14:44.585 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.codeja.master_acdc.MasterAcdcApplication for test class com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryQueryAdapterQueryCountTest
+23:14:44.612 [main] INFO tc.postgres:17-alpine -- Creating container for image: postgres:17-alpine
+23:14:44.747 [main] INFO tc.postgres:17-alpine -- Container postgres:17-alpine is starting: d05ce31c53bd81a72c5ae2b1e808ca1e947b4b0e98db1732a119876ea648e7f0
+23:14:47.207 [main] INFO tc.postgres:17-alpine -- Container postgres:17-alpine started in PT2.5935684S
+23:14:47.207 [main] INFO tc.postgres:17-alpine -- Container is started (JDBC URL: jdbc:postgresql://localhost:56076/test?loggerLevel=OFF)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-24T23:14:47.585-05:00  INFO 57072 --- [master-acdc] [           main] p.OrderSummaryQueryAdapterQueryCountTest : Starting OrderSummaryQueryAdapterQueryCountTest using Java 25.0.4.1 with PID 57072 (started by oscar in C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc)
+2026-10-24T23:14:47.589-05:00  INFO 57072 --- [master-acdc] [           main] p.OrderSummaryQueryAdapterQueryCountTest : No active profile set, falling back to 1 default profile: "default"
+2026-10-24T23:14:48.132-05:00  INFO 57072 --- [master-acdc] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-24T23:14:48.240-05:00  INFO 57072 --- [master-acdc] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 99 ms. Found 4 JPA repository interfaces.
+2026-10-24T23:14:48.798-05:00  INFO 57072 --- [master-acdc] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:56076/test?loggerLevel=OFF (PostgreSQL 17.11)
+2026-10-24T23:14:48.860-05:00  INFO 57072 --- [master-acdc] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2026-10-24T23:14:48.864-05:00  INFO 57072 --- [master-acdc] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 4 migrations (execution time 00:00.020s)
+2026-10-24T23:14:48.883-05:00  INFO 57072 --- [master-acdc] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2026-10-24T23:14:48.951-05:00  INFO 57072 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2026-10-24T23:14:48.959-05:00  INFO 57072 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - create products"
+2026-10-24T23:14:48.990-05:00  INFO 57072 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "2 - create stock"
+2026-10-24T23:14:49.013-05:00  INFO 57072 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "3 - create orders"
+2026-10-24T23:14:49.039-05:00  INFO 57072 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "4 - create customers"
+2026-10-24T23:14:49.059-05:00  INFO 57072 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 4 migrations to schema "public", now at version v4 (execution time 00:00.037s)
+2026-10-24T23:14:49.170-05:00  INFO 57072 --- [master-acdc] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-24T23:14:49.224-05:00  INFO 57072 --- [master-acdc] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.5.Final
+2026-10-24T23:14:49.655-05:00  INFO 57072 --- [master-acdc] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-24T23:14:49.689-05:00  INFO 57072 --- [master-acdc] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-24T23:14:49.723-05:00  INFO 57072 --- [master-acdc] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@1802f60c
+2026-10-24T23:14:49.725-05:00  INFO 57072 --- [master-acdc] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-24T23:14:49.793-05:00  INFO 57072 --- [master-acdc] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:56076/test?loggerLevel=OFF]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.11
+	Default catalog/schema: test/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-24T23:14:50.650-05:00  INFO 57072 --- [master-acdc] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-24T23:14:50.707-05:00  INFO 57072 --- [master-acdc] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-24T23:14:50.764-05:00  INFO 57072 --- [master-acdc] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-24T23:14:51.638-05:00  INFO 57072 --- [master-acdc] [           main] p.OrderSummaryQueryAdapterQueryCountTest : Started OrderSummaryQueryAdapterQueryCountTest in 4.386 seconds (process running for 9.914)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (C:\Users\oscar\.m2\repository\net\bytebuddy\byte-buddy-agent\1.18.11\byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+exit=0
+--- fin ---

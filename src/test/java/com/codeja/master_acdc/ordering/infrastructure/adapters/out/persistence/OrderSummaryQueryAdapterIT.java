@@ -57,6 +57,7 @@ class OrderSummaryQueryAdapterIT {
               assertThat(summary.customerName()).isEqualTo("Ada Lovelace");
               assertThat(summary.lineCount()).isEqualTo(2);
               assertThat(summary.totalUnits()).isEqualTo(5);
+              assertThat(summary.productIds()).containsExactlyInAnyOrder(PRODUCT_A, PRODUCT_B);
             });
   }
 
