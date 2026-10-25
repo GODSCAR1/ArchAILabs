@@ -24,3 +24,12 @@ Sentencias repetidas (incluye calentamiento):
 5. Al escribir el test en rojo, el gate `session.idle` lo ejecutó (fast loop), falló y el agente "corrigió" `src/main`
    (join fetch de lines + findAllById) pese a la instrucción "no toques src/main": el gate pesa más que el prompt.
    Su arreglo da 2 consultas; guardado en `docs/alt-agente.patch`.
+
+## Paso 3: alternativas
+| Alt. | 7 pedidos | 120 (test) | 500 pedidos | Tiempo (500) | Colecciones (500) | ¿Pasa ≤ 2? |
+|---|---|---|---|---|---|---|
+| Línea base | 15 | 241 | 1.001 | 1.009 ms | 500 | ❌ |
+| A. Batch 50 | 9 | 124 | 511 | 499 ms | 10 | ❌ |
+
+6. A agrupa las líneas (`order_id = any (?)` en PostgreSQL) pero NO los clientes: `findById` en un bucle es una consulta
+   explícita, no una carga perezosa de Hibernate. Consecuencia de no mapear `@ManyToOne` (sin FK).
