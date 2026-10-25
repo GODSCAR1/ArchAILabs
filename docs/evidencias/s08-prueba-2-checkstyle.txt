@@ -1,0 +1,38 @@
+ M src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaEntity.java
+?? demo-2.txt
+?? src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/WarehouseJpaEntity.java
+?? src/main/resources/db/migration/V5__create_warehouses.sql
+diff --git a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaEntity.java b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaEntity.java
+index 5716506..708620f 100644
+--- a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaEntity.java
++++ b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaEntity.java
+@@ -10,6 +10,7 @@ import jakarta.persistence.Entity;
+ import jakarta.persistence.FetchType;
+ import jakarta.persistence.Id;
+ import jakarta.persistence.JoinColumn;
++import jakarta.persistence.ManyToOne;
+ import jakarta.persistence.Table;
+ import java.util.ArrayList;
+ import java.util.List;
+@@ -24,6 +25,10 @@ public class OrderJpaEntity {
+   @Column(name = "customer_id", nullable = false)
+   private UUID customerId;
+ 
++  @ManyToOne
++  @JoinColumn(name = "warehouse_id")
++  private WarehouseJpaEntity warehouse;
++
+   @Column(nullable = false, length = 16)
+   private String status;
+ 
+src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/WarehouseJpaEntity.java
+src/main/resources/db/migration/V5__create_warehouses.sql
+[ERROR] src\main\java\com\codeja\master_acdc\ordering\infrastructure\adapters\out\persistence\OrderJpaEntity.java:[28,3] (coding) MatchXpathCheck#toOneLazy: @ManyToOne/@OneToOne sin fetch = FetchType.LAZY (por defecto son EAGER): declara LAZY y carga lo necesario en la consulta del caso de uso (proyección, @EntityGraph o JOIN FETCH).
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-checkstyle-plugin:3.6.0:check (default-cli) on project master-acdc: You have 1 Checkstyle violation. -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+exit=1
