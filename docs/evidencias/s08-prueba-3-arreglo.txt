@@ -1,0 +1,105 @@
+diff --git a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaRepository.java b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaRepository.java
+index 2415f2e..b9eca8f 100644
+--- a/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaRepository.java
++++ b/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderJpaRepository.java
+@@ -3,6 +3,7 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
+ import java.util.List;
+ import java.util.Optional;
+ import java.util.UUID;
++import org.springframework.data.jpa.repository.EntityGraph;
+ import org.springframework.data.jpa.repository.JpaRepository;
+ import org.springframework.data.jpa.repository.Modifying;
+ import org.springframework.data.jpa.repository.Query;
+@@ -10,6 +11,7 @@ import org.springframework.data.repository.query.Param;
+ 
+ public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> {
+ 
++  @EntityGraph(attributePaths = "lines")
+   Optional<OrderJpaEntity> findByIdAndCustomerId(UUID id, UUID customerId);
+ 
+   @Query(
+23:31:55.712 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT]: OrderDetailIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+23:31:55.782 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+23:31:55.784 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+23:31:55.837 [main] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+23:31:56.111 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+23:31:56.589 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+23:31:56.589 [main] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+23:31:56.616 [main] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 29.4.0
+  API Version: 1.54
+  Operating System: Docker Desktop
+  Total Memory: 15888 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+23:31:56.707 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Creating container for image: testcontainers/ryuk:0.14.0
+23:31:56.806 [main] INFO org.testcontainers.utility.RegistryAuthLocator -- Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+23:31:56.976 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 is starting: f705165f1b30b2f757267c4487262f054f105f01e5ea23e6c2d144e32c0fb0f7
+23:31:57.505 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 started in PT0.7987877S
+23:31:57.514 [main] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+23:31:57.514 [main] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+23:31:57.515 [main] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+23:31:57.663 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.codeja.master_acdc.MasterAcdcApplication for test class com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT
+23:31:57.728 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT]: OrderDetailIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+23:31:57.734 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.codeja.master_acdc.MasterAcdcApplication for test class com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT
+23:31:57.754 [main] INFO tc.postgres:17-alpine -- Creating container for image: postgres:17-alpine
+23:31:57.850 [main] INFO tc.postgres:17-alpine -- Container postgres:17-alpine is starting: 4a0d423fa84413f78434cca0b7364db9055e47f3af35680dee16f698ab4bdb66
+23:32:00.106 [main] INFO tc.postgres:17-alpine -- Container postgres:17-alpine started in PT2.3523342S
+23:32:00.107 [main] INFO tc.postgres:17-alpine -- Container is started (JDBC URL: jdbc:postgresql://localhost:49458/test?loggerLevel=OFF)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-24T23:32:00.367-05:00  INFO 52892 --- [master-acdc] [           main] c.c.m.o.i.adapters.in.web.OrderDetailIT  : Starting OrderDetailIT using Java 25.0.4.1 with PID 52892 (started by oscar in C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc)
+2026-10-24T23:32:00.368-05:00  INFO 52892 --- [master-acdc] [           main] c.c.m.o.i.adapters.in.web.OrderDetailIT  : No active profile set, falling back to 1 default profile: "default"
+2026-10-24T23:32:00.993-05:00  INFO 52892 --- [master-acdc] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-24T23:32:01.092-05:00  INFO 52892 --- [master-acdc] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 89 ms. Found 4 JPA repository interfaces.
+2026-10-24T23:32:01.916-05:00  INFO 52892 --- [master-acdc] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:49458/test?loggerLevel=OFF (PostgreSQL 17.11)
+2026-10-24T23:32:02.007-05:00  INFO 52892 --- [master-acdc] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2026-10-24T23:32:02.011-05:00  INFO 52892 --- [master-acdc] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 5 migrations (execution time 00:00.032s)
+2026-10-24T23:32:02.035-05:00  INFO 52892 --- [master-acdc] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2026-10-24T23:32:02.114-05:00  INFO 52892 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2026-10-24T23:32:02.124-05:00  INFO 52892 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - create products"
+2026-10-24T23:32:02.166-05:00  INFO 52892 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "2 - create stock"
+2026-10-24T23:32:02.190-05:00  INFO 52892 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "3 - create orders"
+2026-10-24T23:32:02.220-05:00  INFO 52892 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "4 - create customers"
+2026-10-24T23:32:02.243-05:00  INFO 52892 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "5 - create warehouses"
+2026-10-24T23:32:02.268-05:00  INFO 52892 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 5 migrations to schema "public", now at version v5 (execution time 00:00.057s)
+2026-10-24T23:32:02.437-05:00  INFO 52892 --- [master-acdc] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-24T23:32:02.503-05:00  INFO 52892 --- [master-acdc] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.5.Final
+2026-10-24T23:32:02.917-05:00  INFO 52892 --- [master-acdc] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-24T23:32:02.944-05:00  INFO 52892 --- [master-acdc] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-24T23:32:02.971-05:00  INFO 52892 --- [master-acdc] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@4def900a
+2026-10-24T23:32:02.973-05:00  INFO 52892 --- [master-acdc] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-24T23:32:03.045-05:00  INFO 52892 --- [master-acdc] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:49458/test?loggerLevel=OFF]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.11
+	Default catalog/schema: test/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-24T23:32:04.180-05:00  INFO 52892 --- [master-acdc] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-24T23:32:04.240-05:00  INFO 52892 --- [master-acdc] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-24T23:32:04.328-05:00  INFO 52892 --- [master-acdc] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-24T23:32:05.712-05:00  INFO 52892 --- [master-acdc] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-24T23:32:05.713-05:00  INFO 52892 --- [master-acdc] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-24T23:32:05.715-05:00  INFO 52892 --- [master-acdc] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 2 ms
+2026-10-24T23:32:05.744-05:00  INFO 52892 --- [master-acdc] [           main] c.c.m.o.i.adapters.in.web.OrderDetailIT  : Started OrderDetailIT in 5.597 seconds (process running for 10.781)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (C:\Users\oscar\.m2\repository\net\bytebuddy\byte-buddy-agent\1.18.11\byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+IT exit=0

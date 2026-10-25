@@ -1,0 +1,155 @@
+23:26:53.165 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT]: OrderDetailIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+23:26:53.226 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+23:26:53.227 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+23:26:53.277 [main] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+23:26:53.518 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+23:26:53.896 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+23:26:53.897 [main] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+23:26:53.922 [main] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 29.4.0
+  API Version: 1.54
+  Operating System: Docker Desktop
+  Total Memory: 15888 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+23:26:54.010 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Creating container for image: testcontainers/ryuk:0.14.0
+23:26:54.097 [main] INFO org.testcontainers.utility.RegistryAuthLocator -- Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+23:26:54.242 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 is starting: ba22c649dd962aaa55247e4437a43b5f80ff41dbd9d3f0db17c2116a6d899871
+23:26:54.671 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 started in PT0.6613338S
+23:26:54.679 [main] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+23:26:54.679 [main] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+23:26:54.680 [main] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+23:26:54.833 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.codeja.master_acdc.MasterAcdcApplication for test class com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT
+23:26:54.900 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT]: OrderDetailIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+23:26:54.905 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.codeja.master_acdc.MasterAcdcApplication for test class com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT
+23:26:54.925 [main] INFO tc.postgres:17-alpine -- Creating container for image: postgres:17-alpine
+23:26:55.025 [main] INFO tc.postgres:17-alpine -- Container postgres:17-alpine is starting: f690a26317048c19706232356f95b4e601f18b1f869ed57c41d3dc80f37d484e
+23:26:57.230 [main] INFO tc.postgres:17-alpine -- Container postgres:17-alpine started in PT2.305241S
+23:26:57.231 [main] INFO tc.postgres:17-alpine -- Container is started (JDBC URL: jdbc:postgresql://localhost:55698/test?loggerLevel=OFF)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-24T23:26:57.582-05:00  INFO 49388 --- [master-acdc] [           main] c.c.m.o.i.adapters.in.web.OrderDetailIT  : Starting OrderDetailIT using Java 25.0.4.1 with PID 49388 (started by oscar in C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc)
+2026-10-24T23:26:57.585-05:00  INFO 49388 --- [master-acdc] [           main] c.c.m.o.i.adapters.in.web.OrderDetailIT  : No active profile set, falling back to 1 default profile: "default"
+2026-10-24T23:26:58.296-05:00  INFO 49388 --- [master-acdc] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-10-24T23:26:58.398-05:00  INFO 49388 --- [master-acdc] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 92 ms. Found 4 JPA repository interfaces.
+2026-10-24T23:26:59.249-05:00  INFO 49388 --- [master-acdc] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:55698/test?loggerLevel=OFF (PostgreSQL 17.11)
+2026-10-24T23:26:59.326-05:00  INFO 49388 --- [master-acdc] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2026-10-24T23:26:59.330-05:00  INFO 49388 --- [master-acdc] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 5 migrations (execution time 00:00.023s)
+2026-10-24T23:26:59.353-05:00  INFO 49388 --- [master-acdc] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2026-10-24T23:26:59.415-05:00  INFO 49388 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2026-10-24T23:26:59.423-05:00  INFO 49388 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "1 - create products"
+2026-10-24T23:26:59.456-05:00  INFO 49388 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "2 - create stock"
+2026-10-24T23:26:59.479-05:00  INFO 49388 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "3 - create orders"
+2026-10-24T23:26:59.505-05:00  INFO 49388 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "4 - create customers"
+2026-10-24T23:26:59.525-05:00  INFO 49388 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "5 - create warehouses"
+2026-10-24T23:26:59.548-05:00  INFO 49388 --- [master-acdc] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 5 migrations to schema "public", now at version v5 (execution time 00:00.046s)
+2026-10-24T23:26:59.670-05:00  INFO 49388 --- [master-acdc] [           main] org.hibernate.orm.jpa                    : HHH008540: Processing PersistenceUnitInfo [name: default]
+2026-10-24T23:26:59.732-05:00  INFO 49388 --- [master-acdc] [           main] org.hibernate.orm.core                   : HHH000001: Hibernate ORM core version 7.4.5.Final
+2026-10-24T23:27:00.226-05:00  INFO 49388 --- [master-acdc] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-10-24T23:27:00.260-05:00  INFO 49388 --- [master-acdc] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-24T23:27:00.295-05:00  INFO 49388 --- [master-acdc] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5c20841d
+2026-10-24T23:27:00.297-05:00  INFO 49388 --- [master-acdc] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-24T23:27:00.371-05:00  INFO 49388 --- [master-acdc] [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [jdbc:postgresql://localhost:55698/test?loggerLevel=OFF]
+	Database driver: PostgreSQL JDBC Driver
+	Database dialect: PostgreSQLDialect
+	Database version: 17.11
+	Default catalog/schema: test/public
+	Autocommit mode: undefined/unknown
+	Isolation level: READ_COMMITTED [default READ_COMMITTED]
+	JDBC fetch size: none
+	Pool: DataSourceConnectionProvider
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2026-10-24T23:27:01.392-05:00  INFO 49388 --- [master-acdc] [           main] org.hibernate.orm.core                   : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-10-24T23:27:01.465-05:00  INFO 49388 --- [master-acdc] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-10-24T23:27:01.535-05:00  INFO 49388 --- [master-acdc] [           main] o.s.d.j.r.query.QueryEnhancerFactories   : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-10-24T23:27:03.046-05:00  INFO 49388 --- [master-acdc] [           main] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-10-24T23:27:03.046-05:00  INFO 49388 --- [master-acdc] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-10-24T23:27:03.048-05:00  INFO 49388 --- [master-acdc] [           main] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 2 ms
+2026-10-24T23:27:03.072-05:00  INFO 49388 --- [master-acdc] [           main] c.c.m.o.i.adapters.in.web.OrderDetailIT  : Started OrderDetailIT in 5.787 seconds (process running for 10.692)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (C:\Users\oscar\.m2\repository\net\bytebuddy\byte-buddy-agent\1.18.11\byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 11.12 s <<< FAILURE! -- in com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT
+[ERROR] com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT.should_return_order_with_its_lines_when_customer_owns_it -- Time elapsed: 0.546 s <<< ERROR!
+jakarta.servlet.ServletException: Request processing failed: org.hibernate.LazyInitializationException: Cannot lazily initialize collection of role 'com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaEntity.lines' with key '550e8400-e29b-41d4-a716-446655440001' (no session)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1008)
+	at org.springframework.web.servlet.FrameworkServlet.doGet(FrameworkServlet.java:892)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:622)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:874)
+	at org.springframework.test.web.servlet.TestDispatcherServlet.service(TestDispatcherServlet.java:72)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:710)
+	at org.springframework.mock.web.MockFilterChain$ServletFilterProxy.doFilter(MockFilterChain.java:160)
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:160)
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:160)
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:199)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.springframework.test.web.servlet.setup.MockMvcFilterDecorator.doFilter(MockMvcFilterDecorator.java:160)
+	at org.springframework.mock.web.MockFilterChain.doFilter(MockFilterChain.java:127)
+	at org.springframework.test.web.servlet.MockMvc.perform(MockMvc.java:199)
+	at com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderDetailIT.should_return_order_with_its_lines_when_customer_owns_it(OrderDetailIT.java:58)
+Caused by: org.hibernate.LazyInitializationException: Cannot lazily initialize collection of role 'com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaEntity.lines' with key '550e8400-e29b-41d4-a716-446655440001' (no session)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.throwLazyInitializationException(AbstractPersistentCollection.java:664)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.withTemporarySessionIfNeeded(AbstractPersistentCollection.java:239)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.initialize(AbstractPersistentCollection.java:624)
+	at org.hibernate.collection.spi.AbstractPersistentCollection.read(AbstractPersistentCollection.java:149)
+	at org.hibernate.collection.spi.PersistentBag.iterator(PersistentBag.java:419)
+	at java.base/java.util.Spliterators$IteratorSpliterator.estimateSize(Spliterators.java:1959)
+	at java.base/java.util.Spliterator.getExactSizeIfKnown(Spliterator.java:414)
+	at java.base/java.util.stream.AbstractPipeline.exactOutputSizeIfKnown(AbstractPipeline.java:531)
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:634)
+	at java.base/java.util.stream.AbstractPipeline.evaluateToArrayNode(AbstractPipeline.java:291)
+	at java.base/java.util.stream.ReferencePipeline.toArray(ReferencePipeline.java:652)
+	at java.base/java.util.stream.ReferencePipeline.toArray(ReferencePipeline.java:658)
+	at java.base/java.util.stream.ReferencePipeline.toList(ReferencePipeline.java:663)
+	at com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaEntity.toDomain(OrderJpaEntity.java:67)
+	at java.base/java.util.Optional.map(Optional.java:260)
+	at com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderRepositoryAdapter.findByIdAndCustomerId(OrderRepositoryAdapter.java:25)
+	at com.codeja.master_acdc.ordering.application.GetOrderService.get(GetOrderService.java:20)
+	at com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderController.detail(OrderController.java:51)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:252)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:184)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:117)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:934)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:853)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:86)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:963)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:866)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1000)
+	... 21 more
+
+[ERROR] Errors: 
+[ERROR]   OrderDetailIT.should_return_order_with_its_lines_when_customer_owns_it:58 » Servlet Request processing failed: org.hibernate.LazyInitializationException: Cannot lazily initialize collection of role 'com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaEntity.lines' with key '550e8400-e29b-41d4-a716-446655440001' (no session)
+[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-failsafe-plugin:3.5.6:verify (default) on project master-acdc: 
+[ERROR] 
+[ERROR] See C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\target\failsafe-reports for the individual test results.
+[ERROR] See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException

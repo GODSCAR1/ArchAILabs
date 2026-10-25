@@ -45,3 +45,5 @@ Medición: `OrderSummaryQueryAdapterQueryCountTest` (120 pedidos) + `OrderSummar
 
 - La solución espontánea del agente (`docs/alt-agente.patch`: `left join fetch` en JPQL + `findAllById`) equivale a B: 2 consultas.
 - B y C: test de consultas en verde. C: `verify-quality.sh --full` → exit=0 (incluido el cliente huérfano con `left join`).
+9. Tras cambiar de rama, `target/classes` conservaba `V5__create_warehouses.sql` y `WarehouseJpaEntity.class` de la
+   prueba 2: Flyway aplicó una migración que no existe en la rama (entorno no honesto). `./mvnw clean` al cambiar de rama.
