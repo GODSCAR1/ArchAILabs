@@ -3,9 +3,11 @@ package com.codeja.master_acdc.ordering.infrastructure.config;
 import com.codeja.master_acdc.inventory.api.InventoryFacade;
 import com.codeja.master_acdc.ordering.application.CancelOrderService;
 import com.codeja.master_acdc.ordering.application.CreateOrderService;
+import com.codeja.master_acdc.ordering.application.GetOrderService;
 import com.codeja.master_acdc.ordering.application.ListOrdersByStatusService;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
+import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
 import com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
@@ -43,6 +45,12 @@ public class OrderingConfiguration {
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
     transactionTemplate.setReadOnly(true);
     return status -> transactionTemplate.execute(transaction -> delegate.list(status));
+  }
+
+  /** Detalle de un pedido propio. */
+  @Bean
+  public GetOrderUseCase getOrderUseCase(OrderRepository orderRepository) {
+    return new GetOrderService(orderRepository);
   }
 
   @Bean

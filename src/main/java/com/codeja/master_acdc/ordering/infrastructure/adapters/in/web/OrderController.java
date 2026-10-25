@@ -2,6 +2,7 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
+import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderStatusException;
 import com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException;
@@ -29,14 +30,25 @@ public class OrderController {
   private final CreateOrderUseCase createOrderUseCase;
   private final CancelOrderUseCase cancelOrderUseCase;
   private final ListOrdersByStatusUseCase listOrdersByStatusUseCase;
+  private final GetOrderUseCase getOrderUseCase;
 
   public OrderController(
       CreateOrderUseCase createOrderUseCase,
       CancelOrderUseCase cancelOrderUseCase,
-      ListOrdersByStatusUseCase listOrdersByStatusUseCase) {
+      ListOrdersByStatusUseCase listOrdersByStatusUseCase,
+      GetOrderUseCase getOrderUseCase) {
     this.createOrderUseCase = createOrderUseCase;
     this.cancelOrderUseCase = cancelOrderUseCase;
     this.listOrdersByStatusUseCase = listOrdersByStatusUseCase;
+    this.getOrderUseCase = getOrderUseCase;
+  }
+
+  @GetMapping("/api/orders/{id}")
+  public OrderResponse detail(
+      @PathVariable("id") String orderId,
+      @RequestHeader(value = CUSTOMER_ID_HEADER, required = false) String customerIdHeader) {
+    UUID customerId = parseCustomerId(customerIdHeader);
+    return OrderResponse.from(getOrderUseCase.get(parseOrderId(orderId), customerId));
   }
 
   @GetMapping("/api/orders")

@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
+import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
 import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductException;
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
@@ -49,6 +50,7 @@ class OrderControllerTest {
   @MockitoBean CancelOrderUseCase cancelOrderUseCase;
   @MockitoBean CreateOrderUseCase createOrderUseCase;
   @MockitoBean ListOrdersByStatusUseCase listOrdersByStatusUseCase;
+  @MockitoBean GetOrderUseCase getOrderUseCase;
 
   @Test
   void should_respond_201_when_request_valid() throws Exception {
