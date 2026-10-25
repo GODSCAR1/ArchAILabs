@@ -3,6 +3,7 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -11,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
+import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
 import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductException;
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
@@ -20,8 +22,10 @@ import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
+import com.codeja.master_acdc.ordering.domain.model.OrderSummary;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -44,6 +48,7 @@ class OrderControllerTest {
 
   @MockitoBean CancelOrderUseCase cancelOrderUseCase;
   @MockitoBean CreateOrderUseCase createOrderUseCase;
+  @MockitoBean ListOrdersByStatusUseCase listOrdersByStatusUseCase;
 
   @Test
   void should_respond_201_when_request_valid() throws Exception {
@@ -225,5 +230,37 @@ class OrderControllerTest {
                 .header("X-Customer-Id", CUSTOMER))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CANCELLED"));
+  }
+
+  @Test
+  @DisplayName("Pedidos PAID listados con nombre y métricas")
+  void should_return_paid_summaries_when_status_is_paid() throws Exception {
+    given(listOrdersByStatusUseCase.list(OrderStatus.PAID))
+        .willReturn(List.of(new OrderSummary(UUID.randomUUID(), "Ada", 2, 5)));
+
+    mockMvc
+        .perform(get("/api/orders").param("status", "PAID"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].customerName").value("Ada"))
+        .andExpect(jsonPath("$[0].lineCount").value(2))
+        .andExpect(jsonPath("$[0].totalUnits").value(5));
+  }
+
+  @Test
+  @DisplayName("Status en minúsculas")
+  void should_reject_lowercase_status_when_status_name_is_not_exact() throws Exception {
+    mockMvc
+        .perform(get("/api/orders").param("status", "paid"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-order-status"));
+  }
+
+  @Test
+  @DisplayName("Sin parámetro status")
+  void should_reject_missing_status_when_status_parameter_is_absent() throws Exception {
+    mockMvc
+        .perform(get("/api/orders"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-order-status"));
   }
 }

@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,14 @@ import org.springframework.data.repository.query.Param;
 public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> {
 
   Optional<OrderJpaEntity> findByIdAndCustomerId(UUID id, UUID customerId);
+
+  @Query(
+      "select new"
+          + " com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryRow(o.id,"
+          + " c.name, count(l.productId), coalesce(sum(l.quantity), 0)) from OrderJpaEntity o left"
+          + " join CustomerJpaEntity c on c.id = o.customerId left join o.lines l where o.status ="
+          + " :status group by o.id, c.name")
+  List<OrderSummaryRow> findByStatus(@Param("status") String status);
 
   @Modifying(flushAutomatically = true)
   @Query(

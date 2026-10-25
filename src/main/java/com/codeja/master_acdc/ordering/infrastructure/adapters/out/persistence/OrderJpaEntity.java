@@ -33,6 +33,18 @@ public class OrderJpaEntity {
 
   protected OrderJpaEntity() {}
 
+  UUID id() {
+    return id;
+  }
+
+  UUID customerId() {
+    return customerId;
+  }
+
+  List<OrderLineJpaEmbeddable> lines() {
+    return lines;
+  }
+
   private OrderJpaEntity(UUID id, UUID customerId, String status) {
     this.id = id;
     this.customerId = customerId;
