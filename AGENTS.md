@@ -33,6 +33,17 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
 - `switch` sobre enums: usa una expresión `switch` (`case X -> ...`) para que el compilador exija cubrir todos los valores. `equals` siempre con `hashCode`. Sin imports con `*`.
 - NUNCA añadas `@SuppressWarnings("checkstyle:...")` ni edites `config/checkstyle*.xml`: si una regla no aplica, detente y explica por qué; una persona decide la supresión y la justifica.
 
+## Persistencia (JPA) — ADR `docs/decisiones/listado-de-pedidos.md`
+- Todas las asociaciones son `fetch = FetchType.LAZY`; en `@ManyToOne`/`@OneToOne` escríbelo explícito (por defecto son EAGER). NUNCA `FetchType.EAGER`, `hibernate.enable_lazy_load_no_trans` ni `spring.jpa.open-in-view=true`. (Checkstyle `toOneLazy`/`noEagerFetch`)
+- Qué se carga lo decide la consulta del caso de uso: listado → proyección (`select new …Row(...)`); detalle → `@EntityGraph` con una sola colección; volumen grande → batch fetching + paginación.
+- Si aparece una `LazyInitializationException`, carga la asociación que nombra el mensaje en la consulta del caso de uso. NUNCA la resuelvas con EAGER, OSIV, `enable_lazy_load_no_trans`, `Hibernate.initialize()` en bucle ni consultas dentro de un bucle.
+- NUNCA llames a un repositorio dentro de un bucle (`findById` por elemento): carga todos los ids de una vez (`findAllById`) o usa una proyección. El batch fetching NO agrupa esas llamadas.
+- Los servicios devuelven DTOs o records de dominio, nunca entidades JPA.
+- Todo endpoint de listado tiene un test de número de consultas en el fast loop (`*Test`): datos con MÁS filas que `default_batch_fetch_size` (p. ej. 120), `flush()` + `clear()`, `Statistics.clear()` y un umbral constante (el coste del código correcto, p. ej. `≤ 2`). El número de consultas no puede depender del número de filas.
+- En proyecciones con `left join`, cuenta una columna no nula de la entidad unida (`count(l.productId)`), nunca la entidad o el embeddable (`count(l)`): las filas vacías del `left join` cuentan 1.
+- Consultas paginadas con `join fetch`: `countQuery` explícito y test de `getTotalElements()`.
+- `default_batch_fetch_size=50` es la red de seguridad del proyecto: no lo cambies (zona protegida).
+
 ## Seguridad
 - NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)
 - Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código ni archivos versionados. (pendiente: Gitleaks en S12)
@@ -42,7 +53,7 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
 - Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
-- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`. Si hace falta, detente y pide permiso a una persona.
+- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`. Si hace falta, detente y pide permiso a una persona.
 
 ## graphify
 - Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.

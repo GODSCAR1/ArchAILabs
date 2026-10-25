@@ -15,7 +15,7 @@ function editedPaths(tool: string, args: any): string[] {
 
 const MAX_ATTEMPTS = 3
 // Rutas RELATIVAS a la raíz del repo: config/ de la raíz, no infrastructure/config/
-const PROTECTED = /^(config|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^\.env(\..*)?$/
+const PROTECTED = /^(config|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^src\/main\/resources\/application[^/]*$|^\.env(\..*)?$/
 
 export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
   const attempts = new Map<string, number>()
@@ -27,7 +27,7 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
       for (const raw of editedPaths(input.tool, output.args)) {
         const rel = path.relative(directory, path.resolve(directory, raw)).replace(/\\/g, "/")
         if (PROTECTED.test(rel)) {
-          throw new Error(`AC/DC: ${rel} está en la zona protegida. Pide permiso a un humano.`)
+          throw new Error(`AC/DC: ${rel} está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.`)
         }
       }
     },
