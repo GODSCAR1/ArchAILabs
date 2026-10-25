@@ -15,7 +15,7 @@ function editedPaths(tool: string, args: any): string[] {
 
 const MAX_ATTEMPTS = 3
 // Rutas RELATIVAS a la raíz del repo: config/ de la raíz, no infrastructure/config/
-const PROTECTED = /^(config|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^\.env(\..*)?$/
+const PROTECTED = /^(config|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^src\/main\/resources\/application[^/]*$|^\.env(\..*)?$/
 
 export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
   const attempts = new Map<string, number>()

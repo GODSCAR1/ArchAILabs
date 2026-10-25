@@ -91,5 +91,18 @@
       <property name="query" value="//METHOD_DEF[./MODIFIERS/ANNOTATION/IDENT[@text='Test' or @text='ParameterizedTest' or @text='RepeatedTest']]/IDENT[not(matches(@text, '^should_[a-z0-9]+(_[a-z0-9]+)*_when_[a-z0-9]+(_[a-z0-9]+)*$'))]"/>
       <message key="matchxpath.match" value="Nombre de test: should_&lt;comportamiento&gt;_when_&lt;condición&gt; en snake_case minúscula (p. ej. should_reject_order_when_status_is_shipped). La frase legible va en @DisplayName."/>
     </module>
+    <!-- 5. Fetch (lab S08): las asociaciones a uno van LAZY explícito (por defecto JPA las hace EAGER) -->
+    <module name="MatchXpath">
+      <property name="id" value="toOneLazy"/>
+      <property name="query" value="//ANNOTATION[./IDENT[@text='ManyToOne' or @text='OneToOne']][not(.//IDENT[@text='LAZY'])]"/>
+      <message key="matchxpath.match" value="@ManyToOne/@OneToOne sin fetch = FetchType.LAZY (por defecto son EAGER): declara LAZY y carga lo necesario en la consulta del caso de uso (proyección, @EntityGraph o JOIN FETCH)."/>
+    </module>
+
+    <!-- 6. Fetch (lab S08): nunca EAGER, en ninguna asociación (el @ElementCollection EAGER del S05 pasó sin que nadie lo viera) -->
+    <module name="MatchXpath">
+      <property name="id" value="noEagerFetch"/>
+      <property name="query" value="//ANNOTATION[.//IDENT[@text='EAGER']]"/>
+      <message key="matchxpath.match" value="No uses FetchType.EAGER: deja la asociación LAZY y cárgala en la consulta del caso de uso (proyección, @EntityGraph o JOIN FETCH). Si aparece una LazyInitializationException, la solución es la consulta, no EAGER ni OSIV."/>
+    </module>
   </module>
 </module>
