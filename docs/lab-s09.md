@@ -43,3 +43,40 @@ El mismo comando terminó correctamente:
 ```text
 Process finished with exit code 0
 ```
+
+## Paso 4 — número de consultas
+
+### Experimento sin `fetchAssociations()`
+
+Se comentó temporalmente la línea `filters.add(ProductSpecifications.fetchAssociations());`
+y se ejecutó:
+
+```text
+bash ./mvnw -q -Dtest=ProductSearchQueryCountTest test
+```
+
+El test no llegó a la aserción AssertJ del número de sentencias. Falló antes con:
+
+```text
+org.hibernate.LazyInitializationException: Could not initialize proxy
+[CategoryJpaEntity#00000000-0000-0000-0000-000000000001] - no session
+```
+
+Por ello, no hubo valores de sentencias esperadas frente a observadas: la conversión
+de `CategoryJpaEntity.name()` intentó acceder a una asociación lazy fuera de la sesión.
+La sentencia extra no pudo medirse porque el caso terminó antes de ejecutar la
+aserción de consultas.
+
+### Resultado verde con `fetchAssociations()` restaurado
+
+Se restauró exactamente la línea:
+
+```java
+filters.add(ProductSpecifications.fetchAssociations());
+```
+
+El mismo comando terminó correctamente con el umbral original (`<= 2`):
+
+```text
+Process finished with exit code 0
+```
