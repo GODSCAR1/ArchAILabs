@@ -55,6 +55,31 @@ class CreateProductIT {
   }
 
   @Test
+  void should_persist_catalog_defaults_when_product_is_created() throws Exception {
+    postProduct(body("Cafe Huila 500 g", "32000", "CAF-500")).andExpect(status().isCreated());
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select c.name from products p join categories c on c.id = p.category_id "
+                    + "where p.sku = ?",
+                String.class,
+                "CAF-500"))
+        .isEqualTo("Sin categoría");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select status from products where sku = ?", String.class, "CAF-500"))
+        .isEqualTo("ACTIVE");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select created_at from products where sku = ?", Object.class, "CAF-500"))
+        .isNotNull();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "select version from products where sku = ?", Long.class, "CAF-500"))
+        .isZero();
+  }
+
+  @Test
   void should_return_400_when_sku_has_two_characters() throws Exception {
     postProduct(body("Cafe", "100", "AB"))
         .andExpect(status().isBadRequest())

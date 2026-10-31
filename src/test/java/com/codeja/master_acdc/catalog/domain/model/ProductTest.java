@@ -17,5 +17,8 @@ class ProductTest {
     assertThat(product.name().value()).isEqualTo("Cafe");
     assertThat(product.sku().value()).isEqualTo("CAF-500");
     assertThat(product.price().value()).isEqualTo(100L);
+    assertThat(product.categoryId()).isEqualTo(Category.UNCATEGORIZED_ID);
+    assertThat(product.status()).isEqualTo(ProductStatus.ACTIVE);
+    assertThat(product.createdAt()).isNotNull();
   }
 }

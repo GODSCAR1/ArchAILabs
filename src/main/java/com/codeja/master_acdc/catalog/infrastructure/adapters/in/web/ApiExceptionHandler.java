@@ -1,7 +1,10 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
 import com.codeja.master_acdc.catalog.domain.exception.DuplicateSkuException;
+import com.codeja.master_acdc.catalog.domain.exception.InvalidPriceRangeException;
 import com.codeja.master_acdc.catalog.domain.exception.InvalidProductException;
+import com.codeja.master_acdc.catalog.domain.exception.InvalidSortFieldException;
+import java.net.URI;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -17,6 +20,24 @@ public class ApiExceptionHandler {
   @ExceptionHandler(InvalidProductException.class)
   ProblemDetail handleInvalidProduct(InvalidProductException exception) {
     return problem(HttpStatus.BAD_REQUEST, "Invalid product", exception.getMessage());
+  }
+
+  @ExceptionHandler(InvalidPriceRangeException.class)
+  ProblemDetail handleInvalidPriceRange(InvalidPriceRangeException exception) {
+    return typedProblem(
+        HttpStatus.BAD_REQUEST,
+        "Invalid price range",
+        exception.getMessage(),
+        "https://api.master-acdc.dev/problems/invalid-price-range");
+  }
+
+  @ExceptionHandler(InvalidSortFieldException.class)
+  ProblemDetail handleInvalidSortField(InvalidSortFieldException exception) {
+    return typedProblem(
+        HttpStatus.BAD_REQUEST,
+        "Invalid sort field",
+        exception.getMessage(),
+        "https://api.master-acdc.dev/problems/invalid-sort-field");
   }
 
   @ExceptionHandler(DuplicateSkuException.class)
@@ -42,6 +63,12 @@ public class ApiExceptionHandler {
   private ProblemDetail problem(HttpStatus status, String title, String detail) {
     ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, detail);
     problemDetail.setTitle(title);
+    return problemDetail;
+  }
+
+  private ProblemDetail typedProblem(HttpStatus status, String title, String detail, String type) {
+    ProblemDetail problemDetail = problem(status, title, detail);
+    problemDetail.setType(URI.create(type));
     return problemDetail;
   }
 }
