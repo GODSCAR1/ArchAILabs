@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.BulkOperations.BulkMode;
@@ -31,13 +32,18 @@ public class CatalogProductMigrationService {
 
   private static final int MAX_VARIANTS = 100;
   private static final String CHECKPOINT_ID = "catalog-products";
-  private static final String PRODUCT_BATCH_QUERY =
+  private static final String FIRST_PRODUCT_BATCH_QUERY =
       "select p.id, p.sku, p.name, p.price, p.status, p.created_at, p.version, "
           + "c.id category_id, c.name category_name, coalesce(s.available, 0) available_stock "
           + "from products p join categories c on c.id = p.category_id "
           + "left join stock s on s.product_id = p.id "
-          + "where (cast(:lastProcessedId as uuid) is null or p.id > :lastProcessedId) "
           + "order by p.id limit :batchSize";
+  private static final String NEXT_PRODUCT_BATCH_QUERY =
+      "select p.id, p.sku, p.name, p.price, p.status, p.created_at, p.version, "
+          + "c.id category_id, c.name category_name, coalesce(s.available, 0) available_stock "
+          + "from products p join categories c on c.id = p.category_id "
+          + "left join stock s on s.product_id = p.id "
+          + "where p.id > :lastProcessedId order by p.id limit :batchSize";
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
   private final MongoTemplate mongoTemplate;
@@ -61,6 +67,7 @@ public class CatalogProductMigrationService {
     Map<UUID, List<ProductVariant>> variants = readVariants(ids);
     List<ProductSource> accepted = acceptedProducts(products, variants);
     List<String> rejectedSkus = rejectedSkus(products, accepted);
+    deleteRejectedProducts(products, accepted);
     int variantsProcessed =
         accepted.stream()
             .mapToInt(product -> variants.getOrDefault(product.id(), List.of()).size())
@@ -125,7 +132,17 @@ public class CatalogProductMigrationService {
         new MapSqlParameterSource()
             .addValue("lastProcessedId", lastProcessedId)
             .addValue("batchSize", batchSize);
-    return jdbcTemplate.query(PRODUCT_BATCH_QUERY, parameters, new ProductSourceRowMapper());
+    String sql = lastProcessedId == null ? FIRST_PRODUCT_BATCH_QUERY : NEXT_PRODUCT_BATCH_QUERY;
+    return jdbcTemplate.query(sql, parameters, new ProductSourceRowMapper());
+  }
+
+  private void deleteRejectedProducts(List<ProductSource> products, List<ProductSource> accepted) {
+    products.stream()
+        .filter(product -> !accepted.contains(product))
+        .forEach(
+            product ->
+                mongoTemplate.remove(
+                    Query.query(Criteria.where("_id").is(product.id())), CatalogProduct.class));
   }
 
   private Map<UUID, List<ProductVariant>> readVariants(List<UUID> productIds) {
@@ -231,7 +248,7 @@ public class CatalogProductMigrationService {
             row ->
                 attributes
                     .computeIfAbsent(
-                        row.getObject("product_id", UUID.class), ignored -> new HashMap<>())
+                        row.getObject("product_id", UUID.class), ignored -> new TreeMap<>())
                     .put(row.getString("name"), row.getString("value")));
     return attributes;
   }

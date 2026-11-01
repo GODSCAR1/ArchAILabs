@@ -6,6 +6,7 @@ import com.codeja.master_acdc.catalog.domain.model.ProductRating;
 import com.codeja.master_acdc.catalog.domain.model.ProductReview;
 import com.codeja.master_acdc.catalog.domain.model.ProductVariant;
 import java.time.Instant;
+import java.util.TreeMap;
 
 public final class CatalogProductMongoMapper {
 
@@ -24,7 +25,7 @@ public final class CatalogProductMongoMapper {
         version,
         new CategoryRef(detail.category().id(), detail.category().name()),
         detail.variants().stream().map(CatalogProductMongoMapper::toVariant).toList(),
-        detail.attributes(),
+        new TreeMap<>(detail.attributes()),
         detail.stock(),
         new RatingSummary(detail.rating().average(), detail.rating().count()),
         detail.recentReviews().stream()
@@ -43,7 +44,7 @@ public final class CatalogProductMongoMapper {
         new Category(document.category().id(), document.category().name()),
         document.availableStock(),
         document.variants().stream().map(CatalogProductMongoMapper::toDomain).toList(),
-        document.attributes(),
+        new TreeMap<>(document.attributes()),
         new ProductRating(document.rating().average(), document.rating().count()),
         document.latestReviews().stream().map(CatalogProductMongoMapper::toDomain).toList());
   }

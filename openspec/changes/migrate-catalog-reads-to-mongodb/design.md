@@ -110,8 +110,10 @@ ArchUnit comprobará, como mínimo:
 
 La búsqueda Mongo implementa texto «contiene, sin mayúsculas» como regex con `Pattern.quote`, para
 que `.` y `(` sean literales. El orden por `name` usa una collation/criterio equivalente a
-PostgreSQL, probado con mayúsculas, minúsculas y acentos. El conteo y la página son dos operaciones:
-una de `count` y otra de página.
+PostgreSQL, probado con mayúsculas, minúsculas y acentos. La paridad con `Collation.simple()` exige
+collation `C` en PostgreSQL (orden por punto de código), o una collation de idioma en MongoDB
+equivalente a la configurada en PostgreSQL. El conteo y la página son dos operaciones: una de
+`count` y otra de página.
 
 La suite HTTP común se organiza en las clases base `ProductSearchIT`, `ProductDetailIT` y
 `ProductReviewQueryIT`. La base expone `afterWrite()` y la subclase Mongo ejecuta ahí la migración.

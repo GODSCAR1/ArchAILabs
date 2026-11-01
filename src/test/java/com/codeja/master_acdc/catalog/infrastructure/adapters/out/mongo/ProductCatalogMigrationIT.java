@@ -9,6 +9,9 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.bson.UuidRepresentation;
@@ -107,8 +110,13 @@ class ProductCatalogMigrationIT {
     jdbcTemplate.update(
         "insert into product_attributes (product_id, name, value) values (?, ?, ?)",
         PRODUCT_ID,
-        "material",
+        "z-material",
         "Cuero");
+    jdbcTemplate.update(
+        "insert into product_attributes (product_id, name, value) values (?, ?, ?)",
+        PRODUCT_ID,
+        "a-origen",
+        "Colombia");
     insertSixReviews(PRODUCT_ID);
 
     migrationService.migrateBatch(null, 10);
@@ -117,7 +125,8 @@ class ProductCatalogMigrationIT {
     assertThat(document.sku()).isEqualTo("SKU-FULL");
     assertThat(document.price()).isEqualTo(189900);
     assertThat(document.variants()).hasSize(1);
-    assertThat(document.attributes()).containsEntry("material", "Cuero");
+    assertThat(document.attributes()).containsEntry("z-material", "Cuero");
+    assertThat(document.attributes().keySet()).containsExactly("a-origen", "z-material");
     assertThat(document.rating().average()).isEqualByComparingTo("4.17");
     assertThat(document.rating().count()).isEqualTo(6);
     assertThat(document.latestReviews()).hasSize(5);
@@ -128,6 +137,21 @@ class ProductCatalogMigrationIT {
   void should_reject_product_and_continue_batch_when_variant_limit_is_exceeded() {
     seedProduct(OVERSIZED_ID, "SKU-TOO-MANY", "Muchos", "Calzado", 1);
     seedProduct(NEXT_PRODUCT_ID, "SKU-NEXT", "Siguiente", "Calzado", 2);
+    mongoTemplate.insert(
+        new CatalogProduct(
+            OVERSIZED_ID,
+            "SKU-TOO-MANY",
+            "Documento obsoleto",
+            189900,
+            com.codeja.master_acdc.catalog.domain.model.ProductStatus.ACTIVE,
+            CREATED_AT,
+            0,
+            new CategoryRef(CATEGORY_ID, "Calzado"),
+            List.of(),
+            new LinkedHashMap<>(Map.of("color", "azul")),
+            1,
+            new RatingSummary(java.math.BigDecimal.ZERO.setScale(2), 0),
+            List.of()));
     for (int index = 0; index < 101; index++) {
       insertVariant(OVERSIZED_ID, UUID.randomUUID(), index);
     }

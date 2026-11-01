@@ -82,7 +82,7 @@ class CatalogSearchMongoRepositoryAdapterIT {
     assertThat(result.totalElements()).isEqualTo(5);
     assertThat(result.content())
         .extracting("name")
-        .containsExactly("A.B Lamp", "Alpha", "Laptop", "alpha", "Álpha");
+        .containsExactly("A.B Lamp", "Banana", "Laptop", "apple", "Éclair");
   }
 
   @Test
@@ -146,6 +146,9 @@ class CatalogSearchMongoRepositoryAdapterIT {
     assertThat(nameResult.content())
         .extracting("id")
         .containsExactly(DOTTED_ID, ALPHA_UPPER_ID, LAPTOP_ID, ALPHA_LOWER_ID, ALPHA_ACCENT_ID);
+    assertThat(nameResult.content())
+        .extracting("name")
+        .containsExactly("A.B Lamp", "Banana", "Laptop", "apple", "Éclair");
   }
 
   private ProductSearchCriteria criteria(String text, SearchFilters filters, String order) {
@@ -164,10 +167,10 @@ class CatalogSearchMongoRepositoryAdapterIT {
   private List<CatalogProduct> products() {
     return List.of(
         product(DOTTED_ID, "A.B Lamp", 200, ProductStatus.DRAFT, 0),
-        product(ALPHA_UPPER_ID, "Alpha", 100, ProductStatus.ACTIVE, 2),
+        product(ALPHA_UPPER_ID, "Banana", 100, ProductStatus.ACTIVE, 2),
         product(LAPTOP_ID, "Laptop", 150, ProductStatus.ACTIVE, 2),
-        product(ALPHA_LOWER_ID, "alpha", 100, ProductStatus.ACTIVE, 0),
-        product(ALPHA_ACCENT_ID, "Álpha", 100, ProductStatus.ACTIVE, 4));
+        product(ALPHA_LOWER_ID, "apple", 100, ProductStatus.ACTIVE, 0),
+        product(ALPHA_ACCENT_ID, "Éclair", 100, ProductStatus.ACTIVE, 4));
   }
 
   private CatalogProduct product(

@@ -139,5 +139,8 @@ indicativa del catálogo; la reserva continúa validándose contra `stock`.
   la monitorización de antigüedad de la re-migración y la reconciliación.
 - MongoDB no se convierte en dueño de `stock` ni de las reglas de reserva; solo materializa
   una vista derivada para catálogo.
+- La equivalencia del orden por `name` con `Collation.simple()` de MongoDB requiere que PostgreSQL
+  use la collation `C` (orden por punto de código), o que MongoDB use una collation de idioma
+  equivalente a la collation PostgreSQL configurada.
 - La eliminación de tablas PostgreSQL queda fuera de este ADR y requiere otro change revisado,
   con pruebas de rollback y comprobación de consumidores.
