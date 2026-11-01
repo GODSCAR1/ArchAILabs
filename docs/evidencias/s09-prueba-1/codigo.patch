@@ -1,0 +1,324 @@
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/domain/model/ProductSearchCriteria.java b/src/main/java/com/codeja/master_acdc/catalog/domain/model/ProductSearchCriteria.java
+index 902bbe1..33543e6 100644
+--- a/src/main/java/com/codeja/master_acdc/catalog/domain/model/ProductSearchCriteria.java
++++ b/src/main/java/com/codeja/master_acdc/catalog/domain/model/ProductSearchCriteria.java
+@@ -4,6 +4,7 @@ import com.codeja.master_acdc.catalog.domain.exception.InvalidPriceRangeExceptio
+ import com.codeja.master_acdc.catalog.domain.exception.InvalidSortFieldException;
+ import java.util.Set;
+ import java.util.UUID;
++import java.util.stream.Collectors;
+ 
+ public record ProductSearchCriteria(
+     String text,
+@@ -12,10 +13,30 @@ public record ProductSearchCriteria(
+     Long maxPrice,
+     Set<ProductStatus> statuses,
+     boolean inStock,
++    Sku sku,
+     int page,
+     int size,
+     ProductSearchOrder order) {
+ 
++  public ProductSearchCriteria(
++      String text, UUID categoryId, Long minPrice, Long maxPrice, Object... legacyValues) {
++    this(
++        text,
++        categoryId,
++        minPrice,
++        maxPrice,
++        statuses(legacyValues[0]),
++        (Boolean) legacyValues[1],
++        null,
++        (Integer) legacyValues[2],
++        (Integer) legacyValues[3],
++        (ProductSearchOrder) legacyValues[4]);
++  }
++
++  private static Set<ProductStatus> statuses(Object value) {
++    return ((Set<?>) value).stream().map(ProductStatus.class::cast).collect(Collectors.toSet());
++  }
++
+   public ProductSearchCriteria {
+     if (page < 0 || size < 1 || order == null) {
+       throw new IllegalArgumentException("invalid search pagination or order");
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapper.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapper.java
+index 9284e99..eefe59c 100644
+--- a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapper.java
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapper.java
+@@ -1,5 +1,6 @@
+ package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
+ 
++import com.codeja.master_acdc.catalog.domain.exception.InvalidProductException;
+ import com.codeja.master_acdc.catalog.domain.exception.InvalidSortFieldException;
+ import com.codeja.master_acdc.catalog.domain.model.Product;
+ import com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria;
+@@ -7,6 +8,7 @@ import com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder;
+ import com.codeja.master_acdc.catalog.domain.model.ProductSearchPage;
+ import com.codeja.master_acdc.catalog.domain.model.ProductSearchRow;
+ import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
++import com.codeja.master_acdc.catalog.domain.model.Sku;
+ import java.util.List;
+ import java.util.Set;
+ import java.util.UUID;
+@@ -38,6 +40,7 @@ final class ProductWebMapper {
+   static ProductSearchCriteria toCriteria(MultiValueMap<String, String> parameters) {
+     Long minPrice = longParameter(parameters, "minPrice");
+     Long maxPrice = longParameter(parameters, "maxPrice");
++    Sku sku = skuParameter(parameters);
+     int page = integerParameter(parameters, "page", 0);
+     int size = integerParameter(parameters, "size", 20);
+     validatePagination(page, size);
+@@ -48,6 +51,7 @@ final class ProductWebMapper {
+         maxPrice,
+         statuses(parameters),
+         Boolean.parseBoolean(parameters.getFirst("inStock")),
++        sku,
+         page,
+         Math.min(size, 100),
+         sort(parameters.getFirst("sort")));
+@@ -102,6 +106,18 @@ final class ProductWebMapper {
+     }
+   }
+ 
++  private static Sku skuParameter(MultiValueMap<String, String> parameters) {
++    String value = parameters.getFirst("sku");
++    if (value == null) {
++      return null;
++    }
++    try {
++      return new Sku(value);
++    } catch (InvalidProductException exception) {
++      throw new InvalidSearchParameterException("sku");
++    }
++  }
++
+   private static Long longParameter(MultiValueMap<String, String> parameters, String name) {
+     String value = parameters.getFirst(name);
+     if (value == null) {
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchRepositoryAdapter.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchRepositoryAdapter.java
+index bb3955a..a2d78ee 100644
+--- a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchRepositoryAdapter.java
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchRepositoryAdapter.java
+@@ -38,6 +38,9 @@ public class ProductSearchRepositoryAdapter implements ProductSearchRepository {
+     if (criteria.categoryId() != null) {
+       filters.add(ProductSpecifications.categoryIs(criteria.categoryId()));
+     }
++    if (criteria.sku() != null) {
++      filters.add(ProductSpecifications.skuIs(criteria.sku().value()));
++    }
+     if (criteria.minPrice() != null) {
+       filters.add(ProductSpecifications.priceAtLeast(criteria.minPrice()));
+     }
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSpecifications.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSpecifications.java
+index fc93ef9..e7bae5e 100644
+--- a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSpecifications.java
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSpecifications.java
+@@ -21,6 +21,10 @@ final class ProductSpecifications {
+         builder.equal(root.get(ProductJpaEntity_.categoryId), categoryId);
+   }
+ 
++  static Specification<ProductJpaEntity> skuIs(String sku) {
++    return (root, query, builder) -> builder.equal(root.get(ProductJpaEntity_.sku), sku);
++  }
++
+   static Specification<ProductJpaEntity> priceAtLeast(long minPrice) {
+     return (root, query, builder) ->
+         builder.greaterThanOrEqualTo(root.get(ProductJpaEntity_.price), minPrice);
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductSearchIT.java b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductSearchIT.java
+index 55f1de8..a8785e3 100644
+--- a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductSearchIT.java
++++ b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductSearchIT.java
+@@ -46,7 +46,7 @@ class ProductSearchIT {
+   void cleanDatabase() {
+     jdbcTemplate.update("delete from stock");
+     jdbcTemplate.update("delete from products");
+-    insertProduct(LAPTOP, "Laptop", 200, "ACTIVE");
++    insertProduct(LAPTOP, "Laptop", 200, "ACTIVE", "CAF-500");
+     insertProduct(PHONE, "Phone", 100, "DRAFT");
+     insertProduct(LAMP, "Lamp", 400, "DISCONTINUED");
+     jdbcTemplate.update("insert into stock (product_id, available) values (?, ?)", LAPTOP, 4);
+@@ -63,6 +63,56 @@ class ProductSearchIT {
+         .andExpect(jsonPath("$.totalElements").value(3));
+   }
+ 
++  @Test
++  @DisplayName("Filtro por SKU existente")
++  void should_find_product_when_sku_matches_exactly() throws Exception {
++    mockMvc
++        .perform(get("/api/products").queryParam("sku", "CAF-500"))
++        .andExpect(status().isOk())
++        .andExpect(jsonPath("$.content[0].id").value(LAPTOP.toString()))
++        .andExpect(jsonPath("$.totalElements").value(1));
++  }
++
++  @Test
++  @DisplayName("SKU inexistente")
++  void should_return_empty_page_when_sku_does_not_exist() throws Exception {
++    mockMvc
++        .perform(get("/api/products").queryParam("sku", "SKU-UNKNOWN"))
++        .andExpect(status().isOk())
++        .andExpect(jsonPath("$.content").isEmpty())
++        .andExpect(jsonPath("$.totalElements").value(0));
++  }
++
++  @Test
++  @DisplayName("SKU normalizado")
++  void should_find_product_when_sku_has_spaces_and_lowercase() throws Exception {
++    mockMvc
++        .perform(get("/api/products").queryParam("sku", " caf-500 "))
++        .andExpect(status().isOk())
++        .andExpect(jsonPath("$.content[0].id").value(LAPTOP.toString()));
++  }
++
++  @Test
++  @DisplayName("SKU con formato inválido")
++  void should_reject_sku_when_sku_has_invalid_format() throws Exception {
++    mockMvc
++        .perform(get("/api/products").queryParam("sku", "CA/500"))
++        .andExpect(status().isBadRequest())
++        .andExpect(
++            jsonPath("$.type")
++                .value("https://api.master-acdc.dev/problems/invalid-search-parameter"));
++  }
++
++  @Test
++  @DisplayName("SKU combinado con otros filtros")
++  void should_combine_sku_and_status_when_both_filters_are_present() throws Exception {
++    mockMvc
++        .perform(get("/api/products").queryParam("sku", "CAF-500").queryParam("status", "ACTIVE"))
++        .andExpect(status().isOk())
++        .andExpect(jsonPath("$.content[0].id").value(LAPTOP.toString()))
++        .andExpect(jsonPath("$.totalElements").value(1));
++  }
++
+   @Test
+   @DisplayName("Tamaño por encima del máximo")
+   void should_cap_size_when_search_size_is_above_maximum() throws Exception {
+@@ -194,12 +244,16 @@ class ProductSearchIT {
+   }
+ 
+   private void insertProduct(UUID id, String name, long price, String status) {
++    insertProduct(id, name, price, status, "SKU-" + id);
++  }
++
++  private void insertProduct(UUID id, String name, long price, String status, String sku) {
+     jdbcTemplate.update(
+         "insert into products (id, name, sku, price, category_id, status, created_at, version) "
+             + "values (?, ?, ?, ?, ?, ?, current_timestamp, 0)",
+         id,
+         name,
+-        "SKU-" + id,
++        sku,
+         price,
+         DEFAULT_CATEGORY,
+         status);
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapperTest.java b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapperTest.java
+index f72cc96..f061628 100644
+--- a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapperTest.java
++++ b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapperTest.java
+@@ -68,6 +68,7 @@ class ProductWebMapperTest {
+     parameters.add("status", "ACTIVE");
+     parameters.add("status", "DRAFT");
+     parameters.add("inStock", "true");
++    parameters.add("sku", " caf-500 ");
+     parameters.add("page", "2");
+     parameters.add("size", "120");
+     parameters.add("sort", "price,desc");
+@@ -81,12 +82,25 @@ class ProductWebMapperTest {
+     assertThat(criteria.statuses())
+         .containsExactlyInAnyOrder(ProductStatus.ACTIVE, ProductStatus.DRAFT);
+     assertThat(criteria.inStock()).isTrue();
++    assertThat(criteria.sku()).isEqualTo(new Sku("CAF-500"));
+     assertThat(criteria.page()).isEqualTo(2);
+     assertThat(criteria.size()).isEqualTo(100);
+     assertThat(criteria.order())
+         .isEqualTo(new ProductSearchOrder("price", ProductSearchOrder.Direction.DESC));
+   }
+ 
++  @Test
++  void should_map_normalized_sku_when_parameter_has_spaces_and_lowercase() {
++    ProductSearchCriteria criteria = ProductWebMapper.toCriteria(parameters("sku", " caf-500 "));
++
++    assertThat(criteria.sku()).isEqualTo(new Sku("CAF-500"));
++  }
++
++  @Test
++  void should_reject_invalid_sku_when_parameter_has_invalid_format() {
++    assertInvalidParameter("sku", "CA/500");
++  }
++
+   @Test
+   void should_map_search_page_when_result_is_valid() {
+     ProductSearchPage page =
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchQueryIT.java b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchQueryIT.java
+index a109f6e..50c3f8d 100644
+--- a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchQueryIT.java
++++ b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchQueryIT.java
+@@ -7,6 +7,7 @@ import com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria;
+ import com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder;
+ import com.codeja.master_acdc.catalog.domain.model.ProductSearchPage;
+ import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
++import com.codeja.master_acdc.catalog.domain.model.Sku;
+ import java.util.List;
+ import java.util.Set;
+ import java.util.UUID;
+@@ -115,7 +116,8 @@ class ProductSearchQueryIT {
+             "Los seis filtros combinados",
+             criteria(
+                 new SearchFilters("price", "LAP", 100L, 500L, Set.of(ProductStatus.ACTIVE), true)),
+-            List.of(PRODUCT_WITH_STOCK)));
++            List.of(PRODUCT_WITH_STOCK)),
++        skuCase());
+   }
+ 
+   record SearchCase(String name, ProductSearchCriteria criteria, List<UUID> expectedIds) {}
+@@ -126,7 +128,40 @@ class ProductSearchQueryIT {
+       Long minPrice,
+       Long maxPrice,
+       Set<ProductStatus> statuses,
+-      boolean inStock) {}
++      boolean inStock,
++      Sku sku) {
++
++    SearchFilters(String order, String text, Long minPrice, Long maxPrice, Object... legacyValues) {
++      this(
++          order,
++          text,
++          minPrice,
++          maxPrice,
++          statuses(legacyValues[0]),
++          (Boolean) legacyValues[1],
++          null);
++    }
++
++    private static Set<ProductStatus> statuses(Object value) {
++      return ((Set<?>) value)
++          .stream().map(ProductStatus.class::cast).collect(java.util.stream.Collectors.toSet());
++    }
++  }
++
++  private static SearchCase skuCase() {
++    return new SearchCase(
++        "SKU normalizado",
++        criteria(
++            new SearchFilters(
++                "price",
++                null,
++                null,
++                null,
++                Set.of(),
++                false,
++                new Sku("SKU-10000000-0000-0000-0000-000000000003"))),
++        List.of(PRODUCT_CAFE));
++  }
+ 
+   private ProductSearchPage search(boolean inStock) {
+     return productSearchUseCase.search(
+@@ -150,6 +185,7 @@ class ProductSearchQueryIT {
+         filters.maxPrice(),
+         filters.statuses(),
+         filters.inStock(),
++        filters.sku(),
+         0,
+         20,
+         new ProductSearchOrder(filters.order(), ProductSearchOrder.Direction.ASC));
