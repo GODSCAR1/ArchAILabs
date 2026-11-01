@@ -46,15 +46,11 @@ Process finished with exit code 0
 
 ## Deuda: mappers
 
-La regla de mappers se aplicó al buscador del catálogo. Quedan pendientes la creación
-de productos y ordering:
+La regla de mappers se aplicó al buscador y a la creación del catálogo. La deuda restante
+es únicamente ordering:
 
-- `ProductJpaEntity.from` y el mapeo de creación en `ProductController`.
-- `CreateProductResponse.from`.
 - `OrderJpaEntity.from`.
 - `OrderSummaryResponse.from` y `OrderResponse.from`.
-
-No se refactorizan todavía para mantener el alcance del cambio.
 
 ## Paso 4 — número de consultas
 
@@ -117,3 +113,21 @@ There are test failures.
 Se restauró el mapper para enviar la versión esperada del producto. Con esa versión, el mismo
 test devuelve `ConcurrentProductModificationException` y confirma por JDBC que nombre y precio
 siguen siendo los originales.
+
+## Paso 5 — edición con @Version
+
+### Test de API: dos PUT con la misma versión
+
+Se creó un producto por `POST /api/products`, se tomó la versión inicial de la respuesta y se
+enviaron dos PUT válidos con esa misma versión:
+
+```text
+bash ./mvnw -q -Dtest=ProductEditingIT test
+```
+
+El primer PUT devolvió `200 OK` con la edición confirmada y la versión incrementada. El segundo
+PUT devolvió `409 Conflict` con ProblemDetail type
+`https://api.master-acdc.dev/problems/concurrent-modification`.
+
+El resultado se verificó directamente en la base de datos: el producto conserva el nombre y el
+precio del primer PUT; los valores del segundo PUT no se guardan.

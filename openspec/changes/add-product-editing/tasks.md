@@ -17,5 +17,5 @@
 
 ## 4. Documentación e integración
 
-- [ ] 4.1 Actualizar `docs/lab-s09.md` para dejar en la sección de deuda de mappers únicamente ordering; verificar con una inspección automatizada o revisión de diff que no queden las dos entradas de creación del catálogo.
-- [ ] 4.2 Ejecutar `bash ./verify-quality.sh --fast` y corregir cualquier fallo de especificaciones, Spotless, Checkstyle o tests sin relajar umbrales.
+- [x] 4.1 Actualizar `docs/lab-s09.md` para dejar en la sección de deuda de mappers únicamente ordering; verificar con una inspección automatizada o revisión de diff que no queden las dos entradas de creación del catálogo.
+- [x] 4.2 Ejecutar `bash ./verify-quality.sh --fast` y corregir cualquier fallo de especificaciones, Spotless, Checkstyle o tests sin relajar umbrales.
