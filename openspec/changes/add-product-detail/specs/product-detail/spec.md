@@ -54,6 +54,10 @@ El sistema SHALL exponer `GET /api/products/{sku}/reviews` con página cero-inde
 - **WHEN** dos reseñas de un producto tienen el mismo `createdAt`
 - **THEN** el sistema responde `200` colocándolas según `id` ascendente después del orden descendente por fecha
 
+#### Scenario: Paginación de reseñas inválida
+- **WHEN** el cliente solicita reseñas con `page < 0` o `size < 1`
+- **THEN** el sistema responde `400` con el mismo tipo de problema y parámetro que el buscador mediante `InvalidSearchParameterException`
+
 #### Scenario: SKU inexistente en reseñas
 - **WHEN** el cliente solicita `GET /api/products/SKU-INEXISTENTE/reviews`
 - **THEN** el sistema responde `404` con un `ProblemDetail` cuyo `type` es `https://api.master-acdc.dev/problems/product-not-found`

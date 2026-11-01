@@ -2,13 +2,18 @@ package com.codeja.master_acdc.catalog.infrastructure.config;
 
 import com.codeja.master_acdc.catalog.application.CreateProductService;
 import com.codeja.master_acdc.catalog.application.EditProductService;
+import com.codeja.master_acdc.catalog.application.ProductDetailService;
 import com.codeja.master_acdc.catalog.application.ProductSearchService;
 import com.codeja.master_acdc.catalog.application.port.CreateProductUseCase;
 import com.codeja.master_acdc.catalog.application.port.EditProductUseCase;
+import com.codeja.master_acdc.catalog.application.port.ProductDetailUseCase;
+import com.codeja.master_acdc.catalog.application.port.ProductReviewsUseCase;
 import com.codeja.master_acdc.catalog.application.port.ProductSearchUseCase;
+import com.codeja.master_acdc.catalog.domain.port.ProductDetailRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductEditingRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductSearchRepository;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.ProductDetailRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.ProductEditingRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.ProductJpaRepository;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.ProductRepositoryAdapter;
@@ -58,5 +63,27 @@ public class ProductConfiguration {
   public ProductSearchUseCase productSearchUseCase(
       ProductSearchRepository productSearchRepository) {
     return new ProductSearchService(productSearchRepository);
+  }
+
+  @Bean
+  public ProductDetailRepository productDetailRepository(EntityManager entityManager) {
+    return new ProductDetailRepositoryAdapter(entityManager);
+  }
+
+  @Bean
+  public ProductDetailUseCase productDetailUseCase(
+      ProductDetailRepository repository, PlatformTransactionManager transactionManager) {
+    ProductDetailService delegate = new ProductDetailService(repository);
+    TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+    return sku -> transactionTemplate.execute(status -> delegate.findBySku(sku));
+  }
+
+  @Bean
+  public ProductReviewsUseCase productReviewsUseCase(
+      ProductDetailRepository repository, PlatformTransactionManager transactionManager) {
+    ProductDetailService delegate = new ProductDetailService(repository);
+    TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+    return (sku, page, size) ->
+        transactionTemplate.execute(status -> delegate.findBySku(sku, page, size));
   }
 }
