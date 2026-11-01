@@ -19,14 +19,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Configuration
 public class InventoryConfiguration {
 
+  /**
+   * Un solo adaptador para los dos puertos de stock (StockRepository y StockReservationRepository):
+   * dos beans de la misma clase rompen cualquier inyección por tipo concreto.
+   */
   @Bean
-  public StockRepository stockRepository(StockJpaRepository stockJpaRepository) {
-    return new StockRepositoryAdapter(stockJpaRepository);
-  }
-
-  @Bean
-  public StockReservationRepository stockReservationRepository(
-      StockJpaRepository stockJpaRepository) {
+  public StockRepositoryAdapter stockRepository(StockJpaRepository stockJpaRepository) {
     return new StockRepositoryAdapter(stockJpaRepository);
   }
 
