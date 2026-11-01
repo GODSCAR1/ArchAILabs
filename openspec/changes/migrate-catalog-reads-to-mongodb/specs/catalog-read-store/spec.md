@@ -120,8 +120,8 @@ buscador, la ficha y las reseñas, incluyendo rating con dos decimales y redonde
 
 #### Scenario: Fichas equivalentes
 - **WHEN** se comparan doscientos SKU elegidos aleatoriamente después de migrar
-- **THEN** los `ProductDetail` construidos desde ambos almacenes son iguales y sus promedios de rating se comparan por valor decimal, no por representación
+- **THEN** las fichas de dominio construidas desde ambos almacenes son iguales y sus promedios de rating se comparan por valor decimal, no por representación
 
 #### Scenario: Buscador equivalente
 - **WHEN** se ejecuta la suite de búsquedas con cada valor de `catalog.read-store`
-- **THEN** filtros, ordenación, paginación, disponibilidad y metadatos producen los mismos resultados de dominio que PostgreSQL, incluidos texto con caracteres especiales y orden por nombre con mayúsculas, minúsculas y acentos
+- **THEN** filtros, ordenación, paginación, disponibilidad y metadatos producen los mismos resultados de dominio, incluidos texto con caracteres especiales y orden por nombre con mayúsculas, minúsculas y acentos
