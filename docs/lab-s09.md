@@ -92,3 +92,28 @@ El mismo comando terminó correctamente con el umbral original (`<= 2`):
 ```text
 Process finished with exit code 0
 ```
+
+## Paso 5 — conflicto al guardar
+
+### Experimento rojo: no usar la versión esperada
+
+Se cambió temporalmente el mapper para enviar `version + 1` al adaptador JPA y se ejecutó:
+
+```text
+bash ./mvnw -q -Dtest=ProductEditConflictIT test
+```
+
+El test determinista falló porque la edición no produjo el conflicto esperado:
+
+```text
+[ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
+[ERROR] ProductEditConflictIT.should_reject_when_version_changes_before_save
+java.lang.AssertionError:
+Expecting code to raise a throwable.
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test
+There are test failures.
+```
+
+Se restauró el mapper para enviar la versión esperada del producto. Con esa versión, el mismo
+test devuelve `ConcurrentProductModificationException` y confirma por JDBC que nombre y precio
+siguen siendo los originales.

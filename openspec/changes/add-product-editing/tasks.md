@@ -7,8 +7,8 @@
 
 ## 2. Persistencia y transacción
 
-- [ ] 2.1 Mover la conversión de entidad JPA a `ProductPersistenceMapper`, conservar `@Version` y adaptar el repositorio para devolver la versión inicial y la nueva versión tras guardar; verificar con tests unitarios del mapper y una integración de repositorio que compruebe versión y preservación de campos.
-- [ ] 2.2 Ensamblar la edición con `TransactionTemplate` en configuración de infraestructura y hacer que el adaptador use `saveAndFlush`, traduciendo `ObjectOptimisticLockingFailureException` a la excepción de concurrencia; verificar con una integración determinista que, después de leer y comparar dentro de la transacción, otra conexión incremente la versión por JDBC antes del `saveAndFlush`, y que el resultado sea 409 sin conservar los datos del PUT.
+- [x] 2.1 Mover la conversión de entidad JPA a `ProductPersistenceMapper`, conservar `@Version` y adaptar el repositorio para devolver la versión inicial y la nueva versión tras guardar; verificar con tests unitarios del mapper y una integración de repositorio que compruebe versión y preservación de campos.
+- [x] 2.2 Ensamblar la edición con `TransactionTemplate` en configuración de infraestructura y hacer que el adaptador use `saveAndFlush`, traduciendo `ObjectOptimisticLockingFailureException` a la excepción de concurrencia; verificar con una integración determinista que, después de leer y comparar dentro de la transacción, otra conexión incremente la versión por JDBC antes del `saveAndFlush`, y que el resultado sea 409 sin conservar los datos del PUT.
 
 ## 3. API web y mappers
 

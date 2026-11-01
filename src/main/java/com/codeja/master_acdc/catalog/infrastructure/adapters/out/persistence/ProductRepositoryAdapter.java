@@ -25,7 +25,7 @@ public class ProductRepositoryAdapter implements ProductRepository {
   @Override
   public void save(Product product) {
     try {
-      productJpaRepository.saveAndFlush(ProductJpaEntity.from(product));
+      productJpaRepository.saveAndFlush(ProductPersistenceMapper.toEntity(product));
     } catch (DataIntegrityViolationException exception) {
       if (violatesUniqueSkuConstraint(exception)) {
         throw new DuplicateSkuException(product.sku().value(), exception);

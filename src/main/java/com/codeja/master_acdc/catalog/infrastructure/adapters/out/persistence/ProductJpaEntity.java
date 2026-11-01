@@ -1,6 +1,5 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence;
 
-import com.codeja.master_acdc.catalog.domain.model.Product;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -52,18 +51,15 @@ public class ProductJpaEntity {
 
   protected ProductJpaEntity() {}
 
-  private ProductJpaEntity(Product product) {
-    this.id = product.id();
-    this.name = product.name().value();
-    this.sku = product.sku().value();
-    this.price = product.price().value();
-    this.categoryId = product.categoryId();
-    this.status = product.status().name();
-    this.createdAt = product.createdAt();
-  }
-
-  static ProductJpaEntity from(Product product) {
-    return new ProductJpaEntity(product);
+  ProductJpaEntity(ProductJpaData data) {
+    this.id = data.id();
+    this.name = data.name();
+    this.sku = data.sku();
+    this.price = data.price();
+    this.categoryId = data.categoryId();
+    this.status = data.status();
+    this.createdAt = data.createdAt();
+    this.version = data.version();
   }
 
   CategoryJpaEntity category() {
@@ -88,5 +84,21 @@ public class ProductJpaEntity {
 
   String status() {
     return status;
+  }
+
+  String sku() {
+    return sku;
+  }
+
+  UUID categoryId() {
+    return categoryId;
+  }
+
+  Instant createdAt() {
+    return createdAt;
+  }
+
+  long version() {
+    return version;
   }
 }
