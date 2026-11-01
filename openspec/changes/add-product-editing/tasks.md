@@ -2,8 +2,8 @@
 
 ## 1. Modelo y caso de uso
 
-- [ ] 1.1 Extender el modelo de producto y el puerto de catálogo para transportar la versión, localizar por id y guardar una edición sin modificar SKU, categoría, status ni fecha; verificar con tests unitarios llamados `should_update_name_and_price_when_version_is_current`, `should_reject_when_client_version_is_stale` y `should_preserve_product_when_name_or_price_is_invalid`.
-- [ ] 1.2 Implementar el caso de uso y sus excepciones de inexistencia y concurrencia, aplicando los value objects antes de cambiar el producto; verificar con tests unitarios llamados `should_throw_product_not_found_when_id_does_not_exist`, `should_throw_concurrent_modification_when_version_is_stale` y `should_reject_when_version_is_missing`, ejecutados con `bash ./mvnw -q -Dtest=*Product*ServiceTest test` y sin `@DisplayName` de escenarios.
+- [x] 1.1 Extender el modelo de producto y el puerto de catálogo para transportar la versión, localizar por id y guardar una edición sin modificar SKU, categoría, status ni fecha; verificar con tests unitarios llamados `should_update_name_and_price_when_version_is_current`, `should_reject_when_client_version_is_stale` y `should_preserve_product_when_name_or_price_is_invalid`.
+- [x] 1.2 Implementar el caso de uso y sus excepciones de inexistencia y concurrencia, aplicando los value objects antes de cambiar el producto; verificar con tests unitarios llamados `should_throw_product_not_found_when_id_does_not_exist`, `should_throw_concurrent_modification_when_version_is_stale` y `should_reject_when_version_is_missing`, ejecutados con `bash ./mvnw -q -Dtest=*Product*ServiceTest test` y sin `@DisplayName` de escenarios.
 
 ## 2. Persistencia y transacción
 

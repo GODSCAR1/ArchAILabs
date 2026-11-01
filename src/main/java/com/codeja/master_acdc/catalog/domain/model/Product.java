@@ -11,7 +11,8 @@ public record Product(
     Price price,
     UUID categoryId,
     ProductStatus status,
-    Instant createdAt) {
+    Instant createdAt,
+    long version) {
 
   public static Product create(ProductName name, Sku sku, Price price) {
     return new Product(
@@ -21,6 +22,11 @@ public record Product(
         price,
         Category.UNCATEGORIZED_ID,
         ProductStatus.ACTIVE,
-        Instant.now());
+        Instant.now(),
+        0);
+  }
+
+  public Product edit(ProductName newName, Price newPrice) {
+    return new Product(id, newName, sku, newPrice, categoryId, status, createdAt, version);
   }
 }
