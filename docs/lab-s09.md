@@ -278,6 +278,15 @@ Aplicado al cierre del lab: la regla de la Guide en `AGENTS.md` y la regla ArchU
 `Object[]`", salvo `equals`), añadida a los guardianes. Los casts no tienen verificador
 automático; agrupar los filtros de `ProductSearchCriteria` queda como deuda.
 
+Rojo de la regla con el código real de la prueba 1 (`git stash apply` del parche):
+
+```text
+bash ./mvnw -q -Dtest=DomainSignatureRulesTest test
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package '..domain..' should not accept Object or Object[] parameters' was violated (2 times):
+com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria.<init>(java.lang.String, java.util.UUID, java.lang.Long, java.lang.Long, [Ljava.lang.Object;) accepts Object or Object[]
+com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria.statuses(java.lang.Object) accepts Object or Object[]
+```
+
 El código de la prueba no se mergea: queda como parche en `evidencias/s09-prueba-1/codigo.patch`.
 
 ### Prueba 2 — en una funcionalidad legítima actúa la revisión de la propuesta
