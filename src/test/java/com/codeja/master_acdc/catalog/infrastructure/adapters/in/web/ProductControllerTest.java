@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeja.master_acdc.catalog.application.port.CreateProductUseCase;
+import com.codeja.master_acdc.catalog.application.port.EditProductUseCase;
 import com.codeja.master_acdc.catalog.application.port.ProductSearchUseCase;
 import com.codeja.master_acdc.catalog.domain.exception.DuplicateSkuException;
 import com.codeja.master_acdc.catalog.domain.exception.InvalidProductException;
@@ -42,6 +43,7 @@ class ProductControllerTest {
   @Autowired MockMvc mockMvc;
 
   @MockitoBean CreateProductUseCase createProductUseCase;
+  @MockitoBean EditProductUseCase editProductUseCase;
   @MockitoBean ProductSearchUseCase productSearchUseCase;
 
   @Test

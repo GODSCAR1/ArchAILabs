@@ -12,8 +12,8 @@
 
 ## 3. API web y mappers
 
-- [ ] 3.1 Añadir el request y la respuesta de edición y concentrar en `ProductWebMapper` la conversión de petición y resultado, incluyendo la versión en la respuesta de creación; verificar `ProductWebMapperTest` con casos de normalización y versión.
-- [ ] 3.2 Exponer `PUT /api/products/{id}` y ampliar el manejador de errores para los tipos `product-not-found` y `concurrent-modification`; verificar con tests de integración HTTP cuyos `@DisplayName` sean exactamente `Edición válida del producto`, `Versión del cliente obsoleta`, `Conflicto detectado al guardar`, `Producto inexistente`, `Nombre o precio inválido`, `Versión ausente` y `Producto creado`, comprobando los códigos, tipos ProblemDetail y que los productos rechazados quedan sin cambios.
+- [x] 3.1 Añadir el request y la respuesta de edición y concentrar en `ProductWebMapper` la conversión de petición y resultado, incluyendo la versión en la respuesta de creación; verificar `ProductWebMapperTest` con casos de normalización y versión.
+- [x] 3.2 Exponer `PUT /api/products/{id}` y ampliar el manejador de errores para los tipos `product-not-found` y `concurrent-modification`; verificar con tests de integración HTTP cuyos `@DisplayName` sean exactamente `Edición válida del producto`, `Versión del cliente obsoleta`, `Conflicto detectado al guardar`, `Producto inexistente`, `Nombre o precio inválido`, `Versión ausente` y `Producto creado`, comprobando los códigos, tipos ProblemDetail y que los productos rechazados quedan sin cambios.
 
 ## 4. Documentación e integración
 

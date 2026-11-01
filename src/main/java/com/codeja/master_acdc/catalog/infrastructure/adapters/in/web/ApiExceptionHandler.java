@@ -1,9 +1,11 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
+import com.codeja.master_acdc.catalog.domain.exception.ConcurrentProductModificationException;
 import com.codeja.master_acdc.catalog.domain.exception.DuplicateSkuException;
 import com.codeja.master_acdc.catalog.domain.exception.InvalidPriceRangeException;
 import com.codeja.master_acdc.catalog.domain.exception.InvalidProductException;
 import com.codeja.master_acdc.catalog.domain.exception.InvalidSortFieldException;
+import com.codeja.master_acdc.catalog.domain.exception.ProductNotFoundException;
 import java.net.URI;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
@@ -43,6 +45,25 @@ public class ApiExceptionHandler {
   @ExceptionHandler(DuplicateSkuException.class)
   ProblemDetail handleDuplicateSku(DuplicateSkuException exception) {
     return problem(HttpStatus.CONFLICT, "Duplicate SKU", exception.getMessage());
+  }
+
+  @ExceptionHandler(ProductNotFoundException.class)
+  ProblemDetail handleProductNotFound(ProductNotFoundException exception) {
+    return typedProblem(
+        HttpStatus.NOT_FOUND,
+        "Product not found",
+        exception.getMessage(),
+        "https://api.master-acdc.dev/problems/product-not-found");
+  }
+
+  @ExceptionHandler(ConcurrentProductModificationException.class)
+  ProblemDetail handleConcurrentProductModification(
+      ConcurrentProductModificationException exception) {
+    return typedProblem(
+        HttpStatus.CONFLICT,
+        "Concurrent modification",
+        exception.getMessage(),
+        "https://api.master-acdc.dev/problems/concurrent-modification");
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)

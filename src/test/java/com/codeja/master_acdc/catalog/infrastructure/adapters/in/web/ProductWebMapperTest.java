@@ -4,11 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.codeja.master_acdc.catalog.domain.exception.InvalidSortFieldException;
+import com.codeja.master_acdc.catalog.domain.model.Price;
+import com.codeja.master_acdc.catalog.domain.model.Product;
+import com.codeja.master_acdc.catalog.domain.model.ProductName;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchPage;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchRow;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
+import com.codeja.master_acdc.catalog.domain.model.Sku;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -19,6 +24,39 @@ class ProductWebMapperTest {
 
   private static final UUID CATEGORY_ID = UUID.fromString("40000000-0000-0000-0000-000000000001");
   private static final UUID PRODUCT_ID = UUID.fromString("40000000-0000-0000-0000-000000000002");
+
+  @Test
+  void should_map_edit_request_when_values_are_valid() {
+    EditProductRequest request = new EditProductRequest("Cafe", new BigDecimal("250"), 3L);
+
+    ProductWebMapper.EditProductArguments arguments =
+        ProductWebMapper.toEditArguments(PRODUCT_ID, request);
+
+    assertThat(arguments.productId()).isEqualTo(PRODUCT_ID);
+    assertThat(arguments.name()).isEqualTo("Cafe");
+    assertThat(arguments.price()).isEqualByComparingTo("250");
+    assertThat(arguments.version()).isEqualTo(3L);
+  }
+
+  @Test
+  void should_map_product_to_edit_response_when_product_is_valid() {
+    Product product = product();
+
+    EditProductResponse response = ProductWebMapper.toEditResponse(product);
+
+    assertThat(response)
+        .isEqualTo(new EditProductResponse(product.id(), "Cafe", 100, product.version()));
+  }
+
+  @Test
+  void should_include_version_when_mapping_product_creation_response() {
+    Product product = product();
+
+    CreateProductResponse response = ProductWebMapper.toCreateResponse(product);
+
+    assertThat(response)
+        .isEqualTo(new CreateProductResponse(product.id(), "Cafe", 100, "CAF-500", 0));
+  }
 
   @Test
   void should_map_search_parameters_when_values_are_valid() {
@@ -129,5 +167,10 @@ class ProductWebMapperTest {
     MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
     parameters.add(name, value);
     return parameters;
+  }
+
+  private static Product product() {
+    return Product.create(
+        new ProductName("Cafe"), new Sku("CAF-500"), Price.of(new BigDecimal("100")));
   }
 }

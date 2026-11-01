@@ -1,6 +1,7 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
 import com.codeja.master_acdc.catalog.domain.exception.InvalidSortFieldException;
+import com.codeja.master_acdc.catalog.domain.model.Product;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchPage;
@@ -15,6 +16,24 @@ import org.springframework.util.MultiValueMap;
 final class ProductWebMapper {
 
   private ProductWebMapper() {}
+
+  static EditProductArguments toEditArguments(UUID productId, EditProductRequest request) {
+    return new EditProductArguments(productId, request.name(), request.price(), request.version());
+  }
+
+  static EditProductResponse toEditResponse(Product product) {
+    return new EditProductResponse(
+        product.id(), product.name().value(), product.price().value(), product.version());
+  }
+
+  static CreateProductResponse toCreateResponse(Product product) {
+    return new CreateProductResponse(
+        product.id(),
+        product.name().value(),
+        product.price().value(),
+        product.sku().value(),
+        product.version());
+  }
 
   static ProductSearchCriteria toCriteria(MultiValueMap<String, String> parameters) {
     Long minPrice = longParameter(parameters, "minPrice");
@@ -119,4 +138,7 @@ final class ProductWebMapper {
       throw new InvalidSearchParameterException(name);
     }
   }
+
+  record EditProductArguments(
+      UUID productId, String name, java.math.BigDecimal price, Long version) {}
 }
