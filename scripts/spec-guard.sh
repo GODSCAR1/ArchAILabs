@@ -5,7 +5,8 @@
 set -euo pipefail
 BASE=${1:-origin/main}
 CHANGED=$(git diff --name-only "$BASE"...HEAD)
-ARCHIVED=$(git diff --name-only --diff-filter=A "$BASE"...HEAD | grep '^openspec/changes/archive/' || true)
+# --no-renames: "openspec archive" mueve el change a archive/ y git lo ve como renombrado, no como alta.
+ARCHIVED=$(git diff --name-only --no-renames --diff-filter=A "$BASE"...HEAD | grep '^openspec/changes/archive/' || true)
 
 SPECS=$(grep '^openspec/specs/.*spec\.md$' <<<"$CHANGED" || true)
 [[ -z "$SPECS" ]] && { echo "Spec-guard: OK (sin cambios en openspec/specs/)"; exit 0; }

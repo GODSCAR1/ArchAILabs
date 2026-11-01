@@ -1,6 +1,7 @@
 // .opencode/plugins/verify-quality.ts
 import type { Plugin } from "@opencode-ai/plugin"
 import path from "node:path"
+import fs from "node:fs"
 
 // Rutas que toca una herramienta de edición. OpenCode edita con edit/write (filePath) y, según el
 // modelo, con apply_patch (patchText con "*** Add|Update|Delete File: <ruta>" y "*** Move to: <ruta>").
@@ -17,6 +18,21 @@ const MAX_ATTEMPTS = 3
 // Rutas RELATIVAS a la raíz del repo: config/ de la raíz, no infrastructure/config/
 const PROTECTED = /^(config|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^src\/main\/resources\/application[^/]*$|^\.env(\..*)?$/
 
+// Tests guardianes (lab S09, paso 8): misma lista que protect-verify.sh y verify-quality.sh
+const GUARDS_FILE = "scripts/protected-tests.txt"
+const WRITES = /(>|sed\s+-i|(^|[^\w-])(rm|mv|cp|tee|truncate|unlink)\s|git\s+(rm|mv|checkout|restore)|set-content|add-content|out-file|copy-item|move-item|remove-item|rename-item|new-item|clear-content)/i
+
+function loadGuards(directory: string): string[] {
+  // Falla cerrado: sin lista no se puede verificar
+  const raw = fs.readFileSync(path.join(directory, GUARDS_FILE), "utf8")
+  return raw.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith("#"))
+}
+
+function guardMessage(rel: string): string {
+  return `AC/DC: ${rel} es un test guardián (${GUARDS_FILE}): protege el buscador o la concurrencia. ` +
+    `No se borra, no se mueve, no se renombra ni se debilita. Si crees que sobra o es lento, explica por qué a la persona y detente.`
+}
+
 export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
   const attempts = new Map<string, number>()
   const running = new Set<string>()
@@ -24,8 +40,18 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
   return {
     // Guía dura: zona protegida (≈ PreToolUse)
     "tool.execute.before": async (input, output) => {
+      const guards = loadGuards(directory)
+      if (input.tool === "bash") {
+        const cmd = String(output.args?.command ?? "")
+        if (WRITES.test(cmd)) {
+          const hit = guards.find(g => cmd.includes(path.basename(g)))
+          if (hit) throw new Error(guardMessage(hit))
+        }
+        return
+      }
       for (const raw of editedPaths(input.tool, output.args)) {
         const rel = path.relative(directory, path.resolve(directory, raw)).replace(/\\/g, "/")
+        if (guards.includes(rel)) throw new Error(guardMessage(rel))
         if (PROTECTED.test(rel)) {
           throw new Error(`AC/DC: ${rel} está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.`)
         }

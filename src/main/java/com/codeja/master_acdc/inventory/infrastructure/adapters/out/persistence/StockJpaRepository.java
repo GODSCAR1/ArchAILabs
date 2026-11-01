@@ -1,17 +1,27 @@
 package com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence;
 
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.QueryHint;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 public interface StockJpaRepository extends JpaRepository<StockJpaEntity, UUID> {
 
   @Query("select stock.productId from StockJpaEntity stock where stock.productId in :productIds")
   Set<UUID> findProductIdsIn(@Param("productIds") Collection<UUID> productIds);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "2000"))
+  @Query("select stock from StockJpaEntity stock where stock.productId = :productId")
+  Optional<StockJpaEntity> findForUpdateById(@Param("productId") UUID productId);
 
   @Modifying
   @Query(

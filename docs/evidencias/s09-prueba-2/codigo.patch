@@ -1,0 +1,245 @@
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/domain/model/ProductSearchCriteria.java b/src/main/java/com/codeja/master_acdc/catalog/domain/model/ProductSearchCriteria.java
+index 902bbe1..046f11f 100644
+--- a/src/main/java/com/codeja/master_acdc/catalog/domain/model/ProductSearchCriteria.java
++++ b/src/main/java/com/codeja/master_acdc/catalog/domain/model/ProductSearchCriteria.java
+@@ -23,7 +23,7 @@ public record ProductSearchCriteria(
+     if (minPrice != null && maxPrice != null && minPrice > maxPrice) {
+       throw new InvalidPriceRangeException();
+     }
+-    if (!Set.of("name", "price", "createdAt").contains(order.field())) {
++    if (!Set.of("name", "price", "createdAt", "stock").contains(order.field())) {
+       throw new InvalidSortFieldException(order.field());
+     }
+     statuses = Set.copyOf(statuses == null ? Set.of() : statuses);
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapper.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapper.java
+index 9284e99..41324a4 100644
+--- a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapper.java
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductWebMapper.java
+@@ -79,7 +79,7 @@ final class ProductWebMapper {
+       return new ProductSearchOrder("createdAt", ProductSearchOrder.Direction.ASC);
+     }
+     String[] parts = rawSort.split(",", -1);
+-    if (parts.length > 2 || !Set.of("name", "price", "createdAt").contains(parts[0])) {
++    if (parts.length > 2 || !Set.of("name", "price", "createdAt", "stock").contains(parts[0])) {
+       throw new InvalidSortFieldException(parts[0]);
+     }
+     ProductSearchOrder.Direction direction =
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchRepositoryAdapter.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchRepositoryAdapter.java
+index bb3955a..0fa67d2 100644
+--- a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchRepositoryAdapter.java
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchRepositoryAdapter.java
+@@ -50,11 +50,17 @@ public class ProductSearchRepositoryAdapter implements ProductSearchRepository {
+     if (criteria.inStock()) {
+       filters.add(ProductSpecifications.hasStock());
+     }
++    if ("stock".equals(criteria.order().field())) {
++      filters.add(ProductSpecifications.orderByStock(criteria.order().direction()));
++    }
+     filters.add(ProductSpecifications.fetchAssociations());
+     return Specification.allOf(filters);
+   }
+ 
+   private PageRequest pageRequest(ProductSearchCriteria criteria) {
++    if ("stock".equals(criteria.order().field())) {
++      return PageRequest.of(criteria.page(), criteria.size());
++    }
+     Sort.Direction direction =
+         criteria.order().direction()
+                 == com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder.Direction.ASC
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSpecifications.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSpecifications.java
+index fc93ef9..eb08b98 100644
+--- a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSpecifications.java
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSpecifications.java
+@@ -1,7 +1,10 @@
+ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence;
+ 
++import com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder;
+ import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
++import jakarta.persistence.criteria.Expression;
+ import jakarta.persistence.criteria.JoinType;
++import jakarta.persistence.criteria.Order;
+ import java.util.Collection;
+ import java.util.UUID;
+ import org.springframework.data.jpa.domain.Specification;
+@@ -42,6 +45,22 @@ final class ProductSpecifications {
+             root.join(ProductJpaEntity_.stock).get(CatalogStockJpaEntity_.available), 0);
+   }
+ 
++  static Specification<ProductJpaEntity> orderByStock(ProductSearchOrder.Direction direction) {
++    return (root, query, builder) -> {
++      if (query.getResultType() != Long.class && query.getResultType() != long.class) {
++        var stock = root.join(ProductJpaEntity_.stock, JoinType.LEFT);
++        Expression<Integer> available =
++            builder.coalesce(stock.get(CatalogStockJpaEntity_.available), 0);
++        Order stockOrder =
++            direction == ProductSearchOrder.Direction.ASC
++                ? builder.asc(available)
++                : builder.desc(available);
++        query.orderBy(stockOrder, builder.asc(root.get(ProductJpaEntity_.id)));
++      }
++      return null;
++    };
++  }
++
+   static Specification<ProductJpaEntity> fetchAssociations() {
+     return (root, query, builder) -> {
+       if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductControllerTest.java b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductControllerTest.java
+index 4336664..5c5c2e8 100644
+--- a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductControllerTest.java
++++ b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductControllerTest.java
+@@ -124,6 +124,26 @@ class ProductControllerTest {
+         .andExpect(jsonPath("$.content[0].name").value("Laptop"));
+   }
+ 
++  @Test
++  @DisplayName("Ordenación por stock ascendente")
++  void should_accept_stock_ascending_sort_when_searching_products() throws Exception {
++    given(productSearchUseCase.search(any())).willReturn(page());
++
++    mockMvc
++        .perform(get("/api/products").queryParam("sort", "stock,asc"))
++        .andExpect(status().isOk());
++  }
++
++  @Test
++  @DisplayName("Ordenación por stock descendente")
++  void should_accept_stock_descending_sort_when_searching_products() throws Exception {
++    given(productSearchUseCase.search(any())).willReturn(page());
++
++    mockMvc
++        .perform(get("/api/products").queryParam("sort", "stock,desc"))
++        .andExpect(status().isOk());
++  }
++
+   @Test
+   @DisplayName("Tamaño por encima del máximo")
+   void should_cap_page_size_when_search_size_exceeds_maximum() throws Exception {
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchStockSortIT.java b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchStockSortIT.java
+new file mode 100755
+index 0000000..1ca0b0c
+--- /dev/null
++++ b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchStockSortIT.java
+@@ -0,0 +1,122 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import com.codeja.master_acdc.catalog.application.port.ProductSearchUseCase;
++import com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria;
++import com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder;
++import com.codeja.master_acdc.catalog.domain.model.ProductSearchPage;
++import com.codeja.master_acdc.catalog.domain.model.ProductSearchRow;
++import java.util.List;
++import java.util.Set;
++import java.util.UUID;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.test.context.SpringBootTest;
++import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
++import org.springframework.jdbc.core.JdbcTemplate;
++import org.testcontainers.containers.PostgreSQLContainer;
++import org.testcontainers.junit.jupiter.Container;
++import org.testcontainers.junit.jupiter.Testcontainers;
++
++@SpringBootTest
++@Testcontainers
++class ProductSearchStockSortIT {
++
++  private static final UUID CATEGORY_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
++  private static final List<UUID> ASCENDING_IDS = ids(2, 5, 6, 1, 3, 4);
++  private static final List<UUID> DESCENDING_IDS = ids(4, 1, 3, 2, 5, 6);
++
++  @Container @ServiceConnection
++  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
++
++  @Autowired ProductSearchUseCase productSearchUseCase;
++  @Autowired JdbcTemplate jdbcTemplate;
++
++  @BeforeEach
++  void cleanDatabase() {
++    jdbcTemplate.update("delete from stock");
++    jdbcTemplate.update("delete from products");
++    for (int index = 1; index <= 6; index++) {
++      insertProduct(index);
++    }
++    insertStock(1, 2);
++    insertStock(2, 0);
++    insertStock(3, 2);
++    insertStock(4, 5);
++    insertStock(6, 0);
++  }
++
++  @Test
++  @DisplayName("Ordenación por stock ascendente")
++  void should_order_products_by_stock_ascending_when_stock_sort_is_requested() {
++    assertThat(searchAll(ProductSearchOrder.Direction.ASC))
++        .extracting(ProductSearchRow::id)
++        .containsExactlyElementsOf(ASCENDING_IDS);
++  }
++
++  @Test
++  @DisplayName("Ordenación por stock descendente")
++  void should_order_products_by_stock_descending_when_stock_sort_is_requested() {
++    assertThat(searchAll(ProductSearchOrder.Direction.DESC))
++        .extracting(ProductSearchRow::id)
++        .containsExactlyElementsOf(DESCENDING_IDS);
++  }
++
++  @Test
++  @DisplayName("Producto sin stock ordenado como cero")
++  void should_treat_missing_stock_as_zero_when_sorting_ascending() {
++    List<ProductSearchRow> rows = searchAll(ProductSearchOrder.Direction.ASC);
++
++    assertThat(rows.get(1).id()).isEqualTo(id(5));
++    assertThat(rows.get(1).stock()).isZero();
++  }
++
++  private List<ProductSearchRow> searchAll(ProductSearchOrder.Direction direction) {
++    List<ProductSearchRow> rows = new java.util.ArrayList<>();
++    for (int page = 0; ; page++) {
++      ProductSearchPage result =
++          productSearchUseCase.search(
++              new ProductSearchCriteria(
++                  null,
++                  null,
++                  null,
++                  null,
++                  Set.of(),
++                  false,
++                  page,
++                  2,
++                  new ProductSearchOrder("stock", direction)));
++      rows.addAll(result.content());
++      if (page + 1 >= result.totalPages()) {
++        return rows;
++      }
++    }
++  }
++
++  private void insertProduct(int index) {
++    jdbcTemplate.update(
++        "insert into products (id, name, sku, price, category_id, status, created_at, version) "
++            + "values (?, ?, ?, ?, ?, 'ACTIVE', current_timestamp, 0)",
++        id(index),
++        "Product " + index,
++        "STOCK-" + index,
++        100 + index,
++        CATEGORY_ID);
++  }
++
++  private void insertStock(int index, int available) {
++    jdbcTemplate.update(
++        "insert into stock (product_id, available) values (?, ?)", id(index), available);
++  }
++
++  private static List<UUID> ids(int... values) {
++    return java.util.Arrays.stream(values).mapToObj(ProductSearchStockSortIT::id).toList();
++  }
++
++  private static UUID id(int index) {
++    return UUID.fromString("00000000-0000-0000-0000-00000000000" + index);
++  }
++}

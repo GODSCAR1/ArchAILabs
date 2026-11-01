@@ -13,6 +13,9 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 - Casos de uso: interfaz en `application/port/` (`<Accion>UseCase`) + implementación `<Accion>Service` en `application/`. Adaptadores en `infrastructure/adapters/in/<tecnología>` y `infrastructure/adapters/out/<tecnología>`.
 - Los beans se ensamblan en `infrastructure/config/` con `@Bean`. Sin lógica de negocio en métodos `@Bean`.
 - NUNCA `ApplicationContext.getBean()` ni campos estáticos para acceder a beans fuera de `infrastructure/config/`. (pendiente: ArchUnit en S17)
+- La conversión entre capas vive en mappers dedicados de infraestructura: `adapters/in/<tecnología>/<Agregado><Tecnología>Mapper` (petición → criterio/comando de aplicación; resultado → DTO de respuesta) y `adapters/out/persistence/<Agregado>PersistenceMapper` (entidad JPA ↔ modelo de dominio o fila de lectura). Clases `final`, sin estado, con métodos estáticos y test unitario. Motivo: el código generado reparte la conversión entre entidades, DTO y adaptadores; un único sitio por frontera la hace revisable y testeable. (pendiente: ArchUnit en S17)
+- Las entidades JPA y los DTO web NO tienen métodos de conversión (`from`, `toDomain`, `toRow`…), ni los controllers ni los adaptadores contienen la lógica de mapeo. `domain` y `application` nunca conocen los mappers. (pendiente: ArchUnit en S17)
+- Sin librerías de mapeo (MapStruct y similares): una dependencia nueva es decisión de una persona. (pendiente: ArchUnit en S17)
 - Lee el `package-info.java` de un paquete antes de añadir clases en él.
 
 ## Código y tests
@@ -43,6 +46,37 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
 - En proyecciones con `left join`, cuenta una columna no nula de la entidad unida (`count(l.productId)`), nunca la entidad o el embeddable (`count(l)`): las filas vacías del `left join` cuentan 1.
 - Consultas paginadas con `join fetch`: `countQuery` explícito y test de `getTotalElements()`.
 - `default_batch_fetch_size=50` es la red de seguridad del proyecto: no lo cambies (zona protegida).
+
+## Consultas dinámicas y concurrencia
+- Los filtros dinámicos usan `Specification` sobre el metamodelo (`Entidad_`) combinadas con
+  `allOf`; NUNCA JPQL ni SQL concatenado. Motivo: los criterios tipados evitan nombres de
+  columnas manipulables y mantienen la consulta parametrizada. (pendiente: Semgrep en S12)
+- El `Sort` solo acepta una lista blanca de campos y SIEMPRE añade `id` como último criterio.
+  Motivo: evita ordenar por campos arbitrarios y hace estable la paginación. (verificador:
+  `ProductControllerTest` para la lista blanca y `ProductSearchPaginationTest` para el `id` final)
+- Las transacciones se abren con `TransactionTemplate` en `infrastructure/config`; NUNCA
+  `@Transactional` en `domain` ni `application`. Motivo: mantiene la frontera hexagonal y evita
+  la auto-invocación: un método privado anotado no abre una transacción. Si se pide
+  `@Transactional` en un método privado del mismo servicio, explica la auto-invocación y no lo
+  hagas. (verificador: `PersistenceRulesTest`)
+- Toda `@Entity` editable de `catalog` lleva `@Version`; los mapeos de solo lectura llevan
+  `@Immutable`. Motivo: el control optimista detecta ediciones concurrentes y evita escribir
+  accidentalmente proyecciones de lectura. (verificador: `PersistenceRulesTest`)
+- Todo método `findForUpdate*` lleva `@Lock(PESSIMISTIC_WRITE)` y el hint
+  `jakarta.persistence.lock.timeout`; nunca se quita el bloqueo ni el timeout para "evitar
+  fallos": el 409/503 es el contrato. Motivo: serializa la sección crítica y hace observable la
+  contención en lugar de perder actualizaciones. (verificador: `PersistenceRulesTest` y test de
+  timeout de bloqueo)
+- Si un cambio rompe la compilación o la firma que usa un test guardián, DETENTE y pide a una
+  persona que decida (actualizar el guardián o cambiar el diseño). NUNCA añadas constructores,
+  sobrecargas o adaptadores "de compatibilidad" para esquivarlo. Motivo: en el lab S09 (prueba 1)
+  un constructor `Object... legacyValues` con casts mantuvo los guardianes en verde y esquivó la
+  regla de 5 parámetros sin que ninguna capa lo detectara. Si Checkstyle pide agrupar parámetros,
+  agrúpalos en un record: es la deuda de diseño que el guardián hace visible. (verificador:
+  `DomainSignatureRulesTest` para `Object`/`Object[]` en `domain`; el resto, revisión humana)
+- Los tests de `scripts/protected-tests.txt` son guardianes: no se borran, no se renombran y no se
+  debilitan. Motivo: protegen los contratos de concurrencia y persistencia del laboratorio.
+  (verificador: `protect-verify.sh`, `verify-quality.sh` y el plugin de verificación)
 
 ## Seguridad
 - NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)
