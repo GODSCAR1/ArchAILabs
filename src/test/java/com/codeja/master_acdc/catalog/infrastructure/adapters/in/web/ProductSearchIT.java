@@ -1,6 +1,8 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -29,6 +31,8 @@ class ProductSearchIT {
   private static final UUID LAPTOP = UUID.fromString("20000000-0000-0000-0000-000000000001");
   private static final UUID PHONE = UUID.fromString("20000000-0000-0000-0000-000000000002");
   private static final UUID LAMP = UUID.fromString("20000000-0000-0000-0000-000000000003");
+  private static final UUID DESK = UUID.fromString("20000000-0000-0000-0000-000000000004");
+  private static final UUID DRAFT_LAPTOP = UUID.fromString("20000000-0000-0000-0000-000000000005");
   private static final UUID DEFAULT_CATEGORY =
       UUID.fromString("00000000-0000-0000-0000-000000000001");
 
@@ -102,6 +106,40 @@ class ProductSearchIT {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].id").value(LAPTOP.toString()))
         .andExpect(jsonPath("$.totalElements").value(1));
+  }
+
+  @Test
+  @DisplayName("Filtros de texto categoría precio y estados")
+  void should_filter_by_text_category_price_and_status_when_all_are_present() throws Exception {
+    insertProduct(DRAFT_LAPTOP, "Laptop draft", 180, "DRAFT");
+    mockMvc
+        .perform(
+            get("/api/products")
+                .queryParam("text", "lap")
+                .queryParam("categoryId", DEFAULT_CATEGORY.toString())
+                .queryParam("minPrice", "100")
+                .queryParam("maxPrice", "250")
+                .queryParam("status", "ACTIVE")
+                .queryParam("status", "DRAFT"))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath("$.content[*].id")
+                .value(containsInAnyOrder(LAPTOP.toString(), DRAFT_LAPTOP.toString())))
+        .andExpect(jsonPath("$.totalElements").value(2));
+  }
+
+  @Test
+  @DisplayName("Ordenación por precio con desempate")
+  void should_sort_by_price_and_id_when_prices_are_repeated() throws Exception {
+    insertProduct(DESK, "Desk", 200, "ACTIVE");
+    mockMvc
+        .perform(get("/api/products").queryParam("sort", "price,asc"))
+        .andExpect(status().isOk())
+        .andExpect(
+            jsonPath("$.content[*].id")
+                .value(
+                    contains(
+                        PHONE.toString(), LAPTOP.toString(), DESK.toString(), LAMP.toString())));
   }
 
   @Test

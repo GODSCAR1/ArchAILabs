@@ -13,6 +13,9 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 - Casos de uso: interfaz en `application/port/` (`<Accion>UseCase`) + implementación `<Accion>Service` en `application/`. Adaptadores en `infrastructure/adapters/in/<tecnología>` y `infrastructure/adapters/out/<tecnología>`.
 - Los beans se ensamblan en `infrastructure/config/` con `@Bean`. Sin lógica de negocio en métodos `@Bean`.
 - NUNCA `ApplicationContext.getBean()` ni campos estáticos para acceder a beans fuera de `infrastructure/config/`. (pendiente: ArchUnit en S17)
+- La conversión entre capas vive en mappers dedicados de infraestructura: `adapters/in/<tecnología>/<Agregado><Tecnología>Mapper` (petición → criterio/comando de aplicación; resultado → DTO de respuesta) y `adapters/out/persistence/<Agregado>PersistenceMapper` (entidad JPA ↔ modelo de dominio o fila de lectura). Clases `final`, sin estado, con métodos estáticos y test unitario. Motivo: el código generado reparte la conversión entre entidades, DTO y adaptadores; un único sitio por frontera la hace revisable y testeable. (pendiente: ArchUnit en S17)
+- Las entidades JPA y los DTO web NO tienen métodos de conversión (`from`, `toDomain`, `toRow`…), ni los controllers ni los adaptadores contienen la lógica de mapeo. `domain` y `application` nunca conocen los mappers. (pendiente: ArchUnit en S17)
+- Sin librerías de mapeo (MapStruct y similares): una dependencia nueva es decisión de una persona. (pendiente: ArchUnit en S17)
 - Lee el `package-info.java` de un paquete antes de añadir clases en él.
 
 ## Código y tests

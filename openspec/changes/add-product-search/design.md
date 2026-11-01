@@ -25,7 +25,8 @@ El catálogo hoy solo crea productos y su persistencia no contiene categoría, e
 
 Cada filtro se implementará como una `Specification` independiente sobre el metamodelo estático `ProductJpaEntity_` y se combinarán con `Specification.allOf`; nunca se construirá JPQL concatenando valores del usuario. La consulta unirá la categoría y el stock para producir el resumen, tratará un stock ausente como cero y añadirá siempre id al orden.
 
-La elección final queda entre dos alternativas y se decidirá en `docs/adr/0007` con números medidos:
+La elección final queda entre dos alternativas y se decidirá en
+`docs/adr/0007-buscador-y-concurrencia-del-catalogo.md` con números medidos:
 
 - A: `Specification` con fetch de categoría y stock en la consulta de página, excluyendo esos fetches en la consulta de count, con un máximo esperado de dos consultas por página.
 - B: Entity View de Blaze-Persistence, con una única consulta de proyección si las mediciones confirman que cubre filtros, orden, count y stock sin regresiones.

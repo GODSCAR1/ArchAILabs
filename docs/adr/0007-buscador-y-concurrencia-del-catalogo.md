@@ -1,4 +1,4 @@
-# ADR 0007: estrategia de consulta de productos
+# ADR 0007: buscador y concurrencia del catálogo
 
 - **Estado:** aceptado
 - **Contexto:** `add-product-search`
@@ -15,14 +15,14 @@ ni una dependencia nueva.
 La medición se realiza con PostgreSQL/Testcontainers y 120 productos, más que el
 tamaño de batch de 50, después de limpiar las estadísticas de Hibernate.
 
-| Alternativa | Consulta de página | Consulta de count | Total observado/objetivo | Entidades de stock por fila |
+| Alternativa | Consulta de página | Consulta de count | Resultado | Entidades de stock por fila |
 |---|---:|---:|---:|---:|
 | A. Specification + fetch condicional | 1 | 1 | 2 observado, umbral `<= 2` | 0 adicionales |
-| B. Entity View de Blaze-Persistence | 1 | integrada | 1 objetivo | 0 adicionales |
+| B. Entity View de Blaze-Persistence | no medida (requiere dependencia nueva) | no medida (requiere dependencia nueva) | no medida (requiere dependencia nueva) | no medida (requiere dependencia nueva) |
 
-La alternativa B tendría el mejor resultado teórico, pero no se puede medir ni
-introducir sin una dependencia que no forma parte del proyecto y cuya adición
-está fuera del alcance autorizado. La alternativa A cumple el umbral medido,
+La alternativa B no se ha medido porque requiere una dependencia nueva que no
+forma parte del proyecto y cuya adición está fuera del alcance autorizado. La
+alternativa A cumple el umbral medido,
 mantiene la consulta parametrizada y usa las capacidades ya instaladas.
 
 ## Consecuencias

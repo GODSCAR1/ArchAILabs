@@ -44,6 +44,18 @@ El mismo comando terminó correctamente:
 Process finished with exit code 0
 ```
 
+## Deuda: mappers
+
+La regla de mappers se aplicó al buscador del catálogo. Quedan pendientes la creación
+de productos y ordering:
+
+- `ProductJpaEntity.from` y el mapeo de creación en `ProductController`.
+- `CreateProductResponse.from`.
+- `OrderJpaEntity.from`.
+- `OrderSummaryResponse.from` y `OrderResponse.from`.
+
+No se refactorizan todavía para mantener el alcance del cambio.
+
 ## Paso 4 — número de consultas
 
 ### Experimento sin `fetchAssociations()`

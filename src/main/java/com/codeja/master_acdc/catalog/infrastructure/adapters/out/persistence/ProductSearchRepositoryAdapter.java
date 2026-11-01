@@ -2,7 +2,6 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence;
 
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchPage;
-import com.codeja.master_acdc.catalog.domain.model.ProductSearchRow;
 import com.codeja.master_acdc.catalog.domain.port.ProductSearchRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,7 +23,7 @@ public class ProductSearchRepositoryAdapter implements ProductSearchRepository {
     Page<ProductJpaEntity> page =
         productJpaRepository.findAll(specification(criteria), pageRequest(criteria));
     return new ProductSearchPage(
-        page.getContent().stream().map(ProductSearchRepositoryAdapter::toRow).toList(),
+        page.getContent().stream().map(ProductPersistenceMapper::toRow).toList(),
         page.getNumber(),
         page.getSize(),
         page.getTotalElements(),
@@ -63,16 +62,5 @@ public class ProductSearchRepositoryAdapter implements ProductSearchRepository {
             : Sort.Direction.DESC;
     Sort sort = Sort.by(direction, criteria.order().field()).and(Sort.by(Sort.Direction.ASC, "id"));
     return PageRequest.of(criteria.page(), criteria.size(), sort);
-  }
-
-  private static ProductSearchRow toRow(ProductJpaEntity product) {
-    int stock = product.stock() == null ? 0 : product.stock().available();
-    return new ProductSearchRow(
-        product.id(),
-        product.name(),
-        product.price(),
-        stock,
-        product.category().name(),
-        com.codeja.master_acdc.catalog.domain.model.ProductStatus.valueOf(product.status()));
   }
 }

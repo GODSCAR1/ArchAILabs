@@ -36,6 +36,9 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(ProductController.class)
 class ProductControllerTest {
 
+  private static final String INVALID_SEARCH_PARAMETER_TYPE =
+      "https://api.master-acdc.dev/problems/invalid-search-parameter";
+
   @Autowired MockMvc mockMvc;
 
   @MockitoBean CreateProductUseCase createProductUseCase;
@@ -145,6 +148,76 @@ class ProductControllerTest {
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.type").value("https://api.master-acdc.dev/problems/invalid-sort-field"));
+  }
+
+  @Test
+  void should_return_400_problem_when_status_is_not_recognized() throws Exception {
+    mockMvc
+        .perform(get("/api/products").queryParam("status", "UNKNOWN"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.type").value(INVALID_SEARCH_PARAMETER_TYPE));
+  }
+
+  @Test
+  void should_return_400_problem_when_category_id_is_not_uuid() throws Exception {
+    mockMvc
+        .perform(get("/api/products").queryParam("categoryId", "not-a-uuid"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.type").value(INVALID_SEARCH_PARAMETER_TYPE));
+  }
+
+  @Test
+  void should_return_400_problem_when_min_price_is_not_numeric() throws Exception {
+    mockMvc
+        .perform(get("/api/products").queryParam("minPrice", "abc"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.type").value(INVALID_SEARCH_PARAMETER_TYPE));
+  }
+
+  @Test
+  void should_return_400_problem_when_max_price_is_not_numeric() throws Exception {
+    mockMvc
+        .perform(get("/api/products").queryParam("maxPrice", "abc"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.type").value(INVALID_SEARCH_PARAMETER_TYPE));
+  }
+
+  @Test
+  void should_return_400_problem_when_page_is_not_numeric() throws Exception {
+    mockMvc
+        .perform(get("/api/products").queryParam("page", "abc"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.type").value(INVALID_SEARCH_PARAMETER_TYPE));
+  }
+
+  @Test
+  void should_return_400_problem_when_size_is_not_numeric() throws Exception {
+    mockMvc
+        .perform(get("/api/products").queryParam("size", "abc"))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(jsonPath("$.type").value(INVALID_SEARCH_PARAMETER_TYPE));
+  }
+
+  @Test
+  void should_return_400_problem_when_page_is_negative() throws Exception {
+    mockMvc
+        .perform(get("/api/products").queryParam("page", "-1"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.type").value(INVALID_SEARCH_PARAMETER_TYPE));
+  }
+
+  @Test
+  void should_return_400_problem_when_size_is_zero() throws Exception {
+    mockMvc
+        .perform(get("/api/products").queryParam("size", "0"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.type").value(INVALID_SEARCH_PARAMETER_TYPE));
   }
 
   private static ProductSearchPage page() {

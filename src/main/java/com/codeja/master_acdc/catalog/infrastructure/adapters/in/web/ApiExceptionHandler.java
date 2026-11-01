@@ -60,6 +60,15 @@ public class ApiExceptionHandler {
         HttpStatus.BAD_REQUEST, "Invalid request", "request body is missing or malformed");
   }
 
+  @ExceptionHandler(InvalidSearchParameterException.class)
+  ProblemDetail handleInvalidSearchParameter(InvalidSearchParameterException exception) {
+    return typedProblem(
+        HttpStatus.BAD_REQUEST,
+        "Invalid search parameter",
+        "invalid search parameter: " + exception.parameter(),
+        "https://api.master-acdc.dev/problems/invalid-search-parameter");
+  }
+
   private ProblemDetail problem(HttpStatus status, String title, String detail) {
     ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, detail);
     problemDetail.setTitle(title);
