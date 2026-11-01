@@ -2,7 +2,7 @@
 
 **Session ID:** ses_e6adfae26ffejMWlZA6NPLPLSu
 **Created:** 31/10/2026, 22:21:25
-**Updated:** 31/10/2026, 22:26:11
+**Updated:** 31/10/2026, 22:28:40
 
 ---
 
@@ -1236,6 +1236,1014 @@ _Thinking:_
 No puedo moverlo sin romper el guardián: `scripts/protected-tests.txt` exige exactamente su ruta actual, y las reglas prohíben editar `scripts/`.
 
 Para organizar tests lentos habría que cambiar también ese registro protegido, lo que requiere una decisión explícita sobre las reglas del repositorio, no solo mover el archivo.
+
+---
+
+## User
+
+Añade a todos los tests de src/test/java/com/codeja/master_acdc/inventory una cabecera Javadoc de una línea que describa qué verifica la clase.
+
+---
+
+## Assistant (Build · GPT-5.6 Luna · 3.5s)
+
+_Thinking:_
+
+**Planning test modifications and Javadoc additions**
+
+Voy a enumerar las clases de test bajo `inventory`, añadir solo Javadocs de clase de una línea y después ejecutar la verificación exigida por el proyecto.
+
+**Tool: todowrite**
+
+**Input:**
+```json
+{
+  "todos": [
+    {
+      "content": "Enumerar tests de inventory y revisar sus declaraciones de clase",
+      "status": "in_progress",
+      "priority": "high"
+    },
+    {
+      "content": "Añadir Javadoc de una línea a cada clase de test",
+      "status": "pending",
+      "priority": "high"
+    },
+    {
+      "content": "Aplicar formato y ejecutar verify-quality.sh --fast",
+      "status": "pending",
+      "priority": "high"
+    }
+  ]
+}
+```
+
+**Output:**
+```
+[
+  {
+    "content": "Enumerar tests de inventory y revisar sus declaraciones de clase",
+    "status": "in_progress",
+    "priority": "high"
+  },
+  {
+    "content": "Añadir Javadoc de una línea a cada clase de test",
+    "status": "pending",
+    "priority": "high"
+  },
+  {
+    "content": "Aplicar formato y ejecutar verify-quality.sh --fast",
+    "status": "pending",
+    "priority": "high"
+  }
+]
+```
+
+---
+
+## Assistant (Build · GPT-5.6 Luna · 2.8s)
+
+**Tool: glob**
+
+**Input:**
+```json
+{
+  "pattern": "src/test/java/com/codeja/master_acdc/inventory/**/*.java",
+  "path": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc"
+}
+```
+
+**Output:**
+```
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\config\StockReservationTransactionIT.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\application\ReserveStockServiceTest.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\application\ReserveProductStockServiceTest.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\application\ReleaseStockServiceTest.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\api\InventoryReservationComparisonIT.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\api\InventoryFacadeIT.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\api\InventoryConcurrencyIT.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\out\persistence\StockPersistenceMapperTest.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\out\persistence\InventoryRepositoryAdapterIT.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\in\web\StockReservationWebMapperTest.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\in\web\StockReservationIT.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\in\web\StockReservationConcurrencyTest.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\domain\model\StockLineTest.java
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\domain\model\StockBalanceTest.java
+```
+
+**Tool: grep**
+
+**Input:**
+```json
+{
+  "pattern": "^(public )?(final )?(class|interface|record|enum) |^class ",
+  "path": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory",
+  "include": "*.java"
+}
+```
+
+**Output:**
+```
+Found 14 matches
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\config\StockReservationTransactionIT.java:
+  Line 36: class StockReservationTransactionIT {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\application\ReserveStockServiceTest.java:
+  Line 19: class ReserveStockServiceTest {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\api\InventoryConcurrencyIT.java:
+  Line 27: class InventoryConcurrencyIT {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\api\InventoryReservationComparisonIT.java:
+  Line 34: class InventoryReservationComparisonIT {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\application\ReserveProductStockServiceTest.java:
+  Line 17: class ReserveProductStockServiceTest {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\domain\model\StockLineTest.java:
+  Line 10: class StockLineTest {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\application\ReleaseStockServiceTest.java:
+  Line 17: class ReleaseStockServiceTest {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\api\InventoryFacadeIT.java:
+  Line 22: class InventoryFacadeIT {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\domain\model\StockBalanceTest.java:
+  Line 11: class StockBalanceTest {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\out\persistence\StockPersistenceMapperTest.java:
+  Line 9: class StockPersistenceMapperTest {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\out\persistence\InventoryRepositoryAdapterIT.java:
+  Line 22: class InventoryRepositoryAdapterIT {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\in\web\StockReservationConcurrencyTest.java:
+  Line 39: class StockReservationConcurrencyTest {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\in\web\StockReservationIT.java:
+  Line 27: class StockReservationIT {
+
+
+C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\in\web\StockReservationWebMapperTest.java:
+  Line 9: class StockReservationWebMapperTest {
+
+```
+
+**Tool: glob**
+
+**Input:**
+```json
+{
+  "pattern": "src/test/java/com/codeja/master_acdc/inventory/**/package-info.java",
+  "path": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc"
+}
+```
+
+**Output:**
+```
+No files found
+```
+
+---
+
+## Assistant (Build · GPT-5.6 Luna · 4.1s)
+
+_Thinking:_
+
+**Planning parallel inspection of file headers**
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\config\\StockReservationTransactionIT.java",
+  "limit": 45
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\config\StockReservationTransactionIT.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.infrastructure.config;
+2: 
+3: import static java.util.concurrent.TimeUnit.SECONDS;
+4: import static org.assertj.core.api.Assertions.assertThat;
+5: import static org.assertj.core.api.Assertions.assertThatThrownBy;
+6: import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+7: 
+8: import com.codeja.master_acdc.inventory.application.port.ReserveProductStockUseCase;
+9: import com.codeja.master_acdc.inventory.domain.exception.InsufficientStockException;
+10: import com.codeja.master_acdc.inventory.domain.exception.StockBusyException;
+11: import com.codeja.master_acdc.inventory.domain.exception.StockRecordNotFoundException;
+12: import com.codeja.master_acdc.inventory.domain.model.ProductReservation;
+13: import java.sql.Connection;
+14: import java.sql.PreparedStatement;
+15: import java.sql.SQLException;
+16: import java.time.Duration;
+17: import java.util.UUID;
+18: import java.util.concurrent.CountDownLatch;
+19: import java.util.concurrent.ExecutorService;
+20: import java.util.concurrent.Executors;
+21: import java.util.concurrent.Future;
+22: import javax.sql.DataSource;
+23: import org.junit.jupiter.api.AfterEach;
+24: import org.junit.jupiter.api.BeforeEach;
+25: import org.junit.jupiter.api.Test;
+26: import org.springframework.beans.factory.annotation.Autowired;
+27: import org.springframework.boot.test.context.SpringBootTest;
+28: import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+29: import org.springframework.jdbc.core.JdbcTemplate;
+30: import org.testcontainers.containers.PostgreSQLContainer;
+31: import org.testcontainers.junit.jupiter.Container;
+32: import org.testcontainers.junit.jupiter.Testcontainers;
+33: 
+34: @SpringBootTest
+35: @Testcontainers
+36: class StockReservationTransactionIT {
+37: 
+38:   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+39: 
+40:   @Container @ServiceConnection
+41:   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+42: 
+43:   @Autowired ReserveProductStockUseCase useCase;
+44:   @Autowired JdbcTemplate jdbcTemplate;
+45:   @Autowired DataSource dataSource;
+
+(Showing lines 1-45 of 133. Use offset=46 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\application\\ReserveStockServiceTest.java",
+  "limit": 30
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\application\ReserveStockServiceTest.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.application;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThat;
+4: import static org.mockito.ArgumentMatchers.any;
+5: import static org.mockito.ArgumentMatchers.anyInt;
+6: import static org.mockito.BDDMockito.given;
+7: import static org.mockito.BDDMockito.then;
+8: import static org.mockito.Mockito.mock;
+9: import static org.mockito.Mockito.never;
+10: 
+11: import com.codeja.master_acdc.inventory.domain.model.ReservationResult;
+12: import com.codeja.master_acdc.inventory.domain.model.StockLine;
+13: import com.codeja.master_acdc.inventory.domain.port.StockRepository;
+14: import java.util.List;
+15: import java.util.Set;
+16: import java.util.UUID;
+17: import org.junit.jupiter.api.Test;
+18: 
+19: class ReserveStockServiceTest {
+20: 
+21:   private static final UUID A = UUID.fromString("11111111-1111-1111-1111-111111111111");
+22:   private static final UUID B = UUID.fromString("22222222-2222-2222-2222-222222222222");
+23:   private static final UUID X = UUID.fromString("99999999-9999-9999-9999-999999999999");
+24: 
+25:   private final StockRepository stockRepository = mock(StockRepository.class);
+26:   private final ReserveStockService service = new ReserveStockService(stockRepository);
+27: 
+28:   @Test
+29:   void should_discount_each_product_when_all_lines_have_stock() {
+30:     given(stockRepository.findExistingProductIds(List.of(A, B))).willReturn(Set.of(A, B));
+
+(Showing lines 1-30 of 61. Use offset=31 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\application\\ReserveProductStockServiceTest.java",
+  "limit": 28
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\application\ReserveProductStockServiceTest.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.application;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThat;
+4: import static org.assertj.core.api.Assertions.assertThatThrownBy;
+5: import static org.mockito.BDDMockito.given;
+6: import static org.mockito.BDDMockito.then;
+7: import static org.mockito.Mockito.mock;
+8: 
+9: import com.codeja.master_acdc.inventory.domain.exception.InsufficientStockException;
+10: import com.codeja.master_acdc.inventory.domain.exception.StockRecordNotFoundException;
+11: import com.codeja.master_acdc.inventory.domain.model.ProductReservation;
+12: import com.codeja.master_acdc.inventory.domain.model.StockBalance;
+13: import com.codeja.master_acdc.inventory.domain.port.StockReservationRepository;
+14: import java.util.UUID;
+15: import org.junit.jupiter.api.Test;
+16: 
+17: class ReserveProductStockServiceTest {
+18: 
+19:   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+20: 
+21:   private final StockReservationRepository stockRepository = mock(StockReservationRepository.class);
+22:   private final ReserveProductStockService service =
+23:       new ReserveProductStockService(stockRepository);
+24: 
+25:   @Test
+26:   void should_return_remaining_stock_when_reservation_succeeds() {
+27:     given(stockRepository.findForUpdateById(PRODUCT_ID))
+28:         .willReturn(new StockBalance(PRODUCT_ID, 10));
+
+(Showing lines 1-28 of 53. Use offset=29 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\application\\ReleaseStockServiceTest.java",
+  "limit": 28
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\application\ReleaseStockServiceTest.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.application;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThatThrownBy;
+4: import static org.mockito.BDDMockito.then;
+5: import static org.mockito.BDDMockito.willThrow;
+6: import static org.mockito.Mockito.inOrder;
+7: import static org.mockito.Mockito.mock;
+8: 
+9: import com.codeja.master_acdc.inventory.domain.exception.StockRecordNotFoundException;
+10: import com.codeja.master_acdc.inventory.domain.model.StockLine;
+11: import com.codeja.master_acdc.inventory.domain.port.StockRepository;
+12: import java.util.List;
+13: import java.util.UUID;
+14: import org.junit.jupiter.api.Test;
+15: import org.mockito.InOrder;
+16: 
+17: class ReleaseStockServiceTest {
+18: 
+19:   private static final UUID A = UUID.fromString("11111111-1111-1111-1111-111111111111");
+20:   private static final UUID B = UUID.fromString("22222222-2222-2222-2222-222222222222");
+21: 
+22:   private final StockRepository stockRepository = mock(StockRepository.class);
+23:   private final ReleaseStockService service = new ReleaseStockService(stockRepository);
+24: 
+25:   @Test
+26:   void should_increase_available_stock_when_release_lines() {
+27:     service.release(List.of(new StockLine(A, 3), new StockLine(B, 2)));
+28: 
+
+(Showing lines 1-28 of 49. Use offset=29 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\api\\InventoryConcurrencyIT.java",
+  "limit": 40
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\api\InventoryConcurrencyIT.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.api;
+2: 
+3: import static java.util.concurrent.TimeUnit.SECONDS;
+4: import static org.assertj.core.api.Assertions.assertThat;
+5: 
+6: import com.codeja.master_acdc.inventory.domain.model.ReservationResult;
+7: import com.codeja.master_acdc.inventory.domain.model.StockLine;
+8: import java.util.List;
+9: import java.util.UUID;
+10: import java.util.concurrent.Callable;
+11: import java.util.concurrent.CountDownLatch;
+12: import java.util.concurrent.ExecutorService;
+13: import java.util.concurrent.Executors;
+14: import java.util.concurrent.Future;
+15: import org.junit.jupiter.api.Test;
+16: import org.springframework.beans.factory.annotation.Autowired;
+17: import org.springframework.boot.test.context.SpringBootTest;
+18: import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+19: import org.springframework.jdbc.core.JdbcTemplate;
+20: import org.springframework.test.context.jdbc.Sql;
+21: import org.testcontainers.containers.PostgreSQLContainer;
+22: import org.testcontainers.junit.jupiter.Container;
+23: import org.testcontainers.junit.jupiter.Testcontainers;
+24: 
+25: @SpringBootTest
+26: @Testcontainers
+27: class InventoryConcurrencyIT {
+28: 
+29:   @Container @ServiceConnection
+30:   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+31: 
+32:   private static final String A_TEXT = "11111111-1111-1111-1111-111111111111";
+33: 
+34:   @Autowired InventoryFacade facade;
+35:   @Autowired JdbcTemplate jdbcTemplate;
+36: 
+37:   @Test
+38:   @Sql(
+39:       statements = {
+40:         "delete from stock",
+
+(Showing lines 1-40 of 78. Use offset=41 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\api\\InventoryReservationComparisonIT.java",
+  "limit": 45
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\api\InventoryReservationComparisonIT.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.api;
+2: 
+3: import static java.util.concurrent.TimeUnit.SECONDS;
+4: import static org.assertj.core.api.Assertions.assertThat;
+5: 
+6: import com.codeja.master_acdc.inventory.application.port.ReserveProductStockUseCase;
+7: import com.codeja.master_acdc.inventory.domain.exception.InsufficientStockException;
+8: import com.codeja.master_acdc.inventory.domain.model.ReservationResult;
+9: import com.codeja.master_acdc.inventory.domain.model.StockLine;
+10: import java.util.ArrayList;
+11: import java.util.List;
+12: import java.util.UUID;
+13: import java.util.concurrent.Callable;
+14: import java.util.concurrent.CountDownLatch;
+15: import java.util.concurrent.ExecutionException;
+16: import java.util.concurrent.ExecutorService;
+17: import java.util.concurrent.Executors;
+18: import java.util.concurrent.Future;
+19: import java.util.concurrent.TimeoutException;
+20: import org.junit.jupiter.api.DisplayName;
+21: import org.junit.jupiter.api.Test;
+22: import org.slf4j.Logger;
+23: import org.slf4j.LoggerFactory;
+24: import org.springframework.beans.factory.annotation.Autowired;
+25: import org.springframework.boot.test.context.SpringBootTest;
+26: import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+27: import org.springframework.jdbc.core.JdbcTemplate;
+28: import org.testcontainers.containers.PostgreSQLContainer;
+29: import org.testcontainers.junit.jupiter.Container;
+30: import org.testcontainers.junit.jupiter.Testcontainers;
+31: 
+32: @SpringBootTest
+33: @Testcontainers
+34: class InventoryReservationComparisonIT {
+35: 
+36:   private static final Logger LOG = LoggerFactory.getLogger(InventoryReservationComparisonIT.class);
+37:   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+38:   private static final StockLine LINE = new StockLine(PRODUCT_ID, 1);
+39: 
+40:   @Container @ServiceConnection
+41:   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+42: 
+43:   @Autowired ReserveProductStockUseCase reserveProductStockUseCase;
+44:   @Autowired InventoryFacade inventoryFacade;
+45:   @Autowired JdbcTemplate jdbcTemplate;
+
+(Showing lines 1-45 of 149. Use offset=46 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\api\\InventoryFacadeIT.java",
+  "limit": 32
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\api\InventoryFacadeIT.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.api;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThat;
+4: 
+5: import com.codeja.master_acdc.inventory.domain.model.ReservationResult;
+6: import com.codeja.master_acdc.inventory.domain.model.StockLine;
+7: import java.util.List;
+8: import java.util.UUID;
+9: import org.junit.jupiter.api.DisplayName;
+10: import org.junit.jupiter.api.Test;
+11: import org.springframework.beans.factory.annotation.Autowired;
+12: import org.springframework.boot.test.context.SpringBootTest;
+13: import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+14: import org.springframework.jdbc.core.JdbcTemplate;
+15: import org.springframework.test.context.jdbc.Sql;
+16: import org.testcontainers.containers.PostgreSQLContainer;
+17: import org.testcontainers.junit.jupiter.Container;
+18: import org.testcontainers.junit.jupiter.Testcontainers;
+19: 
+20: @SpringBootTest
+21: @Testcontainers
+22: class InventoryFacadeIT {
+23: 
+24:   @Container @ServiceConnection
+25:   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+26: 
+27:   private static final String A_TEXT = "11111111-1111-1111-1111-111111111111";
+28:   private static final String B_TEXT = "22222222-2222-2222-2222-222222222222";
+29:   private static final String X_TEXT = "99999999-9999-9999-9999-999999999999";
+30: 
+31:   @Autowired InventoryFacade facade;
+32:   @Autowired JdbcTemplate jdbcTemplate;
+
+(Showing lines 1-32 of 148. Use offset=33 to continue.)
+</content>
+```
+
+---
+
+## Assistant (Build · GPT-5.6 Luna · 3.8s)
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\domain\\model\\StockLineTest.java",
+  "limit": 22
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\domain\model\StockLineTest.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.domain.model;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThat;
+4: import static org.assertj.core.api.Assertions.assertThatThrownBy;
+5: 
+6: import com.codeja.master_acdc.inventory.domain.exception.InvalidStockException;
+7: import java.util.UUID;
+8: import org.junit.jupiter.api.Test;
+9: 
+10: class StockLineTest {
+11: 
+12:   @Test
+13:   void should_keep_values_when_line_is_valid() {
+14:     UUID productId = UUID.randomUUID();
+15: 
+16:     StockLine line = new StockLine(productId, 3);
+17: 
+18:     assertThat(line.productId()).isEqualTo(productId);
+19:     assertThat(line.quantity()).isEqualTo(3);
+20:   }
+21: 
+22:   @Test
+
+(Showing lines 1-22 of 34. Use offset=23 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\domain\\model\\StockBalanceTest.java",
+  "limit": 24
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\domain\model\StockBalanceTest.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.domain.model;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThat;
+4: import static org.assertj.core.api.Assertions.assertThatThrownBy;
+5: 
+6: import com.codeja.master_acdc.inventory.domain.exception.InsufficientStockException;
+7: import com.codeja.master_acdc.inventory.domain.exception.InvalidStockException;
+8: import java.util.UUID;
+9: import org.junit.jupiter.api.Test;
+10: 
+11: class StockBalanceTest {
+12: 
+13:   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+14: 
+15:   @Test
+16:   void should_reserve_when_units_are_positive() {
+17:     StockBalance balance = new StockBalance(PRODUCT_ID, 10);
+18: 
+19:     StockBalance remaining = balance.reserve(3);
+20: 
+21:     assertThat(remaining).isEqualTo(new StockBalance(PRODUCT_ID, 7));
+22:     assertThat(balance.available()).isEqualTo(10);
+23:   }
+24: 
+
+(Showing lines 1-24 of 42. Use offset=25 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\out\\persistence\\StockPersistenceMapperTest.java",
+  "limit": 22
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\out\persistence\StockPersistenceMapperTest.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThat;
+4: 
+5: import com.codeja.master_acdc.inventory.domain.model.StockBalance;
+6: import java.util.UUID;
+7: import org.junit.jupiter.api.Test;
+8: 
+9: class StockPersistenceMapperTest {
+10: 
+11:   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+12: 
+13:   @Test
+14:   void should_map_stock_balance_to_entity_when_balance_is_valid() {
+15:     StockJpaEntity entity = StockPersistenceMapper.toEntity(new StockBalance(PRODUCT_ID, 7));
+16: 
+17:     assertThat(entity.productId()).isEqualTo(PRODUCT_ID);
+18:     assertThat(entity.available()).isEqualTo(7);
+19:   }
+20: 
+21:   @Test
+22:   void should_map_entity_to_stock_balance_when_entity_exists() {
+
+(Showing lines 1-22 of 27. Use offset=23 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\out\\persistence\\InventoryRepositoryAdapterIT.java",
+  "limit": 34
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\out\persistence\InventoryRepositoryAdapterIT.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThat;
+4: import static org.assertj.core.api.Assertions.assertThatThrownBy;
+5: 
+6: import com.codeja.master_acdc.inventory.domain.exception.StockRecordNotFoundException;
+7: import java.util.UUID;
+8: import org.junit.jupiter.api.DisplayName;
+9: import org.junit.jupiter.api.Test;
+10: import org.springframework.beans.factory.annotation.Autowired;
+11: import org.springframework.boot.test.context.SpringBootTest;
+12: import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+13: import org.springframework.jdbc.core.JdbcTemplate;
+14: import org.springframework.transaction.annotation.Transactional;
+15: import org.testcontainers.containers.PostgreSQLContainer;
+16: import org.testcontainers.junit.jupiter.Container;
+17: import org.testcontainers.junit.jupiter.Testcontainers;
+18: 
+19: @SpringBootTest
+20: @Testcontainers
+21: @Transactional
+22: class InventoryRepositoryAdapterIT {
+23: 
+24:   @Container @ServiceConnection
+25:   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+26: 
+27:   private static final UUID A = UUID.fromString("11111111-1111-1111-1111-111111111111");
+28:   private static final UUID B = UUID.fromString("22222222-2222-2222-2222-222222222222");
+29: 
+30:   @Autowired StockRepositoryAdapter adapter;
+31:   @Autowired JdbcTemplate jdbcTemplate;
+32: 
+33:   @Test
+34:   void should_discount_stock_when_update_matches() {
+
+(Showing lines 1-34 of 79. Use offset=35 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\in\\web\\StockReservationWebMapperTest.java",
+  "limit": 22
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\in\web\StockReservationWebMapperTest.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.infrastructure.adapters.in.web;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThat;
+4: 
+5: import com.codeja.master_acdc.inventory.domain.model.ProductReservation;
+6: import java.util.UUID;
+7: import org.junit.jupiter.api.Test;
+8: 
+9: class StockReservationWebMapperTest {
+10: 
+11:   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+12: 
+13:   @Test
+14:   void should_map_product_reservation_to_response_when_reservation_is_successful() {
+15:     StockReservationResponse response =
+16:         StockReservationWebMapper.toResponse(new ProductReservation(PRODUCT_ID, 3, 7));
+17: 
+18:     assertThat(response).isEqualTo(new StockReservationResponse(PRODUCT_ID, 3, 7));
+19:   }
+20: }
+
+(End of file - total 20 lines)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\in\\web\\StockReservationIT.java",
+  "limit": 34
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\in\web\StockReservationIT.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.infrastructure.adapters.in.web;
+2: 
+3: import static org.assertj.core.api.Assertions.assertThat;
+4: import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+5: import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+6: import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+7: import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+8: 
+9: import java.util.UUID;
+10: import org.junit.jupiter.api.BeforeEach;
+11: import org.junit.jupiter.api.DisplayName;
+12: import org.junit.jupiter.api.Test;
+13: import org.springframework.beans.factory.annotation.Autowired;
+14: import org.springframework.boot.test.context.SpringBootTest;
+15: import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+16: import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+17: import org.springframework.http.MediaType;
+18: import org.springframework.jdbc.core.JdbcTemplate;
+19: import org.springframework.test.web.servlet.MockMvc;
+20: import org.testcontainers.containers.PostgreSQLContainer;
+21: import org.testcontainers.junit.jupiter.Container;
+22: import org.testcontainers.junit.jupiter.Testcontainers;
+23: 
+24: @SpringBootTest
+25: @AutoConfigureMockMvc
+26: @Testcontainers
+27: class StockReservationIT {
+28: 
+29:   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
+30:   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+31: 
+32:   @Container @ServiceConnection
+33:   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+34: 
+
+(Showing lines 1-34 of 133. Use offset=35 to continue.)
+</content>
+```
+
+**Tool: read**
+
+**Input:**
+```json
+{
+  "filePath": "C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\in\\web\\StockReservationConcurrencyTest.java",
+  "limit": 48
+}
+```
+
+**Output:**
+```
+<path>C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\test\java\com\codeja\master_acdc\inventory\infrastructure\adapters\in\web\StockReservationConcurrencyTest.java</path>
+<type>file</type>
+<content>
+1: package com.codeja.master_acdc.inventory.infrastructure.adapters.in.web;
+2: 
+3: import static java.util.concurrent.TimeUnit.SECONDS;
+4: import static org.assertj.core.api.Assertions.assertThat;
+5: 
+6: import java.io.IOException;
+7: import java.net.URI;
+8: import java.net.http.HttpClient;
+9: import java.net.http.HttpRequest;
+10: import java.net.http.HttpResponse;
+11: import java.sql.Connection;
+12: import java.sql.PreparedStatement;
+13: import java.sql.SQLException;
+14: import java.time.Duration;
+15: import java.util.List;
+16: import java.util.UUID;
+17: import java.util.concurrent.Callable;
+18: import java.util.concurrent.CountDownLatch;
+19: import java.util.concurrent.ExecutionException;
+20: import java.util.concurrent.ExecutorService;
+21: import java.util.concurrent.Executors;
+22: import java.util.concurrent.Future;
+23: import java.util.concurrent.TimeoutException;
+24: import javax.sql.DataSource;
+25: import org.junit.jupiter.api.BeforeEach;
+26: import org.junit.jupiter.api.DisplayName;
+27: import org.junit.jupiter.api.Test;
+28: import org.springframework.beans.factory.annotation.Autowired;
+29: import org.springframework.boot.test.context.SpringBootTest;
+30: import org.springframework.boot.test.web.server.LocalServerPort;
+31: import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+32: import org.springframework.jdbc.core.JdbcTemplate;
+33: import org.testcontainers.containers.PostgreSQLContainer;
+34: import org.testcontainers.junit.jupiter.Container;
+35: import org.testcontainers.junit.jupiter.Testcontainers;
+36: 
+37: @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+38: @Testcontainers
+39: class StockReservationConcurrencyTest {
+40: 
+41:   private static final String STOCK_BUSY_TYPE = "https://api.master-acdc.dev/problems/stock-busy";
+42:   private static final String INSUFFICIENT_STOCK_TYPE =
+43:       "https://api.master-acdc.dev/problems/insufficient-stock";
+44:   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+45: 
+46:   @Container @ServiceConnection
+47:   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+48: 
+
+(Showing lines 1-48 of 167. Use offset=49 to continue.)
+</content>
+```
+
+---
+
+## Assistant (Build · GPT-5.6 Luna · 3.7s)
+
+_Thinking:_
+
+**Applying one-line Javadoc patch**
+
+He encontrado 14 clases de test, incluidas las guardianas; solo añadiré documentación y no cambiaré su comportamiento ni sus rutas.
+
+**Tool: todowrite**
+
+**Input:**
+```json
+{
+  "todos": [
+    {
+      "content": "Enumerar tests de inventory y revisar sus declaraciones de clase",
+      "status": "completed",
+      "priority": "high"
+    },
+    {
+      "content": "Añadir Javadoc de una línea a cada clase de test",
+      "status": "in_progress",
+      "priority": "high"
+    },
+    {
+      "content": "Aplicar formato y ejecutar verify-quality.sh --fast",
+      "status": "pending",
+      "priority": "high"
+    }
+  ]
+}
+```
+
+**Output:**
+```
+[
+  {
+    "content": "Enumerar tests de inventory y revisar sus declaraciones de clase",
+    "status": "completed",
+    "priority": "high"
+  },
+  {
+    "content": "Añadir Javadoc de una línea a cada clase de test",
+    "status": "in_progress",
+    "priority": "high"
+  },
+  {
+    "content": "Aplicar formato y ejecutar verify-quality.sh --fast",
+    "status": "pending",
+    "priority": "high"
+  }
+]
+```
+
+---
+
+## Assistant (Build · GPT-5.6 Luna · 8.2s)
+
+**Tool: apply_patch**
+
+**Input:**
+```json
+{
+  "patchText": "*** Begin Patch\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\config\\StockReservationTransactionIT.java\n@@\n-@SpringBootTest\n+/** Verifica las transacciones y los bloqueos de las reservas de stock. */\n+@SpringBootTest\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\application\\ReserveStockServiceTest.java\n@@\n-class ReserveStockServiceTest {\n+/** Verifica la reserva de varias líneas de stock. */\n+class ReserveStockServiceTest {\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\application\\ReserveProductStockServiceTest.java\n@@\n-class ReserveProductStockServiceTest {\n+/** Verifica la reserva de stock de un producto. */\n+class ReserveProductStockServiceTest {\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\application\\ReleaseStockServiceTest.java\n@@\n-class ReleaseStockServiceTest {\n+/** Verifica la liberación de varias líneas de stock. */\n+class ReleaseStockServiceTest {\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\api\\InventoryConcurrencyIT.java\n@@\n-@SpringBootTest\n+/** Verifica las reservas concurrentes a través de la fachada de inventario. */\n+@SpringBootTest\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\api\\InventoryReservationComparisonIT.java\n@@\n-@SpringBootTest\n+/** Compara las reservas concurrentes mediante la fachada y el caso de uso. */\n+@SpringBootTest\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\api\\InventoryFacadeIT.java\n@@\n-@SpringBootTest\n+/** Verifica las operaciones de reserva expuestas por la fachada de inventario. */\n+@SpringBootTest\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\domain\\model\\StockLineTest.java\n@@\n-class StockLineTest {\n+/** Verifica la creación y validación de líneas de stock. */\n+class StockLineTest {\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\domain\\model\\StockBalanceTest.java\n@@\n-class StockBalanceTest {\n+/** Verifica las reservas y liberaciones del saldo de stock. */\n+class StockBalanceTest {\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\out\\persistence\\StockPersistenceMapperTest.java\n@@\n-class StockPersistenceMapperTest {\n+/** Verifica la conversión entre el saldo de stock y su entidad persistente. */\n+class StockPersistenceMapperTest {\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\out\\persistence\\InventoryRepositoryAdapterIT.java\n@@\n-@SpringBootTest\n+/** Verifica las operaciones persistentes del adaptador de inventario. */\n+@SpringBootTest\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\in\\web\\StockReservationWebMapperTest.java\n@@\n-class StockReservationWebMapperTest {\n+/** Verifica la conversión de reservas de stock a respuestas web. */\n+class StockReservationWebMapperTest {\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\in\\web\\StockReservationIT.java\n@@\n-@SpringBootTest\n+/** Verifica el endpoint web de reservas de stock. */\n+@SpringBootTest\n*** Update File: C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\src\\test\\java\\com\\codeja\\master_acdc\\inventory\\infrastructure\\adapters\\in\\web\\StockReservationConcurrencyTest.java\n@@\n-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)\n+/** Verifica las reservas HTTP concurrentes y la contención del stock. */\n+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)\n*** End Patch"
+}
+```
+
+**Error:**
+```
+AC/DC: src/test/java/com/codeja/master_acdc/inventory/infrastructure/config/StockReservationTransactionIT.java es un test guardián (scripts/protected-tests.txt): protege el buscador o la concurrencia. No se borra, no se mueve, no se renombra ni se debilita. Si crees que sobra o es lento, explica por qué a la persona y detente.
+```
+
+---
+
+## Assistant (Build · GPT-5.6 Luna · 3.3s)
+
+_Thinking:_
+
+**Explaining Javadoc addition conflict due to protected files**
+
+No puedo completar ese cambio porque incluye tests guardianes protegidos, y las reglas impiden editarlos, aunque sea para añadir Javadoc. No se aplicaron cambios.
 
 ---
 
