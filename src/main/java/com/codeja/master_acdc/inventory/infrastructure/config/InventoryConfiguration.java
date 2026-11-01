@@ -2,10 +2,13 @@ package com.codeja.master_acdc.inventory.infrastructure.config;
 
 import com.codeja.master_acdc.inventory.api.InventoryFacade;
 import com.codeja.master_acdc.inventory.application.ReleaseStockService;
+import com.codeja.master_acdc.inventory.application.ReserveProductStockService;
 import com.codeja.master_acdc.inventory.application.ReserveStockService;
 import com.codeja.master_acdc.inventory.application.port.ReleaseStockUseCase;
+import com.codeja.master_acdc.inventory.application.port.ReserveProductStockUseCase;
 import com.codeja.master_acdc.inventory.application.port.ReserveStockUseCase;
 import com.codeja.master_acdc.inventory.domain.port.StockRepository;
+import com.codeja.master_acdc.inventory.domain.port.StockReservationRepository;
 import com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence.StockJpaRepository;
 import com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence.StockRepositoryAdapter;
 import org.springframework.context.annotation.Bean;
@@ -22,8 +25,23 @@ public class InventoryConfiguration {
   }
 
   @Bean
+  public StockReservationRepository stockReservationRepository(
+      StockJpaRepository stockJpaRepository) {
+    return new StockRepositoryAdapter(stockJpaRepository);
+  }
+
+  @Bean
   public ReserveStockUseCase reserveStockUseCase(StockRepository stockRepository) {
     return new ReserveStockService(stockRepository);
+  }
+
+  @Bean
+  public ReserveProductStockUseCase reserveProductStockUseCase(
+      StockReservationRepository stockRepository, PlatformTransactionManager transactionManager) {
+    ReserveProductStockService delegate = new ReserveProductStockService(stockRepository);
+    TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
+    return (productId, units) ->
+        transactionTemplate.execute(status -> delegate.reserve(productId, units));
   }
 
   @Bean

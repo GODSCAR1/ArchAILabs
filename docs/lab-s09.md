@@ -131,3 +131,21 @@ PUT devolvió `409 Conflict` con ProblemDetail type
 
 El resultado se verificó directamente en la base de datos: el producto conserva el nombre y el
 precio del primer PUT; los valores del segundo PUT no se guardan.
+
+## Paso 6 — timeout del bloqueo
+
+Se retuvo la fila de stock con `SELECT ... FOR UPDATE` en otra conexión JDBC sin confirmar y se
+ejecutó la reserva a través del caso de uso transaccional:
+
+```text
+bash ./mvnw -q -Dtest=StockReservationTransactionIT test
+```
+
+El camino que funcionó fue el hint JPA
+`jakarta.persistence.lock.timeout=2000`; no fue necesario aplicar el plan B con
+`SET LOCAL lock_timeout = '2s'`. PostgreSQL devolvió SQLSTATE `55P03` (`lock_not_available`) y
+Spring lo entregó al adaptador como `CannotAcquireLockException`, que se tradujo a
+`StockBusyException`.
+
+La reserva falló en aproximadamente 2,0 segundos, dentro del intervalo exigido de 1,5 a 3,5
+segundos, y el stock permaneció sin cambios.

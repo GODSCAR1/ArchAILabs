@@ -23,4 +23,12 @@ public class StockJpaEntity {
     this.productId = productId;
     this.available = available;
   }
+
+  UUID productId() {
+    return productId;
+  }
+
+  int available() {
+    return available;
+  }
 }

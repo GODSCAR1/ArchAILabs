@@ -7,9 +7,9 @@
 
 ## 2. Persistencia y transacción
 
-- [ ] 2.1 Implementar `StockJpaRepository.findForUpdateById` con bloqueo pesimista de escritura y hint `jakarta.persistence.lock.timeout=2000`, además del mapper y adaptador de persistencia; verificar con una integración Testcontainers que una reserva válida descuenta exactamente las unidades y devuelve el disponible restante.
-- [ ] 2.2 Traducir el registro ausente y el timeout concreto del bloqueo a excepciones de dominio sin capturar excepciones genéricas; verificar con tests de adaptador llamados `should_throw_stock_not_found_when_record_is_missing` y `should_translate_lock_timeout_when_database_rejects_lock`, sin `@DisplayName` de escenarios, que el stock queda sin cambios.
-- [ ] 2.3 Ensamblar el caso de uso con `TransactionTemplate` en `inventory.infrastructure.config`, sin `@Transactional` en domain/application; verificar con una integración transaccional llamada `should_commit_reservation_when_stock_is_available` y otra llamada `should_rollback_when_stock_is_insufficient`, sin `@DisplayName` de escenarios.
+- [x] 2.1 Implementar `StockJpaRepository.findForUpdateById` con bloqueo pesimista de escritura y hint `jakarta.persistence.lock.timeout=2000`, además del mapper y adaptador de persistencia; verificar con una integración Testcontainers que una reserva válida descuenta exactamente las unidades y devuelve el disponible restante.
+- [x] 2.2 Traducir el registro ausente y el timeout concreto del bloqueo a excepciones de dominio sin capturar excepciones genéricas; verificar con tests de adaptador llamados `should_throw_stock_not_found_when_record_is_missing` y `should_translate_lock_timeout_when_database_rejects_lock`, sin `@DisplayName` de escenarios, que el stock queda sin cambios.
+- [x] 2.3 Ensamblar el caso de uso con `TransactionTemplate` en `inventory.infrastructure.config`, sin `@Transactional` en domain/application; verificar con una integración transaccional llamada `should_commit_reservation_when_stock_is_available` y otra llamada `should_rollback_when_stock_is_insufficient`, sin `@DisplayName` de escenarios.
 
 ## 3. API web
 
