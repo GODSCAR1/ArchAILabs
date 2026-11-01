@@ -24,7 +24,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
 @Testcontainers
-class ProductSearchPaginationIT {
+class ProductSearchPaginationTest {
 
   private static final int PRODUCTS = 60;
   private static final UUID CATEGORY_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");

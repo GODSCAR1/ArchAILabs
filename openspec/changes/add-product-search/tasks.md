@@ -23,6 +23,6 @@
 ## 4. Rendimiento y regresión
 
 - [x] 4.1 Añadir una prueba de consulta con más de 50 productos, `flush()` y `clear()`, `Statistics.clear()` y umbral `<= 2`; verificar con `ProductSearchQueryCountTest` que el número de consultas no depende del número de filas.
-- [x] 4.2 Añadir un test de paginación estable con páginas de 7 productos y precios repetidos; verificar con `ProductSearchPaginationIT` que cada producto aparece exactamente una vez al recorrer todas las páginas ordenadas por `price`.
+- [x] 4.2 Añadir un test de paginación estable con páginas de 7 productos y precios repetidos; verificar con `ProductSearchPaginationTest` que cada producto aparece exactamente una vez al recorrer todas las páginas ordenadas por `price`.
 - [x] 4.3 Ejecutar la integración completa del endpoint con PostgreSQL/Testcontainers y verificar `totalElements`, `totalPages`, página vacía y los escenarios `Consulta sin filtros`, `Texto sin distinguir mayúsculas`, `Ordenación por fecha de creación` y `Producto recién creado visible en el catálogo` mediante `@DisplayName` exactos.
 - [x] 4.4 Documentar en `docs/adr/0007-buscador-y-concurrencia-del-catalogo.md` la comparación medida de A (Specification + fetch, máximo dos consultas por página) y dejar B (Entity View) como no medida por requerir una dependencia nueva; verificar la decisión y el resultado del umbral `<= 2`.

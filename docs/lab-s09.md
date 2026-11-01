@@ -2,6 +2,10 @@
 
 ## Paso 4 — paginación estable
 
+> En el paso 8 los guardianes `ProductSearchPaginationIT`, `ProductEditConflictIT` y
+> `StockReservationConcurrencyIT` se renombraron a `*Test` para que corran en el gate de fin de
+> turno (`verify-quality.sh --fast`). Los comandos de abajo son los que se ejecutaron entonces.
+
 ### Experimento rojo: sin desempate por id
 
 Con el desempate por id retirado temporalmente de `ProductSearchRepositoryAdapter`:
@@ -103,7 +107,7 @@ El test determinista falló porque la edición no produjo el conflicto esperado:
 
 ```text
 [ERROR] Tests run: 1, Failures: 1, Errors: 0, Skipped: 0
-[ERROR] ProductEditConflictIT.should_reject_when_version_changes_before_save
+[ERROR] ProductEditConflictTest.should_reject_when_version_changes_before_save
 java.lang.AssertionError:
 Expecting code to raise a throwable.
 [ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test

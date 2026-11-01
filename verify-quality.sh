@@ -20,6 +20,18 @@ tr -d '\r' < "$JPA_PROPS" | grep -qx 'spring.jpa.properties.hibernate.default_ba
 if grep -rqs 'enable_lazy_load_no_trans' src/main/resources; then
   echo "AC/DC: hibernate.enable_lazy_load_no_trans está prohibido (abre una sesión por acceso: N+1 garantizado)." >&2; exit 1
 fi
+echo "▶ Tests guardianes (lab S09: scripts/protected-tests.txt)"
+# Segunda capa: si un guardián desaparece por una vía que ningún hook vio, Verify falla igual.
+GUARDS_MISSING=0
+while IFS= read -r guard; do
+  guard=${guard%$'\r'}
+  [[ -z "$guard" || "$guard" == \#* ]] && continue
+  if [[ ! -f "$guard" ]]; then
+    echo "AC/DC: falta el test guardián $guard. Restáuralo (git restore); solo una persona puede retirarlo de scripts/protected-tests.txt." >&2
+    GUARDS_MISSING=1
+  fi
+done < scripts/protected-tests.txt
+(( GUARDS_MISSING == 0 )) || exit 1
 echo "▶ Capa 1: formato y estilo"
 ./mvnw -q spotless:check
 ./mvnw -q checkstyle:check

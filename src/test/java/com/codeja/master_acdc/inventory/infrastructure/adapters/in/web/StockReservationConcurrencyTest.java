@@ -36,7 +36,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
-class StockReservationConcurrencyIT {
+class StockReservationConcurrencyTest {
 
   private static final String STOCK_BUSY_TYPE = "https://api.master-acdc.dev/problems/stock-busy";
   private static final String INSUFFICIENT_STOCK_TYPE =

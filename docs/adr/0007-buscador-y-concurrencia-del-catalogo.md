@@ -75,9 +75,9 @@ se retiene ningún lock: la edición humana transcurre fuera de cualquier transa
 
 - `ProductEditingIT` ejecutó dos `PUT` con la misma versión: el primero devolvió `200` y el segundo
   `409` con el problema de modificación concurrente.
-- `ProductEditConflictIT` verifica el conflicto detectado al guardar y que los valores del segundo
+- `ProductEditConflictTest` verifica el conflicto detectado al guardar y que los valores del segundo
   cambio no se persisten.
-- El experimento rojo de `ProductEditConflictIT`, al enviar temporalmente `version + 1`, está
+- El experimento rojo de `ProductEditConflictTest`, al enviar temporalmente `version + 1`, está
   documentado en [docs/lab-s09.md](../lab-s09.md): el test no produjo el conflicto esperado.
 
 ### Consecuencias

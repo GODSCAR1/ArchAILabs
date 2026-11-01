@@ -34,9 +34,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
-@Import(ProductEditConflictIT.ConflictConfiguration.class)
+@Import(ProductEditConflictTest.ConflictConfiguration.class)
 @Testcontainers
-class ProductEditConflictIT {
+class ProductEditConflictTest {
 
   @Container @ServiceConnection
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");

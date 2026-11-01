@@ -1,0 +1,12 @@
+# Tests guardianes (lab S09, paso 8). Zona protegida: solo los edita, mueve o borra una persona.
+# Una ruta por línea, relativa a la raíz. Los lee protect-verify.sh, el plugin verify-quality.ts
+# y verify-quality.sh (segunda capa: fallar si alguno falta).
+src/test/java/com/codeja/master_acdc/inventory/infrastructure/adapters/in/web/StockReservationConcurrencyTest.java
+src/test/java/com/codeja/master_acdc/inventory/infrastructure/config/StockReservationTransactionIT.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/config/ProductEditConflictTest.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/ProductEditingIT.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchQueryCountTest.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persistence/ProductSearchPaginationTest.java
+src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterQueryCountTest.java
+src/test/java/com/codeja/master_acdc/arch/ArchitectureTest.java
+src/test/java/com/codeja/master_acdc/CatalogArchitectureTest.java
