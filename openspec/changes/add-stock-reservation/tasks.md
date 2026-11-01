@@ -18,10 +18,10 @@
 
 ## 4. Concurrencia y evidencia
 
-- [ ] 4.1 Añadir el test determinista de 50 reservas concurrentes usando `@SpringBootTest(webEnvironment = RANDOM_PORT)`, un cliente HTTP real, `ExecutorService`, `CountDownLatch` y límites en `await`/`Future.get`; verificar `@DisplayName("Reservas concurrentes en venta flash")` con exactamente 30 respuestas 201, 20 respuestas 409, cero respuestas 503 y stock final 0.
-- [ ] 4.2 Añadir el test de bloqueo retenido por otra transacción y comprobar que la API responde 503 en torno a dos segundos, con `Retry-After: 1` y stock sin cambios; verificar `@DisplayName("Stock ocupado")` sin sleeps de aplicación ni awaits sin límite y demostrar el plan B de `SET LOCAL lock_timeout = '2s'` si el hint JPA no acota la espera.
-- [ ] 4.3 Ejecutar la misma carga de 50 reservas contra la ruta pesimista y contra `discountIfAvailable`, medir tiempo total y líneas de código relevantes y documentar la comparación en `docs/adr/0007-buscador-y-concurrencia-del-catalogo.md`; verificar la evidencia con el test de carga acotado y una revisión de diff que confirme que ordering no cambia.
+- [x] 4.1 Añadir el test determinista de 50 reservas concurrentes usando `@SpringBootTest(webEnvironment = RANDOM_PORT)`, un cliente HTTP real, `ExecutorService`, `CountDownLatch` y límites en `await`/`Future.get`; verificar `@DisplayName("Reservas concurrentes en venta flash")` con exactamente 30 respuestas 201, 20 respuestas 409, cero respuestas 503 y stock final 0.
+- [x] 4.2 Añadir el test de bloqueo retenido por otra transacción y comprobar que la API responde 503 en torno a dos segundos, con `Retry-After: 1` y stock sin cambios; verificar `@DisplayName("Stock ocupado")` sin sleeps de aplicación ni awaits sin límite y demostrar el plan B de `SET LOCAL lock_timeout = '2s'` si el hint JPA no acota la espera.
+- [x] 4.3 Ejecutar la misma carga de 50 reservas contra la ruta pesimista y contra `discountIfAvailable`, medir tiempo total y líneas de código relevantes y documentar la comparación en `docs/adr/0007-buscador-y-concurrencia-del-catalogo.md`; verificar la evidencia con el test de carga acotado y una revisión de diff que confirme que ordering no cambia.
 
 ## 5. Integración final
 
-- [ ] 5.1 Ejecutar `bash ./verify-quality.sh --fast` y corregir cualquier fallo de especificaciones, formato, Checkstyle, arquitectura o tests sin relajar umbrales; verificar que todos los escenarios anteriores siguen pasando.
+- [x] 5.1 Ejecutar `bash ./verify-quality.sh --fast` y corregir cualquier fallo de especificaciones, formato, Checkstyle, arquitectura o tests sin relajar umbrales; verificar que todos los escenarios anteriores siguen pasando.

@@ -16,26 +16,30 @@ public class StockReservationExceptionHandler {
 
   @ExceptionHandler(InsufficientStockException.class)
   ProblemDetail handleInsufficientStock(InsufficientStockException exception) {
-    ProblemDetail problem = problem(HttpStatus.CONFLICT, "insufficient-stock", exception);
+    ProblemDetail problem =
+        problem(HttpStatus.CONFLICT, "Insufficient stock", "insufficient-stock", exception);
     problem.setProperty("available", exception.available());
     return problem;
   }
 
   @ExceptionHandler(StockRecordNotFoundException.class)
   ProblemDetail handleStockRecordNotFound(StockRecordNotFoundException exception) {
-    return problem(HttpStatus.NOT_FOUND, "stock-not-found", exception);
+    return problem(HttpStatus.NOT_FOUND, "Stock not found", "stock-not-found", exception);
   }
 
   @ExceptionHandler(StockBusyException.class)
   ResponseEntity<ProblemDetail> handleStockBusy(StockBusyException exception) {
-    ProblemDetail problem = problem(HttpStatus.SERVICE_UNAVAILABLE, "stock-busy", exception);
+    ProblemDetail problem =
+        problem(HttpStatus.SERVICE_UNAVAILABLE, "Stock busy", "stock-busy", exception);
     return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
         .header(HttpHeaders.RETRY_AFTER, "1")
         .body(problem);
   }
 
-  private static ProblemDetail problem(HttpStatus status, String type, Exception exception) {
+  private static ProblemDetail problem(
+      HttpStatus status, String title, String type, Exception exception) {
     ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, exception.getMessage());
+    problem.setTitle(title);
     problem.setType(URI.create("https://api.master-acdc.dev/problems/" + type));
     return problem;
   }

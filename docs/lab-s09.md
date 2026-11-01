@@ -149,3 +149,31 @@ Spring lo entregó al adaptador como `CannotAcquireLockException`, que se traduj
 
 La reserva falló en aproximadamente 2,0 segundos, dentro del intervalo exigido de 1,5 a 3,5
 segundos, y el stock permaneció sin cambios.
+
+## Paso 6 — pesimista vs UPDATE atómico
+
+Se ejecutó `InventoryReservationComparisonIT` con PostgreSQL/Testcontainers. Las dos rutas se
+midieron en la misma capa transaccional, sin HTTP, con 50 llamadas concurrentes de una unidad sobre
+30 unidades. Antes de las cinco rondas medidas se ejecutó una ronda de calentamiento por ruta.
+Cada ronda confirmó 30 reservas exitosas, 20 rechazos por insuficiencia y stock final 0.
+
+```text
+bash ./mvnw -q -Dtest=InventoryReservationComparisonIT test
+```
+
+| Ruta | Mediana | Mínimo | Máximo | Resultado por ronda |
+|---|---:|---:|---:|---|
+| Pesimista (`ReserveProductStockUseCase`) | 118 ms | 108 ms | 121 ms | 30/20/0 |
+| UPDATE atómico (`InventoryFacade` → `discountIfAvailable`) | 37 ms | 36 ms | 40 ms | 30/20/0 |
+
+Las mediciones observadas fueron `[120, 121, 118, 108, 113]` ms para la ruta pesimista y
+`[37, 40, 37, 36, 36]` ms para la ruta atómica. El recuento de líneas relevantes, contando
+consulta, adaptador y caso de uso e incluyendo las anotaciones y firmas de esos fragmentos, fue:
+
+| Ruta | Consulta | Adaptador | Caso de uso | Total |
+|---|---:|---:|---:|---:|
+| Pesimista | 4 | 10 | 6 | 20 |
+| UPDATE atómico | 5 | 3 | 6 | 14 |
+
+La ruta atómica fue aproximadamente 3,2 veces más rápida en esta ejecución y requiere seis líneas
+relevantes menos. No se modificó código de producción de ordering.

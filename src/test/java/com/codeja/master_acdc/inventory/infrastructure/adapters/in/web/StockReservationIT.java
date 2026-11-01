@@ -63,6 +63,7 @@ class StockReservationIT {
     mockMvc
         .perform(reserve("{\"units\":3}"))
         .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.title").value("Insufficient stock"))
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "insufficient-stock"))
         .andExpect(jsonPath("$.available").value(2));
 
@@ -75,6 +76,7 @@ class StockReservationIT {
     mockMvc
         .perform(reserve("{\"units\":1}"))
         .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.title").value("Stock not found"))
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "stock-not-found"));
 
     assertThat(stockCount()).isZero();
@@ -88,6 +90,7 @@ class StockReservationIT {
     mockMvc
         .perform(reserve("{}"))
         .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.title").value("Invalid request"))
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
 
     assertThat(available()).isEqualTo(10);
@@ -101,6 +104,7 @@ class StockReservationIT {
     mockMvc
         .perform(reserve("{\"units\":0}"))
         .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.title").value("Invalid request"))
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
 
     assertThat(available()).isEqualTo(10);
