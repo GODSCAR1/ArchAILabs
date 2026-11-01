@@ -13,8 +13,8 @@
 
 ## 3. API web
 
-- [ ] 3.1 Añadir request, response y mapper web dedicado para `POST /api/products/{id}/reservations`, incluyendo validación de `units` y el disponible restante; verificar `StockReservationWebMapperTest` y el test HTTP `@DisplayName("Reserva directa exitosa")`.
-- [ ] 3.2 Exponer el endpoint desde el adaptador web de inventory y mapear sus errores a ProblemDetail: `insufficient-stock` con `available` y `stock-not-found`; acotar el `@RestControllerAdvice` al controlador de reservas y manejar solo las tres excepciones de inventory, manteniendo la validación existente sin handlers genéricos; verificar tests HTTP con `@DisplayName("Stock insuficiente")`, `@DisplayName("Stock inexistente")`, `@DisplayName("Unidades ausentes")` y `@DisplayName("Unidades no positivas")`.
+- [x] 3.1 Añadir request, response y mapper web dedicado para `POST /api/products/{id}/reservations`, incluyendo validación de `units` y el disponible restante; verificar `StockReservationWebMapperTest` y el test HTTP `@DisplayName("Reserva directa exitosa")`.
+- [x] 3.2 Exponer el endpoint desde el adaptador web de inventory y mapear sus errores a ProblemDetail: `insufficient-stock` con `available` y `stock-not-found`; acotar el `@RestControllerAdvice` al controlador de reservas y manejar solo las tres excepciones de inventory, manteniendo la validación existente sin handlers genéricos; verificar tests HTTP con `@DisplayName("Stock insuficiente")`, `@DisplayName("Stock inexistente")`, `@DisplayName("Unidades ausentes")` y `@DisplayName("Unidades no positivas")`.
 
 ## 4. Concurrencia y evidencia
 
