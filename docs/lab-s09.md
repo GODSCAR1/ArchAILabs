@@ -181,3 +181,45 @@ consulta, adaptador y caso de uso e incluyendo las anotaciones y firmas de esos 
 
 La ruta atómica fue aproximadamente 3,2 veces más rápida en esta ejecución y requiere seis líneas
 relevantes menos. No se modificó código de producción de ordering.
+
+## Paso 8 — reglas ArchUnit
+
+Se añadió `PersistenceRulesTest` con tres reglas: `@Version` en entidades editables de `catalog`,
+ausencia de `@Transactional` en `domain` y `application`, y bloqueo pesimista más timeout en todos
+los métodos de repositorio `findForUpdate*`. Cada regla se demostró en rojo con una mutación temporal
+de código de producción. Los archivos se restauraron después de cada ejecución.
+
+### Entidad editable sin `@Version`
+
+Se retiraron temporalmente `@Version` y su import de `CategoryJpaEntity`:
+
+```text
+bash ./mvnw -q -Dtest=PersistenceRulesTest test
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that are annotated with @Entity and reside in any package ['..catalog..'] and are not annotated with @Immutable should have a field annotated with @Version' was violated (1 times):
+com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.CategoryJpaEntity has no field annotated with @Version
+```
+
+### `@Transactional` en `application`
+
+Se añadió temporalmente `@Transactional` a `ProductSearchService`:
+
+```text
+bash ./mvnw -q -Dtest=PersistenceRulesTest test
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in any package ['..domain..', '..application..'] should not use @Transactional on classes or methods' was violated (1 times):
+com.codeja.master_acdc.catalog.application.ProductSearchService is transactional
+```
+
+### `findForUpdate*` sin bloqueo ni timeout
+
+Se retiraron temporalmente `@Lock` y `@QueryHints` de `StockJpaRepository.findForUpdateById`:
+
+```text
+bash ./mvnw -q -Dtest=PersistenceRulesTest test
+[ERROR] Tests run: 3, Failures: 1, Errors: 0, Skipped: 0
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that are assignable to org.springframework.data.repository.Repository should protect findForUpdate methods' was violated (1 times):
+com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence.StockJpaRepository.findForUpdateById
+```
+
+Con las tres mutaciones restauradas, `PersistenceRulesTest` terminó en verde.

@@ -10,3 +10,4 @@ src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/persist
 src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterQueryCountTest.java
 src/test/java/com/codeja/master_acdc/arch/ArchitectureTest.java
 src/test/java/com/codeja/master_acdc/CatalogArchitectureTest.java
+src/test/java/com/codeja/master_acdc/arch/PersistenceRulesTest.java

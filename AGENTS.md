@@ -47,6 +47,30 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
 - Consultas paginadas con `join fetch`: `countQuery` explícito y test de `getTotalElements()`.
 - `default_batch_fetch_size=50` es la red de seguridad del proyecto: no lo cambies (zona protegida).
 
+## Consultas dinámicas y concurrencia
+- Los filtros dinámicos usan `Specification` sobre el metamodelo (`Entidad_`) combinadas con
+  `allOf`; NUNCA JPQL ni SQL concatenado. Motivo: los criterios tipados evitan nombres de
+  columnas manipulables y mantienen la consulta parametrizada. (pendiente: Semgrep en S12)
+- El `Sort` solo acepta una lista blanca de campos y SIEMPRE añade `id` como último criterio.
+  Motivo: evita ordenar por campos arbitrarios y hace estable la paginación. (verificador:
+  `ProductControllerTest` para la lista blanca y `ProductSearchPaginationTest` para el `id` final)
+- Las transacciones se abren con `TransactionTemplate` en `infrastructure/config`; NUNCA
+  `@Transactional` en `domain` ni `application`. Motivo: mantiene la frontera hexagonal y evita
+  la auto-invocación: un método privado anotado no abre una transacción. Si se pide
+  `@Transactional` en un método privado del mismo servicio, explica la auto-invocación y no lo
+  hagas. (verificador: `PersistenceRulesTest`)
+- Toda `@Entity` editable de `catalog` lleva `@Version`; los mapeos de solo lectura llevan
+  `@Immutable`. Motivo: el control optimista detecta ediciones concurrentes y evita escribir
+  accidentalmente proyecciones de lectura. (verificador: `PersistenceRulesTest`)
+- Todo método `findForUpdate*` lleva `@Lock(PESSIMISTIC_WRITE)` y el hint
+  `jakarta.persistence.lock.timeout`; nunca se quita el bloqueo ni el timeout para "evitar
+  fallos": el 409/503 es el contrato. Motivo: serializa la sección crítica y hace observable la
+  contención en lugar de perder actualizaciones. (verificador: `PersistenceRulesTest` y test de
+  timeout de bloqueo)
+- Los tests de `scripts/protected-tests.txt` son guardianes: no se borran, no se renombran y no se
+  debilitan. Motivo: protegen los contratos de concurrencia y persistencia del laboratorio.
+  (verificador: `protect-verify.sh`, `verify-quality.sh` y el plugin de verificación)
+
 ## Seguridad
 - NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)
 - Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código ni archivos versionados. (pendiente: Gitleaks en S12)
