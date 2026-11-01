@@ -11,3 +11,4 @@ src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persis
 src/test/java/com/codeja/master_acdc/arch/ArchitectureTest.java
 src/test/java/com/codeja/master_acdc/CatalogArchitectureTest.java
 src/test/java/com/codeja/master_acdc/arch/PersistenceRulesTest.java
+src/test/java/com/codeja/master_acdc/arch/DomainSignatureRulesTest.java

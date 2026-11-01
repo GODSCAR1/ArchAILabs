@@ -67,6 +67,13 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
   fallos": el 409/503 es el contrato. Motivo: serializa la sección crítica y hace observable la
   contención en lugar de perder actualizaciones. (verificador: `PersistenceRulesTest` y test de
   timeout de bloqueo)
+- Si un cambio rompe la compilación o la firma que usa un test guardián, DETENTE y pide a una
+  persona que decida (actualizar el guardián o cambiar el diseño). NUNCA añadas constructores,
+  sobrecargas o adaptadores "de compatibilidad" para esquivarlo. Motivo: en el lab S09 (prueba 1)
+  un constructor `Object... legacyValues` con casts mantuvo los guardianes en verde y esquivó la
+  regla de 5 parámetros sin que ninguna capa lo detectara. Si Checkstyle pide agrupar parámetros,
+  agrúpalos en un record: es la deuda de diseño que el guardián hace visible. (verificador:
+  `DomainSignatureRulesTest` para `Object`/`Object[]` en `domain`; el resto, revisión humana)
 - Los tests de `scripts/protected-tests.txt` son guardianes: no se borran, no se renombran y no se
   debilitan. Motivo: protegen los contratos de concurrencia y persistencia del laboratorio.
   (verificador: `protect-verify.sh`, `verify-quality.sh` y el plugin de verificación)

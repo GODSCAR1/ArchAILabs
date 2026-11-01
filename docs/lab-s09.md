@@ -273,6 +273,11 @@ Lecturas y mejoras propuestas:
 - **Guardianes**: que ejerciten costuras estables (caso de uso con un builder de criterio o la API
   HTTP) en lugar de constructores con muchos parámetros, para no congelar firmas internas.
 
+Aplicado al cierre del lab: la regla de la Guide en `AGENTS.md` y la regla ArchUnit
+`DomainSignatureRulesTest` ("ningún constructor o método de `..domain..` recibe `Object` u
+`Object[]`", salvo `equals`), añadida a los guardianes. Los casts no tienen verificador
+automático; agrupar los filtros de `ProductSearchCriteria` queda como deuda.
+
 El código de la prueba no se mergea: queda como parche en `evidencias/s09-prueba-1/codigo.patch`.
 
 ### Prueba 2 — en una funcionalidad legítima actúa la revisión de la propuesta
