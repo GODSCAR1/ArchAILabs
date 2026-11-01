@@ -2,8 +2,8 @@
 
 ## 1. Dominio y caso de uso
 
-- [ ] 1.1 Añadir el modelo inmutable de balance de stock, la excepción nueva de insuficiencia propia de `inventory.domain` con `available` y la excepción de stock ocupado, manteniendo `inventory.domain` sin dependencias de infraestructura; verificar con tests unitarios llamados `should_reserve_when_units_are_positive`, `should_reject_when_available_is_insufficient` y `should_reject_when_units_are_non_positive`, sin `@DisplayName` de escenarios.
-- [ ] 1.2 Añadir el puerto y el caso de uso de reserva de un producto que carguen el balance bloqueado, apliquen la reserva en el dominio y devuelvan producto, unidades y disponible restante; verificar con tests unitarios llamados `should_return_remaining_stock_when_reservation_succeeds`, `should_throw_stock_not_found_when_record_is_missing` y `should_throw_insufficient_stock_when_units_exceed_available`, sin `@DisplayName` de escenarios.
+- [x] 1.1 Añadir el modelo inmutable de balance de stock, la excepción nueva de insuficiencia propia de `inventory.domain` con `available` y la excepción de stock ocupado, manteniendo `inventory.domain` sin dependencias de infraestructura; verificar con tests unitarios llamados `should_reserve_when_units_are_positive`, `should_reject_when_available_is_insufficient` y `should_reject_when_units_are_non_positive`, sin `@DisplayName` de escenarios.
+- [x] 1.2 Añadir el puerto y el caso de uso de reserva de un producto que carguen el balance bloqueado, apliquen la reserva en el dominio y devuelvan producto, unidades y disponible restante; verificar con tests unitarios llamados `should_return_remaining_stock_when_reservation_succeeds`, `should_throw_stock_not_found_when_record_is_missing` y `should_throw_insufficient_stock_when_units_exceed_available`, sin `@DisplayName` de escenarios.
 
 ## 2. Persistencia y transacción
 
