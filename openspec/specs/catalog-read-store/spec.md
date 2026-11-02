@@ -1,6 +1,11 @@
-# Spec Delta
+# catalog-read-store Specification
 
-## MODIFIED Requirements
+## Purpose
+Permite materializar y servir las lecturas del catálogo desde un almacén documental sin cambiar
+los endpoints existentes, manteniendo PostgreSQL como fuente de verdad y una migración repetible,
+reanudable y verificable.
+
+## Requirements
 
 ### Requirement: Documento agregado de catálogo
 
@@ -10,9 +15,9 @@ El almacén documental SHALL contener una ficha por SKU con producto, categoría
 - **WHEN** se prepara la ficha de un producto
 - **THEN** el documento de MongoDB contiene precio, estado, categoría `{_id, name}`, variantes, atributos, `availableStock`, rating y `latestReviews` con los valores correspondientes al producto
 
-#### Scenario: Respuesta HTTP de ficha
+#### Scenario: Respuesta HTTP equivalente a PostgreSQL
 - **WHEN** un cliente solicita la ficha de un SKU disponible
-- **THEN** el sistema responde `200` con el contrato vigente, incluido el campo `stock` en lugar de exponer `availableStock`
+- **THEN** el sistema responde `200` con el mismo contrato HTTP que tenía con PostgreSQL, incluido el campo `stock` en lugar de exponer `availableStock`
 
 #### Scenario: Arrays acotados
 - **WHEN** la materialización encuentra un producto con más de cinco reseñas recientes o más de cien variantes
@@ -37,21 +42,3 @@ El sistema SHALL aplicar un validador de esquema con los campos obligatorios, in
 #### Scenario: Índices reproducibles
 - **WHEN** el inicializador de MongoDB se ejecuta más de una vez
 - **THEN** los índices requeridos siguen siendo únicos y no se crean índices adicionales por descubrimiento automático
-
-## REMOVED Requirements
-
-### Requirement: Selección compatible del almacén de lectura
-**Reason**: MongoDB es el único almacén de lectura del catálogo; ya no existe selección compatible ni activación de infraestructura ligada a una migración.
-**Migration**: Retirar `catalog.store` y `catalog.migration.enabled`; las lecturas del catálogo se sirven desde MongoDB.
-
-### Requirement: Re-migración periódica desde PostgreSQL
-**Reason**: La proyección periódica del catálogo desde el almacén relacional deja de ser necesaria al retirar ese almacén para el catálogo.
-**Migration**: Conservar los datos autoritativos del catálogo en MongoDB; la proyección periódica de stock desde Inventory no forma parte de este requisito.
-
-### Requirement: Migración reanudable e idempotente
-**Reason**: Ya no existe un proceso de migración del catálogo que requiera checkpoint, reanudación o upsert entre almacenes.
-**Migration**: No se requiere una acción de migración; MongoDB permanece como almacén único del catálogo.
-
-### Requirement: Equivalencia entre almacenes
-**Reason**: La equivalencia comparativa entre dos almacenes deja de ser un contrato cuando el catálogo solo usa MongoDB.
-**Migration**: Mantener los contratos funcionales de búsqueda, ficha y reseñas sobre el almacén MongoDB.

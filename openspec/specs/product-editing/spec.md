@@ -6,7 +6,7 @@ Permite editar de forma segura los datos comerciales básicos de un producto y h
 ## Requirements
 
 ### Requirement: El nombre y el precio se pueden editar con una versión esperada
-El sistema SHALL aceptar `PUT /api/products/{id}` con `name`, `price` y `version`, y SHALL actualizar únicamente el nombre y el precio cuando la versión recibida sea la actual.
+El sistema SHALL aceptar `PUT /api/products/{id}` con `name`, `price` y `version`, y SHALL actualizar únicamente el nombre y el precio cuando la versión recibida sea la actual, persistiendo el resultado en MongoDB.
 
 #### Scenario: Edición válida del producto
 - **WHEN** un cliente envía un PUT válido para un producto existente con su versión actual
@@ -39,8 +39,23 @@ El sistema SHALL aplicar la validación existente de los value objects del produ
 - **THEN** el sistema devuelve HTTP 400 con el contrato de error de validación existente, y el producto permanece sin cambios
 
 ### Requirement: La creación de producto expone su versión inicial
-El sistema SHALL incluir la `version` inicial del producto en la respuesta correcta de `POST /api/products`.
+El sistema SHALL incluir la `version` inicial del producto en la respuesta correcta de `POST /api/products`, persistiendo la creación en MongoDB.
 
 #### Scenario: Producto creado
 - **WHEN** un cliente crea un producto válido
 - **THEN** el sistema devuelve HTTP 201 con los campos existentes de creación y `version` igual a la versión inicial persistida
+
+#### Scenario: SKU duplicado
+- **WHEN** un cliente crea un producto con un SKU ya existente, incluso si la colisión ocurre concurrentemente al guardar
+- **THEN** el sistema devuelve HTTP 409 con el mismo ProblemDetail type actual (`about:blank`) y el producto previamente asociado al SKU permanece sin cambios
+
+### Requirement: La disponibilidad de stock en catálogo es una copia eventualmente consistente
+El sistema SHALL reflejar periódicamente el stock disponible en la vista de catálogo, sin convertirla en autoridad para reservar o modificar inventario.
+
+#### Scenario: Actualización periódica de stock
+- **WHEN** se ejecuta la sincronización periódica para un producto con fila de stock
+- **THEN** `availableStock` refleja el valor de `stock.available` en el último ciclo completado, admitiendo desfase entre ciclos
+
+#### Scenario: Producto sin fila de stock
+- **WHEN** se ejecuta la sincronización para un producto sin fila de stock
+- **THEN** `availableStock` se establece en cero y la reserva de inventario sigue consultando su fuente de verdad

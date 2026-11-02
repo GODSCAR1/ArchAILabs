@@ -11,7 +11,7 @@
 
 ## 2. Suite de catálogo Mongo
 
-- [x] 2.1 Consolidar las suites duales en Mongo y retirar las subclases PostgreSQL; verificar los escenarios HTTP existentes de `product-search`, `product-editing` y `product-detail`, manteniendo status y `ProblemDetail.type` según sus `@DisplayName` actuales. En `ProductDetailMongoIT`, verificar el escenario `@DisplayName("Respuesta HTTP de ficha")`; verificar el coste de ficha con `ProductDetailQueryCountMongoTest`, que lleva `@DisplayName("Muchas colecciones asociadas")` y comprueba una sola operación de lectura.
+- [x] 2.1 Consolidar las suites duales en Mongo y retirar las subclases PostgreSQL; verificar los escenarios HTTP existentes de `product-search`, `product-editing` y `product-detail`, manteniendo status y `ProblemDetail.type` según sus `@DisplayName` actuales. En `ProductDetailMongoIT`, verificar el escenario `@DisplayName("Respuesta HTTP equivalente a PostgreSQL")`; verificar el coste de ficha con `ProductDetailQueryCountMongoTest`, que lleva `@DisplayName("Muchas colecciones asociadas")` y comprueba una sola operación de lectura.
 - [x] 2.2 Conservar `ProductSearchMigrationIT` y `ProductDetailMigrationIT` como verificaciones históricas con target Flyway V5 y V6 respectivamente; verificar que ninguna aplica V7.
 
 ## 3. Infraestructura de tests y contrato de datos
