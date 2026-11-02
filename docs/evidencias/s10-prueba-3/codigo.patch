@@ -1,0 +1,514 @@
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/application/CategoryProductCountsService.java b/src/main/java/com/codeja/master_acdc/catalog/application/CategoryProductCountsService.java
+new file mode 100644
+index 0000000..6b4a8e5
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/application/CategoryProductCountsService.java
+@@ -0,0 +1,20 @@
++package com.codeja.master_acdc.catalog.application;
++
++import com.codeja.master_acdc.catalog.application.port.CategoryProductCountsUseCase;
++import com.codeja.master_acdc.catalog.domain.model.CategoryProductCount;
++import com.codeja.master_acdc.catalog.domain.port.CategoryProductCountRepository;
++import java.util.List;
++
++public class CategoryProductCountsService implements CategoryProductCountsUseCase {
++
++  private final CategoryProductCountRepository repository;
++
++  public CategoryProductCountsService(CategoryProductCountRepository repository) {
++    this.repository = repository;
++  }
++
++  @Override
++  public List<CategoryProductCount> findCountsByCategory() {
++    return repository.findCountsByCategory();
++  }
++}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/application/port/CategoryProductCountsUseCase.java b/src/main/java/com/codeja/master_acdc/catalog/application/port/CategoryProductCountsUseCase.java
+new file mode 100644
+index 0000000..be16330
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/application/port/CategoryProductCountsUseCase.java
+@@ -0,0 +1,9 @@
++package com.codeja.master_acdc.catalog.application.port;
++
++import com.codeja.master_acdc.catalog.domain.model.CategoryProductCount;
++import java.util.List;
++
++public interface CategoryProductCountsUseCase {
++
++  List<CategoryProductCount> findCountsByCategory();
++}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/domain/model/CategoryProductCount.java b/src/main/java/com/codeja/master_acdc/catalog/domain/model/CategoryProductCount.java
+new file mode 100644
+index 0000000..56a1e98
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/domain/model/CategoryProductCount.java
+@@ -0,0 +1,13 @@
++package com.codeja.master_acdc.catalog.domain.model;
++
++import com.codeja.master_acdc.catalog.domain.exception.InvalidProductException;
++import java.util.UUID;
++
++public record CategoryProductCount(UUID categoryId, String categoryName, long productCount) {
++
++  public CategoryProductCount {
++    if (categoryId == null || categoryName == null || categoryName.isBlank() || productCount < 1) {
++      throw new InvalidProductException("category product count must be positive and complete");
++    }
++  }
++}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/domain/port/CategoryProductCountRepository.java b/src/main/java/com/codeja/master_acdc/catalog/domain/port/CategoryProductCountRepository.java
+new file mode 100644
+index 0000000..d5220f6
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/domain/port/CategoryProductCountRepository.java
+@@ -0,0 +1,9 @@
++package com.codeja.master_acdc.catalog.domain.port;
++
++import com.codeja.master_acdc.catalog.domain.model.CategoryProductCount;
++import java.util.List;
++
++public interface CategoryProductCountRepository {
++
++  List<CategoryProductCount> findCountsByCategory();
++}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountController.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountController.java
+new file mode 100644
+index 0000000..ef4daca
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountController.java
+@@ -0,0 +1,22 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
++
++import com.codeja.master_acdc.catalog.application.port.CategoryProductCountsUseCase;
++import java.util.List;
++import org.springframework.web.bind.annotation.GetMapping;
++import org.springframework.web.bind.annotation.RestController;
++
++@RestController
++public class CategoryProductCountController {
++
++  private final CategoryProductCountsUseCase categoryProductCountsUseCase;
++
++  public CategoryProductCountController(CategoryProductCountsUseCase categoryProductCountsUseCase) {
++    this.categoryProductCountsUseCase = categoryProductCountsUseCase;
++  }
++
++  @GetMapping("/api/products/category-counts")
++  public List<CategoryProductCountResponse> findCountsByCategory() {
++    return CategoryProductCountWebMapper.toResponse(
++        categoryProductCountsUseCase.findCountsByCategory());
++  }
++}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountResponse.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountResponse.java
+new file mode 100644
+index 0000000..87e55e5
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountResponse.java
+@@ -0,0 +1,6 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
++
++import java.util.UUID;
++
++public record CategoryProductCountResponse(
++    UUID categoryId, String categoryName, long productCount) {}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountWebMapper.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountWebMapper.java
+new file mode 100644
+index 0000000..e776837
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountWebMapper.java
+@@ -0,0 +1,18 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
++
++import com.codeja.master_acdc.catalog.domain.model.CategoryProductCount;
++import java.util.List;
++
++final class CategoryProductCountWebMapper {
++
++  private CategoryProductCountWebMapper() {}
++
++  static List<CategoryProductCountResponse> toResponse(List<CategoryProductCount> counts) {
++    return counts.stream()
++        .map(
++            count ->
++                new CategoryProductCountResponse(
++                    count.categoryId(), count.categoryName(), count.productCount()))
++        .toList();
++  }
++}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogCategoryProductCountMongoMapper.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogCategoryProductCountMongoMapper.java
+new file mode 100644
+index 0000000..7842ec6
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogCategoryProductCountMongoMapper.java
+@@ -0,0 +1,12 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
++
++import com.codeja.master_acdc.catalog.domain.model.CategoryProductCount;
++
++final class CatalogCategoryProductCountMongoMapper {
++
++  private CatalogCategoryProductCountMongoMapper() {}
++
++  static CategoryProductCount toDomain(CatalogCategoryProductCountView view) {
++    return new CategoryProductCount(view.categoryId(), view.categoryName(), view.productCount());
++  }
++}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogCategoryProductCountView.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogCategoryProductCountView.java
+new file mode 100644
+index 0000000..e5d5091
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogCategoryProductCountView.java
+@@ -0,0 +1,5 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
++
++import java.util.UUID;
++
++record CatalogCategoryProductCountView(UUID categoryId, String categoryName, long productCount) {}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CategoryProductCountMongoRepositoryAdapter.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CategoryProductCountMongoRepositoryAdapter.java
+new file mode 100644
+index 0000000..3eab1b8
+--- /dev/null
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CategoryProductCountMongoRepositoryAdapter.java
+@@ -0,0 +1,37 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
++
++import com.codeja.master_acdc.catalog.domain.model.CategoryProductCount;
++import com.codeja.master_acdc.catalog.domain.port.CategoryProductCountRepository;
++import java.util.List;
++import org.springframework.data.domain.Sort;
++import org.springframework.data.mongodb.core.MongoTemplate;
++import org.springframework.data.mongodb.core.aggregation.Aggregation;
++import org.springframework.data.mongodb.core.aggregation.AggregationResults;
++
++public class CategoryProductCountMongoRepositoryAdapter implements CategoryProductCountRepository {
++
++  private final MongoTemplate mongoTemplate;
++
++  public CategoryProductCountMongoRepositoryAdapter(MongoTemplate mongoTemplate) {
++    this.mongoTemplate = mongoTemplate;
++  }
++
++  @Override
++  public List<CategoryProductCount> findCountsByCategory() {
++    Aggregation aggregation =
++        Aggregation.newAggregation(
++            Aggregation.group("category._id")
++                .first("category.name")
++                .as("categoryName")
++                .count()
++                .as("productCount"),
++            Aggregation.project("categoryName", "productCount").and("_id").as("categoryId"),
++            Aggregation.sort(Sort.Direction.ASC, "categoryName"));
++    AggregationResults<CatalogCategoryProductCountView> results =
++        mongoTemplate.aggregate(
++            aggregation, CatalogProduct.class, CatalogCategoryProductCountView.class);
++    return results.getMappedResults().stream()
++        .map(CatalogCategoryProductCountMongoMapper::toDomain)
++        .toList();
++  }
++}
+diff --git a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/config/ProductConfiguration.java b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/config/ProductConfiguration.java
+index 3803da8..4b0f988 100644
+--- a/src/main/java/com/codeja/master_acdc/catalog/infrastructure/config/ProductConfiguration.java
++++ b/src/main/java/com/codeja/master_acdc/catalog/infrastructure/config/ProductConfiguration.java
+@@ -1,14 +1,17 @@
+ package com.codeja.master_acdc.catalog.infrastructure.config;
+ 
++import com.codeja.master_acdc.catalog.application.CategoryProductCountsService;
+ import com.codeja.master_acdc.catalog.application.CreateProductService;
+ import com.codeja.master_acdc.catalog.application.EditProductService;
+ import com.codeja.master_acdc.catalog.application.ProductDetailService;
+ import com.codeja.master_acdc.catalog.application.ProductSearchService;
++import com.codeja.master_acdc.catalog.application.port.CategoryProductCountsUseCase;
+ import com.codeja.master_acdc.catalog.application.port.CreateProductUseCase;
+ import com.codeja.master_acdc.catalog.application.port.EditProductUseCase;
+ import com.codeja.master_acdc.catalog.application.port.ProductDetailUseCase;
+ import com.codeja.master_acdc.catalog.application.port.ProductReviewsUseCase;
+ import com.codeja.master_acdc.catalog.application.port.ProductSearchUseCase;
++import com.codeja.master_acdc.catalog.domain.port.CategoryProductCountRepository;
+ import com.codeja.master_acdc.catalog.domain.port.ProductDetailRepository;
+ import com.codeja.master_acdc.catalog.domain.port.ProductEditingRepository;
+ import com.codeja.master_acdc.catalog.domain.port.ProductRepository;
+@@ -16,6 +19,7 @@ import com.codeja.master_acdc.catalog.domain.port.ProductSearchRepository;
+ import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogDetailMongoRepositoryAdapter;
+ import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogIndexInitializer;
+ import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogSchemaValidator;
++import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CategoryProductCountMongoRepositoryAdapter;
+ import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductEditingMongoRepositoryAdapter;
+ import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductMongoRepositoryAdapter;
+ import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductSearchMongoRepositoryAdapter;
+@@ -96,4 +100,16 @@ public class ProductConfiguration {
+     return (sku, page, size) ->
+         transactionTemplate.execute(status -> delegate.findBySku(sku, page, size));
+   }
++
++  @Bean
++  public CategoryProductCountRepository categoryProductCountRepository(
++      MongoTemplate mongoTemplate) {
++    return new CategoryProductCountMongoRepositoryAdapter(mongoTemplate);
++  }
++
++  @Bean
++  public CategoryProductCountsUseCase categoryProductCountsUseCase(
++      CategoryProductCountRepository repository) {
++    return new CategoryProductCountsService(repository);
++  }
+ }
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/application/CategoryProductCountsServiceTest.java b/src/test/java/com/codeja/master_acdc/catalog/application/CategoryProductCountsServiceTest.java
+new file mode 100644
+index 0000000..d36c6d9
+--- /dev/null
++++ b/src/test/java/com/codeja/master_acdc/catalog/application/CategoryProductCountsServiceTest.java
+@@ -0,0 +1,29 @@
++package com.codeja.master_acdc.catalog.application;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.verify;
++import static org.mockito.Mockito.when;
++
++import com.codeja.master_acdc.catalog.domain.model.CategoryProductCount;
++import com.codeja.master_acdc.catalog.domain.port.CategoryProductCountRepository;
++import java.util.List;
++import java.util.UUID;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++
++class CategoryProductCountsServiceTest {
++
++  @Test
++  @DisplayName("Consulta de conteos por categoría")
++  void should_return_category_counts_when_requested() {
++    CategoryProductCountRepository repository = mock(CategoryProductCountRepository.class);
++    CategoryProductCountsService service = new CategoryProductCountsService(repository);
++    List<CategoryProductCount> expected =
++        List.of(new CategoryProductCount(UUID.randomUUID(), "Audio", 2));
++    when(repository.findCountsByCategory()).thenReturn(expected);
++
++    assertThat(service.findCountsByCategory()).isSameAs(expected);
++    verify(repository).findCountsByCategory();
++  }
++}
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountControllerTest.java b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountControllerTest.java
+new file mode 100644
+index 0000000..1f2d84c
+--- /dev/null
++++ b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountControllerTest.java
+@@ -0,0 +1,51 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
++
++import static org.mockito.BDDMockito.given;
++import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
++import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
++
++import com.codeja.master_acdc.catalog.application.port.CategoryProductCountsUseCase;
++import com.codeja.master_acdc.catalog.domain.model.CategoryProductCount;
++import java.util.List;
++import java.util.UUID;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.beans.factory.annotation.Autowired;
++import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
++import org.springframework.test.context.bean.override.mockito.MockitoBean;
++import org.springframework.test.web.servlet.MockMvc;
++
++@WebMvcTest(CategoryProductCountController.class)
++class CategoryProductCountControllerTest {
++
++  @Autowired MockMvc mockMvc;
++
++  @MockitoBean CategoryProductCountsUseCase categoryProductCountsUseCase;
++
++  @Test
++  @DisplayName("Consulta de conteos por categoría")
++  void should_return_category_counts_when_requested() throws Exception {
++    UUID categoryId = UUID.randomUUID();
++    given(categoryProductCountsUseCase.findCountsByCategory())
++        .willReturn(List.of(new CategoryProductCount(categoryId, "Audio", 3)));
++
++    mockMvc
++        .perform(get("/api/products/category-counts"))
++        .andExpect(status().isOk())
++        .andExpect(jsonPath("$[0].categoryId").value(categoryId.toString()))
++        .andExpect(jsonPath("$[0].categoryName").value("Audio"))
++        .andExpect(jsonPath("$[0].productCount").value(3));
++  }
++
++  @Test
++  @DisplayName("Catálogo vacío")
++  void should_return_empty_list_when_catalog_is_empty() throws Exception {
++    given(categoryProductCountsUseCase.findCountsByCategory()).willReturn(List.of());
++
++    mockMvc
++        .perform(get("/api/products/category-counts"))
++        .andExpect(status().isOk())
++        .andExpect(jsonPath("$").isEmpty());
++  }
++}
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountWebMapperTest.java b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountWebMapperTest.java
+new file mode 100644
+index 0000000..a2eee16
+--- /dev/null
++++ b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CategoryProductCountWebMapperTest.java
+@@ -0,0 +1,22 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import com.codeja.master_acdc.catalog.domain.model.CategoryProductCount;
++import java.util.List;
++import java.util.UUID;
++import org.junit.jupiter.api.Test;
++
++class CategoryProductCountWebMapperTest {
++
++  @Test
++  void should_map_domain_counts_when_building_responses() {
++    var categoryId = UUID.randomUUID();
++
++    var result =
++        CategoryProductCountWebMapper.toResponse(
++            List.of(new CategoryProductCount(categoryId, "Audio", 2)));
++
++    assertThat(result).containsExactly(new CategoryProductCountResponse(categoryId, "Audio", 2));
++  }
++}
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogCategoryProductCountMongoMapperTest.java b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogCategoryProductCountMongoMapperTest.java
+new file mode 100644
+index 0000000..35e4d11
+--- /dev/null
++++ b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogCategoryProductCountMongoMapperTest.java
+@@ -0,0 +1,22 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import java.util.UUID;
++import org.junit.jupiter.api.Test;
++
++class CatalogCategoryProductCountMongoMapperTest {
++
++  @Test
++  void should_map_aggregation_view_when_mapping_category_count() {
++    var categoryId = UUID.randomUUID();
++
++    var result =
++        CatalogCategoryProductCountMongoMapper.toDomain(
++            new CatalogCategoryProductCountView(categoryId, "Audio", 2));
++
++    assertThat(result.categoryId()).isEqualTo(categoryId);
++    assertThat(result.categoryName()).isEqualTo("Audio");
++    assertThat(result.productCount()).isEqualTo(2);
++  }
++}
+diff --git a/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CategoryProductCountMongoRepositoryAdapterTest.java b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CategoryProductCountMongoRepositoryAdapterTest.java
+new file mode 100644
+index 0000000..dea2b12
+--- /dev/null
++++ b/src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CategoryProductCountMongoRepositoryAdapterTest.java
+@@ -0,0 +1,102 @@
++package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
++import com.mongodb.ConnectionString;
++import com.mongodb.MongoClientSettings;
++import com.mongodb.client.MongoClient;
++import com.mongodb.client.MongoClients;
++import java.math.BigDecimal;
++import java.time.Instant;
++import java.util.List;
++import java.util.Map;
++import java.util.UUID;
++import org.bson.UuidRepresentation;
++import org.junit.jupiter.api.AfterAll;
++import org.junit.jupiter.api.BeforeAll;
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.data.mongodb.core.MongoTemplate;
++import org.testcontainers.junit.jupiter.Container;
++import org.testcontainers.junit.jupiter.Testcontainers;
++import org.testcontainers.mongodb.MongoDBContainer;
++import org.testcontainers.utility.DockerImageName;
++
++@Testcontainers
++class CategoryProductCountMongoRepositoryAdapterTest {
++
++  @Container
++  static final MongoDBContainer MONGO = new MongoDBContainer(DockerImageName.parse("mongo:7.0"));
++
++  private static MongoClient client;
++  private static MongoTemplate template;
++  private CategoryProductCountMongoRepositoryAdapter adapter;
++
++  @BeforeAll
++  static void initialize_mongo_template() {
++    client =
++        MongoClients.create(
++            MongoClientSettings.builder()
++                .applyConnectionString(new ConnectionString(MONGO.getReplicaSetUrl()))
++                .uuidRepresentation(UuidRepresentation.STANDARD)
++                .build());
++    template = new MongoTemplate(client, "category_product_count_test");
++  }
++
++  @AfterAll
++  static void close_mongo_client() {
++    client.close();
++  }
++
++  @BeforeEach
++  void initialize_adapter() {
++    template.getDb().drop();
++    adapter = new CategoryProductCountMongoRepositoryAdapter(template);
++  }
++
++  @Test
++  @DisplayName("Consulta de conteos por categoría")
++  void should_count_products_per_category_when_products_have_different_statuses() {
++    UUID categoryA = UUID.randomUUID();
++    UUID categoryB = UUID.randomUUID();
++    template.insertAll(
++        List.of(
++            product("A1", categoryA, "Audio", ProductStatus.ACTIVE),
++            product("A2", categoryA, "Audio", ProductStatus.DRAFT),
++            product("A3", categoryA, "Audio", ProductStatus.DISCONTINUED),
++            product("B1", categoryB, "Books", ProductStatus.ACTIVE)));
++
++    var counts = adapter.findCountsByCategory();
++
++    assertThat(counts)
++        .extracting(
++            count -> count.categoryId() + ":" + count.categoryName() + ":" + count.productCount())
++        .containsExactly(categoryA + ":Audio:3", categoryB + ":Books:1");
++  }
++
++  @Test
++  @DisplayName("Catálogo vacío")
++  void should_return_no_category_counts_when_catalog_is_empty() {
++    assertThat(adapter.findCountsByCategory()).isEmpty();
++  }
++
++  private CatalogProduct product(
++      String sku, UUID categoryId, String categoryName, ProductStatus status) {
++    return new CatalogProduct(
++        UUID.randomUUID(),
++        sku,
++        "Product " + sku,
++        100,
++        status,
++        Instant.parse("2026-01-01T00:00:00Z"),
++        0,
++        new CategoryRef(categoryId, categoryName),
++        List.of(),
++        Map.of(),
++        0,
++        new RatingSummary(BigDecimal.ZERO.setScale(2), 0),
++        List.of());
++  }
++}
