@@ -16,7 +16,7 @@ function editedPaths(tool: string, args: any): string[] {
 
 const MAX_ATTEMPTS = 3
 // Rutas RELATIVAS a la raíz del repo: config/ de la raíz, no infrastructure/config/
-const PROTECTED = /^(config|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^src\/main\/resources\/application[^/]*$|^\.env(\..*)?$/
+const PROTECTED = /^(config|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^src\/main\/resources\/application[^/]*$|^\.env(\..*)?$|^src\/main\/java\/com\/codeja\/master_acdc\/catalog\/infrastructure\/adapters\/out\/mongo\/CatalogSchemaValidator\.java$/
 
 // Tests guardianes (lab S09, paso 8): misma lista que protect-verify.sh y verify-quality.sh
 const GUARDS_FILE = "scripts/protected-tests.txt"
@@ -46,6 +46,7 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
         if (WRITES.test(cmd)) {
           const hit = guards.find(g => cmd.includes(path.basename(g)))
           if (hit) throw new Error(guardMessage(hit))
+          if (cmd.includes("CatalogSchemaValidator")) throw new Error("AC/DC: CatalogSchemaValidator está en la zona protegida (validador $jsonSchema del catálogo, ADR 0009). No se edita, no se desactiva ni se sortea: explica el problema a la persona y detente.")
         }
         return
       }

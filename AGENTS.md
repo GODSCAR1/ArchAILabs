@@ -13,7 +13,7 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 - Casos de uso: interfaz en `application/port/` (`<Accion>UseCase`) + implementación `<Accion>Service` en `application/`. Adaptadores en `infrastructure/adapters/in/<tecnología>` y `infrastructure/adapters/out/<tecnología>`.
 - Los beans se ensamblan en `infrastructure/config/` con `@Bean`. Sin lógica de negocio en métodos `@Bean`.
 - NUNCA `ApplicationContext.getBean()` ni campos estáticos para acceder a beans fuera de `infrastructure/config/`. (pendiente: ArchUnit en S17)
-- La conversión entre capas vive en mappers dedicados de infraestructura: `adapters/in/<tecnología>/<Agregado><Tecnología>Mapper` (petición → criterio/comando de aplicación; resultado → DTO de respuesta) y `adapters/out/persistence/<Agregado>PersistenceMapper` (entidad JPA ↔ modelo de dominio o fila de lectura). Clases `final`, sin estado, con métodos estáticos y test unitario. Motivo: el código generado reparte la conversión entre entidades, DTO y adaptadores; un único sitio por frontera la hace revisable y testeable. (pendiente: ArchUnit en S17)
+- La conversión entre capas vive en mappers dedicados de infraestructura: `adapters/in/<tecnología>/<Agregado><Tecnología>Mapper` (petición → criterio/comando de aplicación; resultado → DTO de respuesta), `adapters/out/persistence/<Agregado>PersistenceMapper` (entidad JPA ↔ modelo de dominio o fila de lectura) y `adapters/out/mongo/<Agregado>MongoMapper` (documento ↔ modelo de dominio). Clases `final`, sin estado, con métodos estáticos y test unitario. Motivo: el código generado reparte la conversión entre entidades, DTO y adaptadores; un único sitio por frontera la hace revisable y testeable. (pendiente: ArchUnit en S17)
 - Las entidades JPA y los DTO web NO tienen métodos de conversión (`from`, `toDomain`, `toRow`…), ni los controllers ni los adaptadores contienen la lógica de mapeo. `domain` y `application` nunca conocen los mappers. (pendiente: ArchUnit en S17)
 - Sin librerías de mapeo (MapStruct y similares): una dependencia nueva es decisión de una persona. (pendiente: ArchUnit en S17)
 - Lee el `package-info.java` de un paquete antes de añadir clases en él.
@@ -36,7 +36,7 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
 - `switch` sobre enums: usa una expresión `switch` (`case X -> ...`) para que el compilador exija cubrir todos los valores. `equals` siempre con `hashCode`. Sin imports con `*`.
 - NUNCA añadas `@SuppressWarnings("checkstyle:...")` ni edites `config/checkstyle*.xml`: si una regla no aplica, detente y explica por qué; una persona decide la supresión y la justifica.
 
-## Persistencia (JPA) — ADR `docs/decisiones/listado-de-pedidos.md`
+## Persistencia (JPA: inventory y ordering) — ADR `docs/decisiones/listado-de-pedidos.md`
 - Todas las asociaciones son `fetch = FetchType.LAZY`; en `@ManyToOne`/`@OneToOne` escríbelo explícito (por defecto son EAGER). NUNCA `FetchType.EAGER`, `hibernate.enable_lazy_load_no_trans` ni `spring.jpa.open-in-view=true`. (Checkstyle `toOneLazy`/`noEagerFetch`)
 - Qué se carga lo decide la consulta del caso de uso: listado → proyección (`select new …Row(...)`); detalle → `@EntityGraph` con una sola colección; volumen grande → batch fetching + paginación.
 - Si aparece una `LazyInitializationException`, carga la asociación que nombra el mensaje en la consulta del caso de uso. NUNCA la resuelvas con EAGER, OSIV, `enable_lazy_load_no_trans`, `Hibernate.initialize()` en bucle ni consultas dentro de un bucle.
@@ -48,20 +48,21 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
 - `default_batch_fetch_size=50` es la red de seguridad del proyecto: no lo cambies (zona protegida).
 
 ## Consultas dinámicas y concurrencia
-- Los filtros dinámicos usan `Specification` sobre el metamodelo (`Entidad_`) combinadas con
+- En los módulos JPA (inventory, ordering), los filtros dinámicos usan `Specification` sobre el metamodelo (`Entidad_`) combinadas con
   `allOf`; NUNCA JPQL ni SQL concatenado. Motivo: los criterios tipados evitan nombres de
   columnas manipulables y mantienen la consulta parametrizada. (pendiente: Semgrep en S12)
 - El `Sort` solo acepta una lista blanca de campos y SIEMPRE añade `id` como último criterio.
   Motivo: evita ordenar por campos arbitrarios y hace estable la paginación. (verificador:
-  `ProductControllerTest` para la lista blanca y `ProductSearchPaginationTest` para el `id` final)
+  `ProductControllerTest` para la lista blanca y `ProductSearchPaginationMongoTest` para el `id` final)
 - Las transacciones se abren con `TransactionTemplate` en `infrastructure/config`; NUNCA
   `@Transactional` en `domain` ni `application`. Motivo: mantiene la frontera hexagonal y evita
   la auto-invocación: un método privado anotado no abre una transacción. Si se pide
   `@Transactional` en un método privado del mismo servicio, explica la auto-invocación y no lo
   hagas. (verificador: `PersistenceRulesTest`)
-- Toda `@Entity` editable de `catalog` lleva `@Version`; los mapeos de solo lectura llevan
-  `@Immutable`. Motivo: el control optimista detecta ediciones concurrentes y evita escribir
-  accidentalmente proyecciones de lectura. (verificador: `PersistenceRulesTest`)
+- Las ediciones del catálogo usan concurrencia optimista con el campo `version` del documento
+  (actualización condicional por `_id` + `version`): NUNCA un `save` que sobrescriba sin
+  comparar. Motivo: detecta ediciones concurrentes sin bloqueo. (verificador:
+  `ProductEditingMongoRepositoryAdapterTest`)
 - Todo método `findForUpdate*` lleva `@Lock(PESSIMISTIC_WRITE)` y el hint
   `jakarta.persistence.lock.timeout`; nunca se quita el bloqueo ni el timeout para "evitar
   fallos": el 409/503 es el contrato. Motivo: serializa la sección crítica y hace observable la
@@ -78,6 +79,16 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
   debilitan. Motivo: protegen los contratos de concurrencia y persistencia del laboratorio.
   (verificador: `protect-verify.sh`, `verify-quality.sh` y el plugin de verificación)
 
+## Catálogo en MongoDB — ADR `docs/adr/0009-catalogo-en-mongodb.md` y modelo `docs/catalog-model.md`
+Lee los dos documentos antes de tocar el catálogo: el modelo sale de los patrones de acceso.
+- El catálogo vive solo en MongoDB: NUNCA JPA, `jakarta.persistence` ni Spring Data JPA en `catalog`. Motivo: se retiró PostgreSQL del catálogo (V7). (verificador: `CatalogMongoArchitectureTest`)
+- Arrays acotados: `latestReviews` ≤ 5 y `variants` ≤ 100; las reseñas completas viven en la colección `reviews` y la ficha guarda solo el subset y `rating`. NUNCA embebas un array sin límite (todas las reseñas, historiales…) aunque "la ficha sea más rápida": propón un subset con tope y detente. Motivo: un documento que crece sin límite llega al máximo de 16 MB y degrada cada lectura. (verificador: validador `$jsonSchema` y `CatalogMongoStructureIT`)
+- Todo índice se declara en `CatalogIndexInitializer`; `spring.data.mongodb.auto-index-creation=false`. Cada filtro nuevo del buscador añade su índice ahí y su comprobación al test de índices. Motivo: los índices son decisiones de diseño revisables, no efectos de anotaciones. (verificador: `CatalogMongoStructureIT` y `verify-quality.sh`)
+- Consultas y agregaciones con la clase de entrada (`CatalogProduct.class`, `CatalogReview.class`) y proyecciones si solo necesitas campos; NUNCA el nombre de la colección como texto ni `Document.class`. Motivo: sin la clase, Spring no mapea `category.id` → `category._id` ni convierte tipos, y una agregación sobre el nombre devuelve un único grupo con `_id: null`. (verificador: `verify-quality.sh`)
+- `CatalogSchemaValidator` (validador `$jsonSchema`) es zona protegida: NUNCA lo desactives, relajes ni sortees "porque da problemas"; si rechaza un documento, el documento está mal o el modelo debe cambiar con un ADR. (verificador: `protect-verify.sh`, plugin de verificación y `verify-quality.sh`)
+- `availableStock` es una copia de `stock.available` (dueño: inventory) que refresca `CatalogStockProjectionJob`; NUNCA reserves ni valides stock contra el documento del catálogo.
+- La ficha se resuelve en 1 operación y el buscador en 2 (página + count); el número de operaciones no depende de variantes, atributos ni reseñas. (verificador: `ProductDetailQueryCountMongoTest` y `CatalogSearchMongoQueryCountTest`)
+
 ## Seguridad
 - NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)
 - Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código ni archivos versionados. (pendiente: Gitleaks en S12)
@@ -87,7 +98,7 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
 - Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
-- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`. Si hace falta, detente y pide permiso a una persona.
+- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`. Si hace falta, detente y pide permiso a una persona.
 
 ## graphify
 - Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.

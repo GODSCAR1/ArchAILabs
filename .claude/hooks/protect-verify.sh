@@ -26,6 +26,9 @@ if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
       name=$(basename "$g")
       if grep -qF "$name" <<<"$CMD"; then guard_msg "$g"; exit 2; fi
     done
+    if grep -qF "CatalogSchemaValidator" <<<"$CMD"; then
+      echo "AC/DC: CatalogSchemaValidator está en la zona protegida (validador \$jsonSchema del catálogo, ADR 0009). No se edita, no se desactiva ni se sortea: explica el problema a la persona y detente." >&2; exit 2
+    fi
   fi
   exit 0
 fi
@@ -44,6 +47,7 @@ done
 
 # Solo la raíz: config/ de la raíz, no infrastructure/config/
 case "$REL" in
+  src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogSchemaValidator.java|\
   config/*|.claude/*|.opencode/*|.github/*|scripts/*|pom.xml|verify-quality.sh|lefthook.yml|openspec/config.yaml|src/main/resources/application*|.env|.env.*)
     echo "AC/DC: $REL está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente." >&2
     exit 2 ;;
