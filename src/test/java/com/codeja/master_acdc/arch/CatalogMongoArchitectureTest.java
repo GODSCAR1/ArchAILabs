@@ -23,6 +23,24 @@ class CatalogMongoArchitectureTest {
           .resideInAnyPackage("org.springframework.data.mongodb..", "org.bson..");
 
   @ArchTest
+  static final ArchRule catalog_has_no_jakarta_persistence_dependencies =
+      noClasses()
+          .that()
+          .resideInAPackage("com.codeja.master_acdc.catalog..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("jakarta.persistence..");
+
+  @ArchTest
+  static final ArchRule catalog_has_no_spring_data_jpa_dependencies =
+      noClasses()
+          .that()
+          .resideInAPackage("com.codeja.master_acdc.catalog..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("org.springframework.data.jpa..");
+
+  @ArchTest
   static final ArchRule catalog_application_depends_only_on_domain =
       classes()
           .that()

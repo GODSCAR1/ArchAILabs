@@ -8,15 +8,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.GlobalMongoClientTestConfiguration;
+import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProduct;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -26,17 +32,18 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@Import(GlobalMongoClientTestConfiguration.class)
 class CreateProductIT {
 
   @Container @ServiceConnection
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
   @Autowired MockMvc mockMvc;
-  @Autowired JdbcTemplate jdbcTemplate;
+  @Autowired MongoTemplate mongoTemplate;
 
   @BeforeEach
   void cleanDatabase() {
-    jdbcTemplate.update("delete from products");
+    mongoTemplate.remove(new Query(), CatalogProduct.class);
   }
 
   @Test
@@ -58,25 +65,11 @@ class CreateProductIT {
   void should_persist_catalog_defaults_when_product_is_created() throws Exception {
     postProduct(body("Cafe Huila 500 g", "32000", "CAF-500")).andExpect(status().isCreated());
 
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "select c.name from products p join categories c on c.id = p.category_id "
-                    + "where p.sku = ?",
-                String.class,
-                "CAF-500"))
-        .isEqualTo("Sin categoría");
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "select status from products where sku = ?", String.class, "CAF-500"))
-        .isEqualTo("ACTIVE");
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "select created_at from products where sku = ?", Object.class, "CAF-500"))
-        .isNotNull();
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "select version from products where sku = ?", Long.class, "CAF-500"))
-        .isZero();
+    CatalogProduct product = product("CAF-500");
+    assertThat(product.category().name()).isEqualTo("Sin categoría");
+    assertThat(product.status()).isEqualTo(ProductStatus.ACTIVE);
+    assertThat(product.createdAt()).isNotNull();
+    assertThat(product.version()).isZero();
   }
 
   @Test
@@ -162,20 +155,14 @@ class CreateProductIT {
   void should_trim_name_when_name_has_surrounding_spaces() throws Exception {
     postProduct(body("  Cafe  ", "100", "ABC")).andExpect(status().isCreated());
 
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "select name from products where sku = ?", String.class, "ABC"))
-        .isEqualTo("Cafe");
+    assertThat(product("ABC").name()).isEqualTo("Cafe");
   }
 
   @Test
   void should_return_201_when_price_is_one() throws Exception {
     postProduct(body("Cafe", "1", "ABC")).andExpect(status().isCreated());
 
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "select price from products where sku = ?", Long.class, "ABC"))
-        .isEqualTo(1L);
+    assertThat(product("ABC").price()).isEqualTo(1L);
   }
 
   @Test
@@ -220,12 +207,19 @@ class CreateProductIT {
   }
 
   private int productCount() {
-    return jdbcTemplate.queryForObject("select count(*) from products", Integer.class);
+    return (int) mongoTemplate.count(new Query(), CatalogProduct.class);
   }
 
   private int rowsWithSku(String sku) {
-    return jdbcTemplate.queryForObject(
-        "select count(*) from products where sku = ?", Integer.class, sku);
+    return mongoTemplate.exists(productQuery(sku), CatalogProduct.class) ? 1 : 0;
+  }
+
+  private CatalogProduct product(String sku) {
+    return mongoTemplate.findOne(productQuery(sku), CatalogProduct.class);
+  }
+
+  private Query productQuery(String sku) {
+    return Query.query(Criteria.where("sku").is(sku));
   }
 
   private static String body(String name, String price, String sku) {
