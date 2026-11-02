@@ -120,6 +120,33 @@ class CatalogSearchMongoRepositoryAdapterIT {
   }
 
   @Test
+  @DisplayName("Paginación estable con más de cincuenta productos")
+  void should_page_products_when_result_set_exceeds_fifty_rows() {
+    template.remove(new org.springframework.data.mongodb.core.query.Query(), CatalogProduct.class);
+    List<CatalogProduct> products =
+        java.util.stream.IntStream.range(1, 61)
+            .mapToObj(
+                index ->
+                    product(
+                        UUID.fromString("30000000-0000-0000-0000-%012d".formatted(index)),
+                        "Duplicate",
+                        100,
+                        ProductStatus.ACTIVE,
+                        0))
+            .toList();
+    template.insertAll(products);
+
+    var firstPage = adapter.search(criteria(null, SearchFilters.none(), "name", 0, 50));
+    var secondPage = adapter.search(criteria(null, SearchFilters.none(), "name", 1, 50));
+
+    assertThat(firstPage.totalElements()).isEqualTo(60);
+    assertThat(firstPage.content()).hasSize(50);
+    assertThat(secondPage.content()).hasSize(10);
+    assertThat(firstPage.content().getFirst().id()).isEqualTo(products.getFirst().id());
+    assertThat(secondPage.content().getFirst().id()).isEqualTo(products.get(50).id());
+  }
+
+  @Test
   @DisplayName("Estado repetido")
   void should_apply_status_filter_when_status_is_repeated() {
     LinkedMultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
@@ -152,6 +179,11 @@ class CatalogSearchMongoRepositoryAdapterIT {
   }
 
   private ProductSearchCriteria criteria(String text, SearchFilters filters, String order) {
+    return criteria(text, filters, order, 0, 20);
+  }
+
+  private ProductSearchCriteria criteria(
+      String text, SearchFilters filters, String order, int page, int size) {
     return new ProductSearchCriteria(
         text,
         filters.categoryId(),
@@ -159,8 +191,8 @@ class CatalogSearchMongoRepositoryAdapterIT {
         filters.maxPrice(),
         filters.statuses(),
         filters.inStock(),
-        0,
-        20,
+        page,
+        size,
         new ProductSearchOrder(order, ProductSearchOrder.Direction.ASC));
   }
 

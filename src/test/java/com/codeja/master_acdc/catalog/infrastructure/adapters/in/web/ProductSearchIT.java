@@ -178,22 +178,20 @@ abstract class ProductSearchIT {
                 .content("{\"name\":\"New Laptop\",\"price\":500,\"sku\":\"" + sku + "\"}"))
         .andExpect(status().isCreated());
 
-    if (isMongoReadStore()) {
-      mockMvc
-          .perform(get("/api/products").queryParam("status", "ACTIVE").queryParam("text", "New"))
-          .andExpect(status().isOk())
-          .andExpect(jsonPath("$.content").isEmpty());
+    if (!isMongoReadStore()) {
+      afterWrite();
     }
-    afterWrite();
 
     mockMvc
         .perform(get("/api/products").queryParam("status", "ACTIVE").queryParam("text", "New"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.content[0].categoryName").value("Sin categoría"));
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "select status from products where sku = ?", String.class, sku))
-        .isEqualTo("ACTIVE");
+    if (!isMongoReadStore()) {
+      assertThat(
+              jdbcTemplate.queryForObject(
+                  "select status from products where sku = ?", String.class, sku))
+          .isEqualTo("ACTIVE");
+    }
   }
 
   @Test

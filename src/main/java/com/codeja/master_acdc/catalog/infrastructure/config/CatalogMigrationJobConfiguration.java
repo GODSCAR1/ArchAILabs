@@ -3,6 +3,7 @@ package com.codeja.master_acdc.catalog.infrastructure.config;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogIndexInitializer;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogMigrationJob;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProductMigrationService;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogStockProjectionJob;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
@@ -14,8 +15,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Configuration
 @EnableScheduling
 @ConditionalOnExpression(
-    "'${catalog.read-store:postgres}' == 'mongo' or '${catalog.migration.enabled:false}' =="
-        + " 'true'")
+    "'${catalog.store:postgres}' == 'mongo' or '${catalog.migration.enabled:false}' ==" + " 'true'")
 public class CatalogMigrationJobConfiguration {
 
   @Bean
@@ -35,5 +35,13 @@ public class CatalogMigrationJobConfiguration {
       @Value("${catalog.migration.batch-size:100}") int batchSize,
       @Value("${catalog.migration.enabled:false}") boolean enabled) {
     return new CatalogMigrationJob(migrationService, batchSize, enabled);
+  }
+
+  @Bean
+  public CatalogStockProjectionJob catalogStockProjectionJob(
+      NamedParameterJdbcTemplate jdbcTemplate,
+      MongoTemplate mongoTemplate,
+      @Value("${catalog.migration.batch-size:100}") int batchSize) {
+    return new CatalogStockProjectionJob(jdbcTemplate, mongoTemplate, batchSize);
   }
 }

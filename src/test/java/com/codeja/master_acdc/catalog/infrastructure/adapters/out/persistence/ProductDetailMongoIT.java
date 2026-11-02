@@ -27,7 +27,7 @@ import org.testcontainers.utility.DockerImageName;
 @AutoConfigureMockMvc
 @Testcontainers
 @Import(CatalogMongoTestConfiguration.class)
-@TestPropertySource(properties = "catalog.read-store=mongo")
+@TestPropertySource(properties = "catalog.store=mongo")
 class ProductDetailMongoIT extends ProductDetailIT {
 
   @Container @ServiceConnection

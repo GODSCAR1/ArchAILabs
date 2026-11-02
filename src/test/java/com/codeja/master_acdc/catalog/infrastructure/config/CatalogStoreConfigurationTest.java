@@ -14,20 +14,22 @@ import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogD
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogIndexInitializer;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogMigrationJob;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProductMigrationService;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductEditingMongoRepositoryAdapter;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductSearchMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.ProductDetailRepositoryAdapter;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.ProductEditingRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.ProductJpaRepository;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.ProductRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence.ProductSearchRepositoryAdapter;
 import com.mongodb.client.ListCollectionNamesIterable;
 import com.mongodb.client.MongoDatabase;
 import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 import org.bson.Document;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.Index;
@@ -36,7 +38,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.transaction.PlatformTransactionManager;
 
-class CatalogReadStoreConfigurationTest {
+class CatalogStoreConfigurationTest {
 
   private final ApplicationContextRunner contextRunner =
       new ApplicationContextRunner()
@@ -45,21 +47,52 @@ class CatalogReadStoreConfigurationTest {
               CatalogMigrationJobConfiguration.class,
               ConfigurationMocks.class);
 
-  @ParameterizedTest
-  @MethodSource("propertyCombinations")
-  @DisplayName("Infraestructura Mongo activada por lectura o migración")
-  void should_select_one_reader_and_activate_migration_infrastructure_when_properties_are_set(
-      PropertyCombination properties) {
-    contextRunner
-        .withPropertyValues(properties.asPropertyValues())
-        .run(context -> assertConfiguration(context, properties));
+  @Test
+  @DisplayName("Modo PostgreSQL durante coexistencia")
+  void should_select_postgres_when_store_is_unspecified() {
+    assertConfiguration(new PropertyCombination(null, false));
   }
 
-  private void assertConfiguration(
+  @Test
+  @DisplayName("Migración Mongo habilitada en modo PostgreSQL")
+  void should_keep_postgres_adapters_when_migration_is_enabled() {
+    assertConfiguration(new PropertyCombination("postgres", true));
+  }
+
+  @Test
+  @DisplayName("Modo Mongo con migración desactivada")
+  void should_select_mongo_adapters_when_migration_is_disabled() {
+    assertConfiguration(new PropertyCombination("mongo", false));
+  }
+
+  @Test
+  @DisplayName("Infraestructura Mongo activada por lectura o migración")
+  void should_activate_mongo_infrastructure_when_store_is_mongo_or_migration_is_enabled() {
+    assertConfiguration(new PropertyCombination("mongo", false));
+    assertConfiguration(new PropertyCombination("postgres", true));
+  }
+
+  private void assertConfiguration(PropertyCombination properties) {
+    contextRunner
+        .withPropertyValues(properties.asPropertyValues())
+        .run(context -> assertContext(context, properties));
+  }
+
+  private void assertContext(
       org.springframework.context.ApplicationContext context, PropertyCombination properties) {
     ProductSearchRepository searchRepository = context.getBean(ProductSearchRepository.class);
     ProductDetailRepository detailRepository = context.getBean(ProductDetailRepository.class);
-    boolean mongoSelected = "mongo".equals(properties.readStore());
+    boolean mongoSelected = "mongo".equals(properties.store());
+    ProductRepository productRepository = context.getBean(ProductRepository.class);
+    ProductEditingRepository editingRepository = context.getBean(ProductEditingRepository.class);
+    assertThat(productRepository)
+        .isInstanceOf(
+            mongoSelected ? ProductMongoRepositoryAdapter.class : ProductRepositoryAdapter.class);
+    assertThat(editingRepository)
+        .isInstanceOf(
+            mongoSelected
+                ? ProductEditingMongoRepositoryAdapter.class
+                : ProductEditingRepositoryAdapter.class);
     assertThat(searchRepository)
         .isInstanceOf(
             mongoSelected
@@ -84,19 +117,12 @@ class CatalogReadStoreConfigurationTest {
         .hasSize(mongoInfrastructure ? 1 : 0);
   }
 
-  private static Stream<PropertyCombination> propertyCombinations() {
-    return Stream.of(null, "postgres", "mongo")
-        .flatMap(
-            readStore ->
-                Stream.of(false, true).map(enabled -> new PropertyCombination(readStore, enabled)));
-  }
-
-  private record PropertyCombination(String readStore, boolean migrationEnabled) {
+  private record PropertyCombination(String store, boolean migrationEnabled) {
 
     private String[] asPropertyValues() {
       List<String> values = new ArrayList<>();
-      if (readStore != null) {
-        values.add("catalog.read-store=" + readStore);
+      if (store != null) {
+        values.add("catalog.store=" + store);
       }
       values.add("catalog.migration.enabled=" + migrationEnabled);
       return values.toArray(String[]::new);

@@ -8,5 +8,5 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
-@TestPropertySource(properties = "catalog.read-store=postgres")
+@TestPropertySource(properties = "catalog.store=postgres")
 class ProductReviewPostgresIT extends ProductReviewQueryIT {}

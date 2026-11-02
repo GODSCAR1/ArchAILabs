@@ -35,7 +35,7 @@ import org.testcontainers.mongodb.MongoDBContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
-@SpringBootTest(properties = "catalog.read-store=postgres")
+@SpringBootTest(properties = "catalog.store=postgres")
 @Testcontainers
 @Import(CatalogMongoTestConfiguration.class)
 class CatalogMigrationParityIT {
