@@ -11,16 +11,16 @@ reanudable y verificable.
 ### Requirement: Selección compatible del almacén de lectura
 
 El sistema SHALL seleccionar PostgreSQL por defecto y SHALL permitir seleccionar MongoDB mediante
-`catalog.read-store=mongo`, manteniendo las escrituras en PostgreSQL en ambos modos. La infraestructura
-Mongo (inicializador, validador y job) SHALL activarse si `catalog.read-store=mongo` o
+`catalog.store=mongo`, manteniendo las escrituras en PostgreSQL en ambos modos. La infraestructura
+Mongo (inicializador, validador y job) SHALL activarse si `catalog.store=mongo` o
 `catalog.migration.enabled=true`; el adaptador lector se selecciona independientemente.
 
 #### Scenario: Lecturas por defecto en PostgreSQL
-- **WHEN** no se configura `catalog.read-store`
+- **WHEN** no se configura `catalog.store`
 - **THEN** `GET /api/products`, `GET /api/products/{sku}` y las reseñas paginadas responden `200` con el contrato vigente y leen la vista PostgreSQL del catálogo
 
 #### Scenario: Lecturas activadas en MongoDB
-- **WHEN** `catalog.read-store=mongo` está configurado y la ficha está materializada
+- **WHEN** `catalog.store=mongo` está configurado y la ficha está materializada
 - **THEN** los mismos endpoints responden `200` con el mismo payload, paginación y orden que en PostgreSQL, pero leen MongoDB
 
 #### Scenario: Producto inexistente en ambos modos
@@ -28,8 +28,8 @@ Mongo (inicializador, validador y job) SHALL activarse si `catalog.read-store=mo
 - **THEN** el sistema responde `404` con `ProblemDetail.type=https://api.master-acdc.dev/problems/product-not-found` y no modifica productos ni stock
 
 #### Scenario: Infraestructura Mongo activada por lectura o migración
-- **WHEN** se configura `catalog.read-store=mongo` o `catalog.migration.enabled=true`
-- **THEN** se activan el inicializador, el validador y el job Mongo; con `read-store=postgres` y la migración habilitada las lecturas permanecen en PostgreSQL mientras Mongo se alimenta
+- **WHEN** se configura `catalog.store=mongo` o `catalog.migration.enabled=true`
+- **THEN** se activan el inicializador, el validador y el job Mongo; con `catalog.store=postgres` y la migración habilitada las lecturas permanecen en PostgreSQL mientras Mongo se alimenta
 
 ### Requirement: Documento agregado de catálogo
 
@@ -123,5 +123,5 @@ buscador, la ficha y las reseñas, incluyendo rating con dos decimales y redonde
 - **THEN** las fichas de dominio construidas desde ambos almacenes son iguales y sus promedios de rating se comparan por valor decimal, no por representación
 
 #### Scenario: Buscador equivalente
-- **WHEN** se ejecuta la suite de búsquedas con cada valor de `catalog.read-store`
+- **WHEN** se ejecuta la suite de búsquedas con cada valor de `catalog.store`
 - **THEN** filtros, ordenación, paginación, disponibilidad y metadatos producen los mismos resultados de dominio, incluidos texto con caracteres especiales y orden por nombre con mayúsculas, minúsculas y acentos

@@ -21,7 +21,7 @@ lo que el diseño reutiliza esas dependencias y no introduce otra librería de m
   por UUID, upsert por SKU y checkpoint persistente.
 - Mantener una sola consulta MongoDB para la ficha agregada y dos consultas para una página de
   reseñas, separando el documento principal de la colección de reseñas completas.
-- Seleccionar adaptadores JPA o Mongo con `catalog.read-store`, dejando `postgres` como fallback,
+- Seleccionar adaptadores JPA o Mongo con `catalog.store`, dejando `postgres` como fallback,
   y permitir que la migración alimente Mongo mientras las lecturas permanecen en PostgreSQL.
 - Centralizar la creación explícita de índices y del validador `$jsonSchema`, con auto-indexación
   desactivada.
@@ -54,11 +54,13 @@ adaptador de búsqueda traducirá `ProductSearchCriteria` a filtros tipados, whi
 desempate por UUID y paginación, preservando el comportamiento de la especificación existente.
 
 La configuración declarará beans alternativos con `@ConditionalOnProperty`:
-`catalog.read-store=mongo` activa Mongo y la ausencia de la propiedad o `postgres` activa JPA.
+`catalog.store=mongo` activa el lector Mongo y la ausencia de la propiedad o `postgres` activa JPA.
 La configuración compartirá los casos de uso de aplicación, pero no mezclará adaptadores de
-lectura. Los beans de escritura no quedan condicionados. `catalog.read-store` selecciona el
-adaptador de lectura; `catalog.migration.enabled` controla separadamente el job. El inicializador
-de índices, el validador y el job se activan si `catalog.read-store=mongo` O
+lectura. Los beans de escritura no quedan condicionados. En este change, `catalog.store` selecciona
+el adaptador de lectura; las escrituras siguen en PostgreSQL y `catalog.migration.enabled`
+controla separadamente el job. El nombre `catalog.store` fue fijado por el change posterior
+`move-catalog-writes-to-mongodb`, que unifica bajo esa propiedad la selección de lectura y escritura.
+El inicializador de índices, el validador y el job se activan si `catalog.store=mongo` O
 `catalog.migration.enabled=true`, permitiendo copiar datos a Mongo mientras las lecturas aún usan
 PostgreSQL.
 
@@ -130,7 +132,7 @@ objetos `ProductDetail` y `ProductSearchPage` de dominio, no JSON.
 Se levantará PostgreSQL para preparar productos, variantes, atributos, stock y reseñas; el modo
 Mongo levantará además MongoDB y ejecutará la migración antes de invocar la suite HTTP. La suite
 base abstracta contendrá los escenarios de buscador, ficha y reseñas, y habrá una subclase para
-cada valor de `catalog.read-store`.
+cada valor de `catalog.store`.
 
 Las pruebas de persistencia inspeccionarán en MongoDB los índices, el validador, límites de arrays,
 recuentos, checkpoint, keyset e idempotencia. La equivalencia comparará 200 SKU aleatorios y el
@@ -138,7 +140,7 @@ promedio de rating por `compareTo`. Un `CommandListener` del driver en la prueba
 `find` y `aggregate`: la ficha debe costar exactamente un comando con 60 reseñas, 60 variantes y 60
 atributos; las reseñas completas permanecen en su colección separada.
 
-Los tests existentes que no activan `catalog.read-store=mongo` ni `catalog.migration.enabled=true`
+Los tests existentes que no activan `catalog.store=mongo` ni `catalog.migration.enabled=true`
 no requieren MongoDB: el driver conecta de forma perezosa y
 `spring.data.mongodb.auto-index-creation=false` evita conexiones de auto-indexación al arrancar.
 `MasterAcdcApplicationIT` verificará ese arranque sin Mongo disponible. No se excluye la
@@ -154,9 +156,9 @@ infraestructura debe existir aunque PostgreSQL siga siendo el adaptador lector.
 - [Cambios de categoría o stock no visibles inmediatamente] -> Re-migración periódica configurable;
   aclarar que `availableStock` solo sirve para el indicador de catálogo y no para reservar stock.
 - [Dos almacenes aumentan coste operativo] -> No eliminar JPA en este change y conservar rollback
-  inmediato cambiando `catalog.read-store` a `postgres`.
+  inmediato cambiando `catalog.store` a `postgres`.
 - [La migración debe operar mientras se lee desde PostgreSQL] -> Activar la infraestructura Mongo
-  por `read-store=mongo` O `migration.enabled=true`; los tests con ambas propiedades ausentes
+  por `store=mongo` O `migration.enabled=true`; los tests con ambas propiedades ausentes
   arrancan sin Mongo por conexión perezosa y auto-indexación desactivada, comprobado con
   `MasterAcdcApplicationIT`.
 - [Arrays o documentos inválidos rompen la migración] -> Validación `$jsonSchema`, límites en el
@@ -168,9 +170,9 @@ infraestructura debe existir aunque PostgreSQL siga siendo el adaptador lector.
 2. Preparar un PostgreSQL y MongoDB de integración, ejecutar una migración completa y comprobar
    recuentos, fichas y reseñas.
 3. Activar la suite API en ambos modos; el modo Mongo migra los datos preparados antes de leer.
-4. Desplegar con `catalog.read-store=postgres`, habilitar el job periódico y observar checkpoints,
+4. Desplegar con `catalog.store=postgres`, habilitar el job periódico y observar checkpoints,
    informes y desfase.
-5. Cambiar a `catalog.read-store=mongo` solo tras validar paridad. Rollback: volver a `postgres`;
+5. Cambiar a `catalog.store=mongo` solo tras validar paridad. Rollback: volver a `postgres`;
    no se borran documentos ni tablas.
 
 ## Open Questions

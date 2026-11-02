@@ -21,7 +21,7 @@ fuente de verdad de las escrituras.
   barrido interrumpido.
 - Mantener las reseñas completas en una colección separada y recalcular rating y reseñas recientes
   durante cada migración.
-- Seleccionar las implementaciones de lectura mediante `catalog.read-store`, con `postgres` como
+- Seleccionar las implementaciones de lectura mediante `catalog.store`, con `postgres` como
   valor por defecto y `mongo` como alternativa. La lectura y la migración se configuran por
   separado, de modo que MongoDB puede alimentarse mientras se sigue leyendo desde PostgreSQL; las
   escrituras continúan en PostgreSQL.
@@ -48,7 +48,7 @@ fuente de verdad de las escrituras.
 - Añade MongoDB como dependencia operativa de lectura y como contenedor de integración, sin
   convertirlo en dueño de productos, stock o reseñas de escritura.
 - Requiere adaptar las pruebas de integración HTTP para ejecutar PostgreSQL y MongoDB en ambos
-  valores de `catalog.read-store`. Los tests existentes que no habilitan lectura Mongo ni
+  valores de `catalog.store`. Los tests existentes que no habilitan lectura Mongo ni
   migración no deben necesitar MongoDB.
 - El modo por defecto y el contrato HTTP siguen siendo compatibles; el modo `mongo` introduce la
   posibilidad observable de activar lecturas desde el nuevo almacén.

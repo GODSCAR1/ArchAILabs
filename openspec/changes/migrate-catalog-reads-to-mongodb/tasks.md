@@ -15,7 +15,7 @@
 
 ## 3. Ensamblaje y aislamiento arquitectónico
 
-- [x] 3.1 Condicionar solo los adaptadores lectores a `catalog.read-store` (`postgres` por defecto, `mongo` alternativo), mantener incondicionales los beans de escritura y activar inicializador, validador y job si `catalog.read-store=mongo` O `catalog.migration.enabled=true`. `CatalogReadStoreConfigurationTest` verifica el escenario `Infraestructura Mongo activada por lectura o migración`, selección exclusiva y activación con cada propiedad.
+- [x] 3.1 Condicionar solo los adaptadores lectores a `catalog.store` (`postgres` por defecto, `mongo` alternativo), mantener incondicionales los beans de escritura y activar inicializador, validador y job si `catalog.store=mongo` O `catalog.migration.enabled=true`. `CatalogReadStoreConfigurationTest` verifica el escenario `Infraestructura Mongo activada por lectura o migración`, selección exclusiva y activación con cada propiedad.
 - [x] 3.2 Configurar Mongo con `spring.data.mongodb.auto-index-creation=false`. Los tests existentes que no configuran ninguna de las dos propiedades no deben requerir Mongo: el driver conecta perezosamente y no hay auto-indexación al arrancar. Verificarlo con `MasterAcdcApplicationIT`; los contextos Mongo de integración usan URI de Testcontainers.
 - [x] 3.3 Añadir reglas ArchUnit para aislar Spring Data Mongo en infraestructura, conservar `application -> domain`, impedir dependencias de `catalog` hacia `inventory` y exigir mappers dedicados. `CatalogMongoArchitectureTest` verifica las reglas de design.md.
 
