@@ -68,7 +68,7 @@ class ProductDetailMongoIT {
   }
 
   @Test
-  @DisplayName("Respuesta HTTP de ficha")
+  @DisplayName("Respuesta HTTP equivalente a PostgreSQL")
   void should_return_product_detail_when_sku_exists() throws Exception {
     mockMvc
         .perform(get("/api/products/HTTP-DETAIL"))
