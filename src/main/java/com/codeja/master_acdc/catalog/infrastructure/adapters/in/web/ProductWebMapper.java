@@ -65,7 +65,7 @@ final class ProductWebMapper {
         row.id(), row.name(), row.price(), row.stock(), row.categoryName());
   }
 
-  private static void validatePagination(int page, int size) {
+  static void validatePagination(int page, int size) {
     if (page < 0) {
       throw new InvalidSearchParameterException("page");
     }

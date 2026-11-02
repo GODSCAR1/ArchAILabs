@@ -2,8 +2,10 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,9 +13,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeja.master_acdc.catalog.application.port.CreateProductUseCase;
 import com.codeja.master_acdc.catalog.application.port.EditProductUseCase;
+import com.codeja.master_acdc.catalog.application.port.ProductDetailUseCase;
+import com.codeja.master_acdc.catalog.application.port.ProductReviewsUseCase;
 import com.codeja.master_acdc.catalog.application.port.ProductSearchUseCase;
 import com.codeja.master_acdc.catalog.domain.exception.DuplicateSkuException;
 import com.codeja.master_acdc.catalog.domain.exception.InvalidProductException;
+import com.codeja.master_acdc.catalog.domain.exception.ProductNotFoundException;
 import com.codeja.master_acdc.catalog.domain.model.Price;
 import com.codeja.master_acdc.catalog.domain.model.Product;
 import com.codeja.master_acdc.catalog.domain.model.ProductName;
@@ -34,7 +39,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(ProductController.class)
+@WebMvcTest({ProductController.class, ProductDetailController.class})
 class ProductControllerTest {
 
   private static final String INVALID_SEARCH_PARAMETER_TYPE =
@@ -44,6 +49,8 @@ class ProductControllerTest {
 
   @MockitoBean CreateProductUseCase createProductUseCase;
   @MockitoBean EditProductUseCase editProductUseCase;
+  @MockitoBean ProductDetailUseCase productDetailUseCase;
+  @MockitoBean ProductReviewsUseCase productReviewsUseCase;
   @MockitoBean ProductSearchUseCase productSearchUseCase;
 
   @Test
@@ -109,6 +116,33 @@ class ProductControllerTest {
                 .content("{\"name\":\"Cafe\",\"price\":100,\"sku\":\"CAF-500\"}"))
         .andExpect(status().isConflict())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+  }
+
+  @Test
+  @DisplayName("Edición UUID y consulta SKU coexistentes")
+  void should_route_put_to_edition_and_get_to_detail_when_path_is_uuid_or_sku() throws Exception {
+    UUID productId = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+    String uuidShapedSku = productId.toString();
+    BigDecimal price = new BigDecimal("125");
+    given(editProductUseCase.edit(productId, "Cafe nuevo", price, 0L))
+        .willReturn(
+            Product.create(new ProductName("Cafe nuevo"), new Sku("SKU-500"), Price.of(price)));
+    given(productDetailUseCase.findBySku(uuidShapedSku))
+        .willThrow(new ProductNotFoundException(uuidShapedSku));
+    given(productSearchUseCase.search(any())).willReturn(page());
+
+    mockMvc
+        .perform(
+            put("/api/products/{id}", productId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Cafe nuevo\",\"price\":125,\"version\":0}"))
+        .andExpect(status().isOk());
+    verify(editProductUseCase).edit(productId, "Cafe nuevo", price, 0L);
+
+    mockMvc.perform(get("/api/products/{sku}", uuidShapedSku)).andExpect(status().isNotFound());
+
+    mockMvc.perform(get("/api/products")).andExpect(status().isOk());
+    verify(productSearchUseCase).search(any());
   }
 
   @Test

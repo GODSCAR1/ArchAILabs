@@ -44,7 +44,9 @@ public class ApiExceptionHandler {
 
   @ExceptionHandler(DuplicateSkuException.class)
   ProblemDetail handleDuplicateSku(DuplicateSkuException exception) {
-    return problem(HttpStatus.CONFLICT, "Duplicate SKU", exception.getMessage());
+    ProblemDetail problem = problem(HttpStatus.CONFLICT, "Duplicate SKU", exception.getMessage());
+    problem.setType(URI.create("about:blank"));
+    return problem;
   }
 
   @ExceptionHandler(ProductNotFoundException.class)

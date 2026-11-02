@@ -11,12 +11,10 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
-import jakarta.persistence.Entity;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
 import jakarta.persistence.Version;
 import java.lang.reflect.Method;
-import org.hibernate.annotations.Immutable;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.Repository;
@@ -25,17 +23,6 @@ import org.springframework.data.repository.Repository;
     packages = "com.codeja.master_acdc",
     importOptions = ImportOption.DoNotIncludeTests.class)
 class PersistenceRulesTest {
-
-  @ArchTest
-  static final ArchRule editable_catalog_entities_have_version =
-      classes()
-          .that()
-          .areAnnotatedWith(Entity.class)
-          .and()
-          .resideInAnyPackage("..catalog..")
-          .and()
-          .areNotAnnotatedWith(Immutable.class)
-          .should(haveVersionField());
 
   @ArchTest
   static final ArchRule domain_and_application_have_no_transactional_annotations =

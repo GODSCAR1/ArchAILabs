@@ -2,12 +2,19 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.GlobalMongoClientTestConfiguration;
 import com.codeja.master_acdc.catalog.application.port.ProductSearchUseCase;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchPage;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProduct;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CategoryRef;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.RatingSummary;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,13 +25,16 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
 @Testcontainers
+@Import(GlobalMongoClientTestConfiguration.class)
 class ProductSearchQueryIT {
 
   private static final UUID PRODUCT_WITHOUT_STOCK =
@@ -38,19 +48,15 @@ class ProductSearchQueryIT {
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
   @Autowired ProductSearchUseCase productSearchUseCase;
-  @Autowired JdbcTemplate jdbcTemplate;
+  @Autowired MongoTemplate mongoTemplate;
 
   @BeforeEach
   void cleanDatabase() {
-    jdbcTemplate.update("delete from stock");
-    jdbcTemplate.update("delete from products");
-    insertProduct(PRODUCT_WITHOUT_STOCK, "No stock", "DRAFT");
-    insertProduct(PRODUCT_WITH_STOCK, "Laptop", "ACTIVE", 200);
-    insertProduct(PRODUCT_CAFE, "Cafe", "ACTIVE", 300);
-    insertProduct(PRODUCT_LAMP, "Lamp", "DISCONTINUED", 400);
-    jdbcTemplate.update(
-        "insert into stock (product_id, available) values (?, ?)", PRODUCT_WITH_STOCK, 4);
-    jdbcTemplate.update("insert into stock (product_id, available) values (?, ?)", PRODUCT_CAFE, 0);
+    mongoTemplate.remove(new Query(), CatalogProduct.class);
+    mongoTemplate.insert(product(PRODUCT_WITHOUT_STOCK, "No stock", ProductStatus.DRAFT, 100, 0));
+    mongoTemplate.insert(product(PRODUCT_WITH_STOCK, "Laptop", ProductStatus.ACTIVE, 200, 4));
+    mongoTemplate.insert(product(PRODUCT_CAFE, "Cafe", ProductStatus.ACTIVE, 300, 0));
+    mongoTemplate.insert(product(PRODUCT_LAMP, "Lamp", ProductStatus.DISCONTINUED, 400, 0));
   }
 
   @Test
@@ -155,19 +161,21 @@ class ProductSearchQueryIT {
         new ProductSearchOrder(filters.order(), ProductSearchOrder.Direction.ASC));
   }
 
-  private void insertProduct(UUID id, String name, String status) {
-    insertProduct(id, name, status, 100);
-  }
-
-  private void insertProduct(UUID id, String name, String status, long price) {
-    jdbcTemplate.update(
-        "insert into products (id, name, sku, price, category_id, status, created_at, version) "
-            + "values (?, ?, ?, ?, ?, ?, current_timestamp, 0)",
+  private CatalogProduct product(
+      UUID id, String name, ProductStatus status, long price, int stock) {
+    return new CatalogProduct(
         id,
-        name,
         "SKU-" + id,
+        name,
         price,
-        UUID.fromString("00000000-0000-0000-0000-000000000001"),
-        status);
+        status,
+        Instant.parse("2026-01-01T00:00:00Z"),
+        0,
+        new CategoryRef(UUID.fromString("00000000-0000-0000-0000-000000000001"), "Sin categoría"),
+        List.of(),
+        Map.of(),
+        stock,
+        new RatingSummary(BigDecimal.ZERO.setScale(2), 0),
+        List.of());
   }
 }
