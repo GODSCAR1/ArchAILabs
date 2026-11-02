@@ -14,6 +14,8 @@ import com.codeja.master_acdc.catalog.domain.port.ProductEditingRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductSearchRepository;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogDetailMongoRepositoryAdapter;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogIndexInitializer;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogSchemaValidator;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductEditingMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductSearchMongoRepositoryAdapter;
@@ -25,6 +27,17 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
 public class ProductConfiguration {
+
+  @Bean(initMethod = "initialize")
+  public CatalogSchemaValidator catalogSchemaValidator(MongoTemplate mongoTemplate) {
+    return new CatalogSchemaValidator(mongoTemplate);
+  }
+
+  @Bean(initMethod = "initialize")
+  public CatalogIndexInitializer catalogIndexInitializer(
+      MongoTemplate mongoTemplate, CatalogSchemaValidator catalogSchemaValidator) {
+    return new CatalogIndexInitializer(mongoTemplate);
+  }
 
   @Bean
   public ProductRepository productRepository(MongoTemplate mongoTemplate) {

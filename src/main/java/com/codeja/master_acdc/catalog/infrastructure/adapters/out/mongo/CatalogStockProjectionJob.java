@@ -3,7 +3,6 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.bson.Document;
 import org.springframework.data.mongodb.core.BulkOperations;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -31,7 +30,7 @@ public class CatalogStockProjectionJob {
   @Scheduled(fixedDelayString = "${catalog.stock-sync.interval:PT1M}")
   public void synchronizeStock() {
     UUID lastId = null;
-    List<Document> products;
+    List<CatalogProductIdView> products;
     do {
       Query query =
           new Query().limit(batchSize).with(org.springframework.data.domain.Sort.by("_id"));
@@ -39,10 +38,15 @@ public class CatalogStockProjectionJob {
       if (lastId != null) {
         query.addCriteria(Criteria.where("_id").gt(lastId));
       }
-      products = mongoTemplate.find(query, Document.class, "catalog_products");
+      products =
+          mongoTemplate
+              .query(CatalogProduct.class)
+              .as(CatalogProductIdView.class)
+              .matching(query)
+              .all();
       if (!products.isEmpty()) {
-        synchronizeBatch(products.stream().map(product -> product.get("_id", UUID.class)).toList());
-        lastId = products.getLast().get("_id", UUID.class);
+        synchronizeBatch(products.stream().map(CatalogProductIdView::id).toList());
+        lastId = products.getLast().id();
       }
     } while (products.size() == batchSize);
   }
