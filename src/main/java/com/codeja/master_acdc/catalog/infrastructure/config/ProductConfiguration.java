@@ -38,7 +38,7 @@ public class ProductConfiguration {
       prefix = "catalog",
       name = "store",
       havingValue = "postgres",
-      matchIfMissing = true)
+      matchIfMissing = false)
   public ProductRepository productRepository(ProductJpaRepository productJpaRepository) {
     return new ProductRepositoryAdapter(productJpaRepository);
   }
@@ -49,7 +49,11 @@ public class ProductConfiguration {
   }
 
   @Bean
-  @ConditionalOnProperty(prefix = "catalog", name = "store", havingValue = "mongo")
+  @ConditionalOnProperty(
+      prefix = "catalog",
+      name = "store",
+      havingValue = "mongo",
+      matchIfMissing = true)
   public ProductRepository mongoProductRepository(MongoTemplate mongoTemplate) {
     return new ProductMongoRepositoryAdapter(mongoTemplate);
   }
@@ -59,14 +63,18 @@ public class ProductConfiguration {
       prefix = "catalog",
       name = "store",
       havingValue = "postgres",
-      matchIfMissing = true)
+      matchIfMissing = false)
   public ProductEditingRepository productEditingRepository(
       ProductJpaRepository productJpaRepository, EntityManager entityManager) {
     return new ProductEditingRepositoryAdapter(productJpaRepository, entityManager);
   }
 
   @Bean
-  @ConditionalOnProperty(prefix = "catalog", name = "store", havingValue = "mongo")
+  @ConditionalOnProperty(
+      prefix = "catalog",
+      name = "store",
+      havingValue = "mongo",
+      matchIfMissing = true)
   public ProductEditingRepository mongoProductEditingRepository(MongoTemplate mongoTemplate) {
     return new ProductEditingMongoRepositoryAdapter(mongoTemplate);
   }
@@ -86,14 +94,18 @@ public class ProductConfiguration {
       prefix = "catalog",
       name = "store",
       havingValue = "postgres",
-      matchIfMissing = true)
+      matchIfMissing = false)
   public ProductSearchRepository productSearchRepository(
       ProductJpaRepository productJpaRepository) {
     return new ProductSearchRepositoryAdapter(productJpaRepository);
   }
 
   @Bean
-  @ConditionalOnProperty(prefix = "catalog", name = "store", havingValue = "mongo")
+  @ConditionalOnProperty(
+      prefix = "catalog",
+      name = "store",
+      havingValue = "mongo",
+      matchIfMissing = true)
   public ProductSearchRepository mongoProductSearchRepository(MongoTemplate mongoTemplate) {
     return new ProductSearchMongoRepositoryAdapter(mongoTemplate);
   }
@@ -109,13 +121,17 @@ public class ProductConfiguration {
       prefix = "catalog",
       name = "store",
       havingValue = "postgres",
-      matchIfMissing = true)
+      matchIfMissing = false)
   public ProductDetailRepository productDetailRepository(EntityManager entityManager) {
     return new ProductDetailRepositoryAdapter(entityManager);
   }
 
   @Bean
-  @ConditionalOnProperty(prefix = "catalog", name = "store", havingValue = "mongo")
+  @ConditionalOnProperty(
+      prefix = "catalog",
+      name = "store",
+      havingValue = "mongo",
+      matchIfMissing = true)
   public ProductDetailRepository mongoProductDetailRepository(MongoTemplate mongoTemplate) {
     return new CatalogDetailMongoRepositoryAdapter(mongoTemplate);
   }

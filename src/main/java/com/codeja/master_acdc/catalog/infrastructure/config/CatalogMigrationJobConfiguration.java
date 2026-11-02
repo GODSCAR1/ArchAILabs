@@ -15,7 +15,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @Configuration
 @EnableScheduling
 @ConditionalOnExpression(
-    "'${catalog.store:postgres}' == 'mongo' or '${catalog.migration.enabled:false}' ==" + " 'true'")
+    "'${catalog.store:mongo}' == 'mongo' or '${catalog.migration.enabled:false}' ==" + " 'true'")
 public class CatalogMigrationJobConfiguration {
 
   @Bean

@@ -2,7 +2,7 @@
 
 - **Estado:** propuesto
 - **Fecha:** 2026-11-01
-- **Contexto:** migración del modelo de lectura del catálogo; véase [docs/catalog-model.md](../catalog-model.md)
+- **Contexto:** transición del catálogo completo a MongoDB con PostgreSQL disponible durante coexistencia; véase [docs/catalog-model.md](../catalog-model.md)
 
 ## Contexto
 
@@ -68,7 +68,7 @@ MongoDB.
 
 ### B. MongoDB con el modelo de `catalog-model.md`
 
-Esta alternativa usa `CatalogProduct` como documento de lectura. Embebe las pocas variantes,
+Esta alternativa usa `CatalogProduct` como documento del catálogo. Embebe las pocas variantes,
 los atributos variables, la referencia extendida de categoría, `availableStock`, `rating` y
 hasta cinco `latestReviews`. Las reseñas completas permanecen en una colección aparte. El
 modelo evita joins para la ficha, limita los arrays y conserva la paginación de reseñas sin
@@ -80,25 +80,24 @@ la copia solo soporta el indicador de catálogo `inStock`. Los índices se centr
 
 ## Decisión
 
-Se elige **B: MongoDB como almacén de lectura del catálogo**, con el modelo descrito en
+Se elige **B: MongoDB como almacén del catálogo en modo mongo**, con el modelo descrito en
 [catalog-model.md](../catalog-model.md). A2 sería una alternativa competitiva en producción:
 ofrece una ficha en una consulta, un solo motor, transacciones y menor coste operativo. Se
 elige B porque el objetivo de este lab es practicar el modelado documental y la migración
 gradual, y porque MongoDB aporta validación `$jsonSchema`, índices declarados sobre el
 documento, agregaciones y el soporte documental de Spring Data descritos en A2.
 
-PostgreSQL permanece durante la transición y sigue siendo el almacén actual hasta que la
-nueva lectura esté validada.
+`catalog.store` selecciona conjuntamente los adaptadores de lectura y escritura de búsqueda,
+ficha, creación y edición. En `mongo`, MongoDB es la fuente de verdad del catálogo. El valor
+predeterminado final es `mongo`; el modo explícito `postgres` permanece para coexistencia y
+rollback tras reconciliación. La infraestructura Mongo se activa cuando `catalog.store=mongo`
+o `catalog.migration.enabled=true`.
 
-La selección se expone detrás del feature flag `catalog.read-store`, cuyos valores son:
-
-- `postgres` por defecto durante la transición.
-- `mongo` para activar la lectura desde MongoDB tras validar paridad y métricas.
-
-La transición sigue el plan expandir-contraer: primero se añade y rellena el nuevo almacén,
-se valida la lectura y se cambia el flag; las tablas PostgreSQL no se borran en este cambio.
-Solo se eliminarán al final, en otro change independiente, después de confirmar que no quedan
-consumidores ni posibilidad de rollback inmediato.
+La transición sigue el plan expandir-contraer: se mantiene `catalog.store=postgres` y
+`catalog.migration.enabled=true` hasta que el checkpoint de migración indique `COMPLETADO`.
+Entonces se cambia a `catalog.store=mongo` y `catalog.migration.enabled=false`. No se añade un
+barrido final automático ni se borran las tablas PostgreSQL en este change. Su retirada requiere
+otro change independiente después de confirmar consumidores y rollback.
 
 Esta decisión cambiaría si el coste operativo, la monitorización o la reconciliación de un
 segundo motor no se justifican en producción, si el desfase de la re-migración resulta
@@ -123,9 +122,20 @@ Se consideran tres estrategias:
   observabilidad, replay y reconciliación de eventos perdidos o mal formados. Es un cambio de
   infraestructura mayor y no se introduce ahora.
 
-La re-migración actualiza también `category.name`, `availableStock`, `rating` y
-`latestReviews`. El desfase de `availableStock` se acepta únicamente para la lectura
-indicativa del catálogo; la reserva continúa validándose contra `stock`.
+Durante la coexistencia, la migración PostgreSQL→Mongo actualiza también `category.name`,
+`availableStock`, `rating` y `latestReviews`. Tras el corte se desactiva esa migración para que
+no sobrescriba escrituras Mongo. Un job independiente copia periódicamente `stock.available`:
+recorre productos Mongo por keyset de `_id`, lee IDs por lotes con `product_id in (:ids)` y
+actualiza en bulk; si falta una fila, asigna cero. El desfase hasta el siguiente ciclo se acepta
+para el indicador del catálogo; la reserva continúa validándose contra `stock`.
+
+SKU duplicado mantiene HTTP 409 con `ProblemDetail.type=about:blank` por compatibilidad. Es una
+deuda de contrato explícita, no una decisión sobre el tipo final del error.
+
+El rollback después del corte requiere pausar escrituras, reconciliar Mongo→PostgreSQL
+(productos, versiones y SKUs) y verificar la reconciliación antes de cambiar a
+`catalog.store=postgres`. Sin ella, las escrituras existentes solo en Mongo no serán visibles
+desde PostgreSQL.
 
 ## Consecuencias
 
@@ -133,8 +143,20 @@ indicativa del catálogo; la reserva continúa validándose contra `stock`.
   variantes, atributos y categoría.
 - Las reseñas completas no tienen límite de crecimiento dentro de `CatalogProduct`; solo se
   mantiene una ventana de cinco reseñas recientes y un resumen de rating.
-- Durante la transición existe desfase entre PostgreSQL y MongoDB. El flag por defecto en
-  `postgres` y la re-migración repetible reducen el riesgo de activar datos incompletos.
+- Durante la transición existe desfase entre PostgreSQL y MongoDB. PostgreSQL se selecciona
+  explícitamente hasta el checkpoint `COMPLETADO`; luego el valor por defecto `mongo` usa el
+  catálogo migrado y sus escrituras.
+- El rollback después del corte no es inmediato: requiere reconciliar productos, versiones y
+  SKUs Mongo→PostgreSQL antes de cambiar el selector.
+- El indicador `availableStock` puede quedar desfasado hasta el siguiente lote del job; el
+  inventario y las reservas siguen teniendo PostgreSQL como fuente de verdad.
+- El tipo `about:blank` para un SKU duplicado conserva el contrato actual y queda como deuda.
+- `src/test/resources/config/application.properties` fija `catalog.store=postgres` para los
+  `@SpringBootTest` sin almacén declarado (inventory, ordering, IT JPA y guardianes JPA), que no
+  requieren Mongo. Las pruebas que necesitan Mongo lo seleccionan explícitamente. Esta propiedad
+  solo afecta al classpath de tests: `CatalogStoreConfigurationTest` comprueba el default de
+  producción con `ApplicationContextRunner`, sin cargar ese archivo. Se retirará junto con
+  `retire-catalog-postgres`.
 - Se mantiene el coste operativo de dos almacenes hasta completar expandir-contraer, incluida
   la monitorización de antigüedad de la re-migración y la reconciliación.
 - MongoDB no se convierte en dueño de `stock` ni de las reglas de reserva; solo materializa

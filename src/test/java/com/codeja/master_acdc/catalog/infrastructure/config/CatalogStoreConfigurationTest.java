@@ -49,7 +49,13 @@ class CatalogStoreConfigurationTest {
 
   @Test
   @DisplayName("Modo PostgreSQL durante coexistencia")
-  void should_select_postgres_when_store_is_unspecified() {
+  void should_select_postgres_when_store_is_explicitly_postgres() {
+    assertConfiguration(new PropertyCombination("postgres", false));
+  }
+
+  @Test
+  @DisplayName("Almacén Mongo por defecto")
+  void should_select_mongo_when_store_is_unspecified() {
     assertConfiguration(new PropertyCombination(null, false));
   }
 
@@ -82,7 +88,7 @@ class CatalogStoreConfigurationTest {
       org.springframework.context.ApplicationContext context, PropertyCombination properties) {
     ProductSearchRepository searchRepository = context.getBean(ProductSearchRepository.class);
     ProductDetailRepository detailRepository = context.getBean(ProductDetailRepository.class);
-    boolean mongoSelected = "mongo".equals(properties.store());
+    boolean mongoSelected = properties.store() == null || "mongo".equals(properties.store());
     ProductRepository productRepository = context.getBean(ProductRepository.class);
     ProductEditingRepository editingRepository = context.getBean(ProductEditingRepository.class);
     assertThat(productRepository)

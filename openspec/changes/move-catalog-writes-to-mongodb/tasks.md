@@ -15,14 +15,14 @@
 
 ## 2. Fase B — PERSONA: adaptar los guardianes JPA (el agente se detiene aquí)
 
-- [ ] 2.1 **PERSONA — no marcar como completada por el agente.** Añadir las clases guardianas Mongo nuevas a `scripts/protected-tests.txt` y en los cinco tests JPA `ProductEditConflictTest`, `ProductEditingIT`, `ProductSearchQueryCountTest`, `ProductSearchPaginationTest` y `ProductDetailQueryCountTest` fijar `catalog.store=postgres` explícitamente o retirarlos. Verificar con `bash ./verify-quality.sh --fast` y confirmar que los guardianes JPA que se conserven arrancan en PostgreSQL.
+- [x] 2.1 **PERSONA — no marcar como completada por el agente.** Añadir las clases guardianas Mongo nuevas a `scripts/protected-tests.txt` y en los cinco tests JPA `ProductEditConflictTest`, `ProductEditingIT`, `ProductSearchQueryCountTest`, `ProductSearchPaginationTest` y `ProductDetailQueryCountTest` fijar `catalog.store=postgres` explícitamente o retirarlos. Verificar con `bash ./verify-quality.sh --fast` y confirmar que los guardianes JPA que se conserven arrancan en PostgreSQL.
 
 ## 3. Fase C — Agente: cambiar el default después de la intervención humana
 
-- [ ] 3.1 Solo después de completar 2.1, cambiar el default a `catalog.store=mongo`; verificar `CatalogStoreConfigurationTest` con `@DisplayName("Almacén Mongo por defecto")` (solo Fase C) y `@DisplayName("Modo PostgreSQL durante coexistencia")`, confirmando que `catalog.store=postgres` selecciona lecturas y escrituras PostgreSQL.
-- [ ] 3.2 Actualizar `docs/catalog-model.md` y `docs/adr/0009-catalogo-en-mongodb.md`: Mongo como fuente de verdad del catálogo en modo mongo, job de stock por lotes y desfase, y SKU duplicado `about:blank` como deuda de contrato; verificar coherencia con este design y con los escenarios del spec.
-- [ ] 3.3 Documentar el corte operativo (mantener `store=postgres` y `migration.enabled=true` hasta checkpoint `COMPLETADO`; luego `store=mongo` y `migration.enabled=false`) y el rollback con reconciliación previa; verificar test de configuración de las propiedades sin añadir lógica de ciclo de vida para barrido final.
-- [ ] 3.4 Ejecutar `bash ./verify-quality.sh --fast` después del cambio de default y la adaptación humana; confirmar suite dual en ambos valores de `catalog.store`.
+- [x] 3.1 Solo después de completar 2.1, cambiar el default a `catalog.store=mongo`; verificar `CatalogStoreConfigurationTest` con `@DisplayName("Almacén Mongo por defecto")` (solo Fase C) y `@DisplayName("Modo PostgreSQL durante coexistencia")`, confirmando que `catalog.store=postgres` selecciona lecturas y escrituras PostgreSQL.
+- [x] 3.2 Actualizar `docs/catalog-model.md` y `docs/adr/0009-catalogo-en-mongodb.md`: Mongo como fuente de verdad del catálogo en modo mongo, job de stock por lotes y desfase, y SKU duplicado `about:blank` como deuda de contrato; verificar coherencia con este design y con los escenarios del spec.
+- [x] 3.3 Documentar el corte operativo (mantener `store=postgres` y `migration.enabled=true` hasta checkpoint `COMPLETADO`; luego `store=mongo` y `migration.enabled=false`) y el rollback con reconciliación previa; verificar test de configuración de las propiedades sin añadir lógica de ciclo de vida para barrido final.
+- [x] 3.4 Ejecutar `bash ./verify-quality.sh --fast` después del cambio de default y la adaptación humana; confirmar suite dual en ambos valores de `catalog.store`.
 
 ## Workflow follow-up
 
