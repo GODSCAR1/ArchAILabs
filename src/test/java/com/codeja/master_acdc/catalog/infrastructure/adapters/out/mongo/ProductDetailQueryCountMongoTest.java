@@ -73,7 +73,7 @@ class ProductDetailQueryCountMongoTest {
   }
 
   @Test
-  @DisplayName("Una operación Mongo por ficha")
+  @DisplayName("Muchas colecciones asociadas")
   void should_load_product_detail_when_one_find_command_is_issued() {
     FIND_COMMANDS.set(0);
 
