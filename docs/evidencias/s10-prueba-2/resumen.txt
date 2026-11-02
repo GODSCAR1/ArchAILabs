@@ -1,0 +1,11 @@
+ .../domain/model/ProductSearchCriteria.java        |  1 +
+ .../adapters/in/web/ProductWebMapper.java          |  1 +
+ .../out/mongo/CatalogIndexInitializer.java         |  2 +
+ .../mongo/ProductSearchMongoRepositoryAdapter.java |  9 +++
+ .../application/ProductSearchServiceTest.java      |  4 +-
+ .../out/mongo/CatalogMongoStructureIT.java         |  3 +-
+ .../mongo/CatalogSearchMongoQueryCountTest.java    |  1 +
+ .../CatalogSearchMongoRepositoryAdapterIT.java     | 89 +++++++++++++++++++---
+ .../mongo/ProductSearchPaginationMongoTest.java    |  1 +
+ .../out/persistence/ProductSearchQueryIT.java      |  2 +
+ 10 files changed, 100 insertions(+), 13 deletions(-)

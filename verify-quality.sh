@@ -20,6 +20,18 @@ tr -d '\r' < "$JPA_PROPS" | grep -qx 'spring.jpa.properties.hibernate.default_ba
 if grep -rqs 'enable_lazy_load_no_trans' src/main/resources; then
   echo "AC/DC: hibernate.enable_lazy_load_no_trans está prohibido (abre una sesión por acceso: N+1 garantizado)." >&2; exit 1
 fi
+echo "▶ Catálogo Mongo (ADR docs/adr/0009-catalogo-en-mongodb.md)"
+# Segunda capa (lab S10, paso 8): no depende de que el guard de la zona protegida haya funcionado.
+tr -d '\r' < "$JPA_PROPS" | grep -qx 'spring.data.mongodb.auto-index-creation=false' \
+  || { echo "AC/DC: spring.data.mongodb.auto-index-creation debe ser false: todo índice se declara en CatalogIndexInitializer." >&2; exit 1; }
+SCHEMA_VALIDATOR=src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogSchemaValidator.java
+[[ -f "$SCHEMA_VALIDATOR" ]] \
+  || { echo "AC/DC: falta $SCHEMA_VALIDATOR (validador \$jsonSchema). Restáuralo; solo una persona puede retirarlo." >&2; exit 1; }
+MONGO_BAD=$(grep -rnE 'Document\.class|getCollection\(|,[[:space:]]*"(catalog_products|reviews)"' src/main/java/com/codeja/master_acdc/catalog --include=*.java | grep -v 'CatalogSchemaValidator.java' || true)
+if [[ -n "$MONGO_BAD" ]]; then
+  echo "AC/DC: consultas o agregaciones del catálogo con el nombre de la colección o Document.class. Usa la clase de entrada (CatalogProduct.class, CatalogReview.class) y una proyección si solo necesitas campos:" >&2
+  echo "$MONGO_BAD" >&2; exit 1
+fi
 echo "▶ Tests guardianes (lab S09: scripts/protected-tests.txt)"
 # Segunda capa: si un guardián desaparece por una vía que ningún hook vio, Verify falla igual.
 GUARDS_MISSING=0

@@ -55,6 +55,7 @@ class CatalogMongoStructureIT {
   @Test
   @DisplayName("Arranque con estructura válida")
   void should_create_validator_and_required_indexes_when_initialized() {
+    new CatalogSchemaValidator(template).initialize();
     new CatalogIndexInitializer(template).initialize();
 
     Document collection =
@@ -72,6 +73,7 @@ class CatalogMongoStructureIT {
   @Test
   @DisplayName("Documento inválido rechazado")
   void should_reject_document_without_price_when_schema_validator_is_active() {
+    new CatalogSchemaValidator(template).initialize();
     new CatalogIndexInitializer(template).initialize();
 
     assertThatThrownBy(

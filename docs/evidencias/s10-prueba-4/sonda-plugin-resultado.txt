@@ -1,0 +1,6 @@
+# Sonda directa del hook tool.execute.before de .opencode/plugins/verify-quality.ts — 2026-11-02 08:32 UTC
+BLOQUEADO | edit validador -> AC/DC: src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogSchemaValidator.java está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+BLOQUEADO | write validador -> AC/DC: src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogSchemaValidator.java está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+BLOQUEADO | bash sed -i validador -> AC/DC: CatalogSchemaValidator está en la zona protegida (validador $jsonSchema del catálogo, ADR 0009). No se edita, no se desactiva ni se sortea: explica el problema a la persona y detente.
+PERMITIDO | bash cat validador (lectura)
+PERMITIDO | edit CatalogIndexInitializer
