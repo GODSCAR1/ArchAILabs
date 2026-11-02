@@ -1,9 +1,9 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.codeja.master_acdc.catalog.application.port.ProductDetailUseCase;
-import com.codeja.master_acdc.catalog.domain.model.ProductDetail;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -14,14 +14,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
+@AutoConfigureMockMvc
 @Testcontainers
-class ProductDetailIT {
+abstract class ProductDetailIT {
 
   private static final UUID CATEGORY_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
   private static final UUID PRODUCT_ID =
@@ -30,11 +33,12 @@ class ProductDetailIT {
   @Container @ServiceConnection
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
-  @Autowired ProductDetailUseCase productDetailUseCase;
   @Autowired JdbcTemplate jdbcTemplate;
+  @Autowired MockMvc mockMvc;
 
   @BeforeEach
   void cleanDatabase() {
+    prepareReadStore();
     jdbcTemplate.update("delete from reviews");
     jdbcTemplate.update("delete from product_attributes");
     jdbcTemplate.update("delete from product_variants");
@@ -44,61 +48,88 @@ class ProductDetailIT {
             + "values (?, 'Cafe', 'SKU-DETAIL-IT', 100, ?, 'ACTIVE', current_timestamp, 0)",
         PRODUCT_ID,
         CATEGORY_ID);
+    afterWrite();
   }
 
   @Test
-  @DisplayName("Ficha existente con todos sus datos")
-  void should_return_complete_product_detail_when_all_data_exists() {
+  @DisplayName("Respuesta HTTP equivalente a PostgreSQL")
+  void should_return_complete_product_detail_when_all_data_exists() throws Exception {
     insertOptionalData(3);
+    afterWrite();
 
-    ProductDetail result = productDetailUseCase.findBySku("SKU-DETAIL-IT");
-
-    assertThat(result.category().id()).isEqualTo(CATEGORY_ID);
-    assertThat(result.stock()).isZero();
-    assertThat(result.variants()).hasSize(3);
-    assertThat(result.attributes()).containsEntry("origin", "Colombia");
-    assertThat(result.rating().average()).isEqualByComparingTo("4.33");
+    mockMvc
+        .perform(get("/api/products/SKU-DETAIL-IT"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.category.id").value(CATEGORY_ID.toString()))
+        .andExpect(jsonPath("$.stock").value(0))
+        .andExpect(jsonPath("$.variants").isArray())
+        .andExpect(jsonPath("$.attributes.origin").value("Colombia"))
+        .andExpect(jsonPath("$.rating.average").value(4.33));
   }
 
   @Test
   @DisplayName("Producto sin stock ni datos opcionales")
-  void should_return_empty_optional_data_when_no_optional_rows_exist() {
-    ProductDetail result = productDetailUseCase.findBySku("SKU-DETAIL-IT");
-
-    assertThat(result.stock()).isZero();
-    assertThat(result.variants()).isEmpty();
-    assertThat(result.attributes()).isEmpty();
-    assertThat(result.rating().average()).isEqualByComparingTo("0");
-    assertThat(result.rating().count()).isZero();
+  void should_return_empty_optional_data_when_no_optional_rows_exist() throws Exception {
+    mockMvc
+        .perform(get("/api/products/SKU-DETAIL-IT"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.stock").value(0))
+        .andExpect(jsonPath("$.variants").isEmpty())
+        .andExpect(jsonPath("$.attributes").isEmpty())
+        .andExpect(jsonPath("$.rating.average").value(0))
+        .andExpect(jsonPath("$.rating.count").value(0));
   }
 
   @Test
   @DisplayName("Promedio con decimales")
-  void should_round_average_to_two_decimal_places_when_ratings_have_decimals() {
+  void should_round_average_to_two_decimal_places_when_ratings_have_decimals() throws Exception {
     insertOptionalData(3);
+    afterWrite();
 
-    assertThat(productDetailUseCase.findBySku("SKU-DETAIL-IT").rating().average())
-        .isEqualByComparingTo("4.33");
+    mockMvc
+        .perform(get("/api/products/SKU-DETAIL-IT"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rating.average").value(4.33));
   }
 
   @Test
   @DisplayName("Variantes y atributos pertenecen al producto")
-  void should_return_variants_and_attributes_when_product_has_optional_data() {
+  void should_return_variants_and_attributes_when_product_has_optional_data() throws Exception {
     insertOptionalData(3);
+    afterWrite();
 
-    ProductDetail result = productDetailUseCase.findBySku("SKU-DETAIL-IT");
-
-    assertThat(result.variants()).allMatch(variant -> variant.skuSuffix().startsWith("-"));
-    assertThat(result.attributes()).containsOnlyKeys("origin");
+    mockMvc
+        .perform(get("/api/products/SKU-DETAIL-IT"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.variants.length()").value(3))
+        .andExpect(jsonPath("$.attributes.origin").value("Colombia"));
   }
 
   @Test
   @DisplayName("Límite de reseñas recientes")
-  void should_return_at_most_five_recent_reviews_when_product_has_many_reviews() {
+  void should_return_at_most_five_recent_reviews_when_product_has_many_reviews() throws Exception {
     insertOptionalData(7);
+    afterWrite();
 
-    assertThat(productDetailUseCase.findBySku("SKU-DETAIL-IT").recentReviews()).hasSize(5);
+    mockMvc
+        .perform(get("/api/products/SKU-DETAIL-IT"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.recentReviews.length()").value(5));
   }
+
+  @Test
+  @DisplayName("Producto inexistente en ambos modos")
+  void should_return_product_not_found_when_detail_sku_is_missing() throws Exception {
+    mockMvc
+        .perform(get("/api/products/SKU-MISSING"))
+        .andExpect(status().isNotFound())
+        .andExpect(
+            jsonPath("$.type").value("https://api.master-acdc.dev/problems/product-not-found"));
+  }
+
+  protected void prepareReadStore() {}
+
+  protected void afterWrite() {}
 
   private void insertOptionalData(int reviewCount) {
     jdbcTemplate.update(

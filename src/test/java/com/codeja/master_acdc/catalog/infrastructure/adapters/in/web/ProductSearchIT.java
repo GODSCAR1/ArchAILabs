@@ -26,7 +26,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
-class ProductSearchIT {
+abstract class ProductSearchIT {
 
   private static final UUID LAPTOP = UUID.fromString("20000000-0000-0000-0000-000000000001");
   private static final UUID PHONE = UUID.fromString("20000000-0000-0000-0000-000000000002");
@@ -44,12 +44,14 @@ class ProductSearchIT {
 
   @BeforeEach
   void cleanDatabase() {
+    prepareReadStore();
     jdbcTemplate.update("delete from stock");
     jdbcTemplate.update("delete from products");
     insertProduct(LAPTOP, "Laptop", 200, "ACTIVE");
     insertProduct(PHONE, "Phone", 100, "DRAFT");
     insertProduct(LAMP, "Lamp", 400, "DISCONTINUED");
     jdbcTemplate.update("insert into stock (product_id, available) values (?, ?)", LAPTOP, 4);
+    afterWrite();
   }
 
   @Test
@@ -112,6 +114,7 @@ class ProductSearchIT {
   @DisplayName("Filtros de texto categoría precio y estados")
   void should_filter_by_text_category_price_and_status_when_all_are_present() throws Exception {
     insertProduct(DRAFT_LAPTOP, "Laptop draft", 180, "DRAFT");
+    afterWrite();
     mockMvc
         .perform(
             get("/api/products")
@@ -132,6 +135,7 @@ class ProductSearchIT {
   @DisplayName("Ordenación por precio con desempate")
   void should_sort_by_price_and_id_when_prices_are_repeated() throws Exception {
     insertProduct(DESK, "Desk", 200, "ACTIVE");
+    afterWrite();
     mockMvc
         .perform(get("/api/products").queryParam("sort", "price,asc"))
         .andExpect(status().isOk())
@@ -174,6 +178,14 @@ class ProductSearchIT {
                 .content("{\"name\":\"New Laptop\",\"price\":500,\"sku\":\"" + sku + "\"}"))
         .andExpect(status().isCreated());
 
+    if (isMongoReadStore()) {
+      mockMvc
+          .perform(get("/api/products").queryParam("status", "ACTIVE").queryParam("text", "New"))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.content").isEmpty());
+    }
+    afterWrite();
+
     mockMvc
         .perform(get("/api/products").queryParam("status", "ACTIVE").queryParam("text", "New"))
         .andExpect(status().isOk())
@@ -203,5 +215,13 @@ class ProductSearchIT {
         price,
         DEFAULT_CATEGORY,
         status);
+  }
+
+  protected void prepareReadStore() {}
+
+  protected void afterWrite() {}
+
+  protected boolean isMongoReadStore() {
+    return false;
   }
 }

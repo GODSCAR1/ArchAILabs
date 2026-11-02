@@ -11,7 +11,7 @@ import com.tngtech.archunit.lang.ArchRule;
 @AnalyzeClasses(
     packages = "com.codeja.master_acdc",
     importOptions = ImportOption.DoNotIncludeTests.class)
-class CatalogArchitectureTest {
+class CatalogMongoArchitectureTest {
 
   @ArchTest
   static final ArchRule mongo_dependencies_stay_in_catalog_infrastructure =
