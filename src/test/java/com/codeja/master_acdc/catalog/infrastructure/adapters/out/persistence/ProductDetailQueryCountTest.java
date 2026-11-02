@@ -24,7 +24,11 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
+@SpringBootTest(
+    properties = {
+      "spring.jpa.properties.hibernate.generate_statistics=true",
+      "catalog.store=postgres"
+    })
 @Testcontainers
 class ProductDetailQueryCountTest {
 
