@@ -21,8 +21,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -52,7 +52,7 @@ class ProductDetailCacheRedisIT {
     connectionFactory.start();
     ProductCacheConfiguration configuration = new ProductCacheConfiguration();
     redisTemplate = configuration.productDetailRedisTemplate(connectionFactory);
-    CaffeineCache local = configuration.productDetailLocalCache();
+    Cache local = configuration.productDetailLocalCache(10_000);
     sharedCache = configuration.productDetailSharedCache(redisTemplate);
     cacheManager = configuration.productCacheManager(local, sharedCache, new SimpleMeterRegistry());
     ((SimpleCacheManager) cacheManager).afterPropertiesSet();

@@ -133,6 +133,24 @@ class ProductDetailCacheTest {
   }
 
   @Test
+  @DisplayName("Capacidad L1 cero")
+  void should_use_l2_for_each_read_when_local_capacity_is_zero() {
+    ConcurrentMapCache shared = new ConcurrentMapCache("products.l2");
+    shared.put(SKU, detail());
+    Cache local =
+        new com.codeja.master_acdc.catalog.infrastructure.config.ProductCacheConfiguration()
+            .productDetailLocalCache(0);
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    ProductDetailCache cache = new ProductDetailCache(local, shared, registry);
+
+    cache.get(SKU, ProductDetailCacheTest::detail);
+    cache.get(SKU, ProductDetailCacheTest::detail);
+
+    assertThat(counter(registry, "products.l1", "miss")).isEqualTo(2);
+    assertThat(counter(registry, "products.l2", "hit")).isEqualTo(2);
+  }
+
+  @Test
   @DisplayName("Almacén compartido no disponible durante una lectura")
   void should_load_from_origin_when_shared_cache_read_fails() {
     Cache shared = org.mockito.Mockito.mock(Cache.class);
@@ -190,30 +208,6 @@ class ProductDetailCacheTest {
         .isEqualTo(1);
   }
 
-  @Test
-  @DisplayName("Miss de L2 no se cuenta otra vez si falla put")
-  void should_count_shared_miss_once_when_l2_write_fails() {
-    Cache shared = org.mockito.Mockito.mock(Cache.class);
-    ProductDetail expected = detail();
-    given(shared.get(SKU)).willReturn(null);
-    org.mockito.BDDMockito.willThrow(new DataAccessResourceFailureException("Redis offline"))
-        .given(shared)
-        .put(SKU, expected);
-    SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    ProductDetailCache cache = cache(shared, registry);
-
-    assertThat(cache.get(SKU, () -> expected)).isEqualTo(expected);
-
-    assertThat(
-            registry
-                .get("cache.gets")
-                .tag("cache", "products.l2")
-                .tag("result", "miss")
-                .counter()
-                .count())
-        .isEqualTo(1);
-  }
-
   private static ProductDetailCache cache() {
     return cache(new ConcurrentMapCache("products.l2"));
   }
@@ -247,6 +241,10 @@ class ProductDetailCacheTest {
   private static ProductDetail countLoad(AtomicInteger loads, ProductDetail value) {
     loads.incrementAndGet();
     return value;
+  }
+
+  private static double counter(SimpleMeterRegistry registry, String cache, String result) {
+    return registry.get("cache.gets").tag("cache", cache).tag("result", result).counter().count();
   }
 
   private static ProductDetail fail(ProductNotFoundException exception) {

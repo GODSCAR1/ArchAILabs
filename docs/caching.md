@@ -17,7 +17,7 @@ Fuente única de verdad de las caches. **Toda cache nueva añade aquí su fila a
 
 | Cache | Clave | L1 (TTL / tamaño) | L2 (TTL) | Estrategia | Quién invalida |
 |---|---|---|---|---|---|
-| `products` | `sku` (explícita, `#sku`) | 15 s ±10% / 10.000 | 10 min ±10% | Cache-aside | 1) Edición de producto: evento `ProductChanged(sku)` tras el commit (`AFTER_COMMIT`). 2) `CatalogStockProjectionJob`: los SKU cuyo `availableStock` cambió en la pasada. Cada invalidación: evict L2 + L1 local + mensaje a las demás L1. |
+| `products` | `sku` (explícita, `#sku`) | 15 s ±10% / `catalog.cache.local.maximum-size` (default 10.000; `0` desactiva retención L1) | 10 min ±10% | Cache-aside | 1) Edición de producto: evento `ProductChanged(sku)` tras el commit (`AFTER_COMMIT`). 2) `CatalogStockProjectionJob`: los SKU cuyo `availableStock` cambió en la pasada. Cada invalidación: evict L2 + L1 local + mensaje a las demás L1. |
 | `categories` | `"tree"` | 5 min, `refreshAfterWrite` | 1 h | Read-through | **Reservada:** el repo no tiene lectura del árbol de categorías; no se implementa en este lab. |
 
 - Valor cacheado: el record inmutable `ProductDetail` (listas y mapas con `copyOf`), nunca un documento

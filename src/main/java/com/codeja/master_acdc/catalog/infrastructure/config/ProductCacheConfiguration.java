@@ -19,6 +19,7 @@ import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.caffeine.CaffeineCache;
 import org.springframework.cache.interceptor.CacheErrorHandler;
+import org.springframework.cache.support.NoOpCache;
 import org.springframework.cache.support.NoOpCacheManager;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.context.annotation.Bean;
@@ -70,8 +71,12 @@ public class ProductCacheConfiguration implements CachingConfigurer {
       name = "catalog.cache.enabled",
       havingValue = "true",
       matchIfMissing = true)
-  public CaffeineCache productDetailLocalCache() {
-    return new CaffeineCache("products.l1", localCache(), false);
+  public Cache productDetailLocalCache(
+      @Value("${catalog.cache.local.maximum-size:10000}") int maximumSize) {
+    if (maximumSize == 0) {
+      return new NoOpCache("products.l1");
+    }
+    return new CaffeineCache("products.l1", localCache(maximumSize), false);
   }
 
   @Bean
@@ -132,9 +137,10 @@ public class ProductCacheConfiguration implements CachingConfigurer {
     return container;
   }
 
-  private static com.github.benmanes.caffeine.cache.Cache<Object, Object> localCache() {
+  private static com.github.benmanes.caffeine.cache.Cache<Object, Object> localCache(
+      int maximumSize) {
     return com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
-        .maximumSize(10_000)
+        .maximumSize(maximumSize)
         .expireAfter(
             new com.github.benmanes.caffeine.cache.Expiry<Object, Object>() {
               @Override
