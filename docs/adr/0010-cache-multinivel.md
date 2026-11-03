@@ -21,15 +21,21 @@ decorador en `catalog.infrastructure` sobre `ProductDetailUseCase` (domain y app
 Spring):
 
 - **L1: Caffeine** en cada instancia, TTL 15 s ±10%, máx. 10.000 entradas, `recordStats()`.
-- **L2: Redis** compartido, TTL 10 min ±10%, serializador JSON tipado por cache, prefijo
-  `shop:cache:v1:`, `clear` con SCAN, sin valores nulos.
+- **L2: Redis** compartido mediante `RedisTemplate<String, ProductDetail>` y serializador JSON
+  tipado de Jackson 3. El TTL de 10 min ±10% se aplica con jitter en cada `put` (no se usa
+  `RedisCacheManager` ni `TtlFunction`); prefijo `shop:cache:v1:`, `clear` con SCAN y sin valores
+  nulos. El `CacheManager` solo publica `products`; L1/L2 son caches internas construidas en
+  configuración y entregadas por constructor al listener, no caches administradas adicionales.
 - **Invalidación:** la edición publica `ProductChanged(sku)` y un `@TransactionalEventListener(AFTER_COMMIT)`
   hace evict en L2 y en la L1 local y publica `cache|key|instanceId` en `shop:cache:evictions`; el job de
-  stock invalida solo los SKU cuyo stock cambió. Cada instancia invalida su L1 al recibir el mensaje e
-  ignora los suyos. Un único mecanismo transaccional: el listener `AFTER_COMMIT` (no se usa
-  `transactionAware()` solo en L2, para no desfasar L1 y L2).
-- **Fallos:** `CacheErrorHandler` y la propia cache compuesta tratan los errores de Redis como miss;
-  timeout de Redis 200 ms y comandos rechazados mientras está desconectado (fallo rápido).
+  stock invalida solo los SKU cuyo stock cambió tras el bulk exitoso (con ejecución fallback cuando no
+  hay transacción). Cada instancia invalida su L1 al recibir el mensaje e ignora los suyos. No se usa
+  `transactionAware()` solo en L2, para no desfasar L1 y L2.
+- **Fallos:** `CachingConfigurer` proporciona un `CacheErrorHandler` que registra y absorbe errores
+  de get/put/evict/clear que llegan al aspecto; la cache compuesta trata `DataAccessException` de Redis
+  como miss. Una `SerializationException` por JSON incompatible también produce miss, registra aviso,
+  intenta evict la clave corrupta y carga desde origen. Los errores de L1 no se ocultan. Redis usa
+  timeout de 200 ms y rechaza comandos mientras está desconectado (fallo rápido).
 - **Checkout:** `ordering` e `inventory` no dependen de la cache ni del caso de uso cacheado (ArchUnit).
 
 ## Alternativas descartadas
@@ -50,5 +56,10 @@ Spring):
   valorar bajar el TTL de L2 o un evict diferido; pendiente de revisar con Ricardo.*
 - **Stock mostrado:** puede llegar con el retraso del job (1 min) más la propagación; es un dato
   informativo, nadie reserva contra él.
-- Dos niveles más que operar (métricas `cache.gets` de L1 y L2 en Actuator).
+- Métricas propias `cache.gets` para L1 y L2, con tags `cache=products.l1|products.l2` y
+  `result=hit|miss`; no se crean series de métricas para caches administradas individuales ni para
+  la cache compuesta, y un miss seguido de un `put` fallido se cuenta una sola vez.
+- **Carrera de carga en vuelo tras evict:** una carga iniciada antes de una invalidación puede escribir
+  su valor antiguo en L2 después del evict, conservándolo hasta el TTL y pudiendo repoblar L1. Se acepta
+  el riesgo; un segundo evict diferido es una mitigación posible, no implementada.
 - Cambios en `ProductDetail` exigen subir la versión del prefijo.

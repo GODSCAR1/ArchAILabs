@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 
+import com.codeja.master_acdc.catalog.domain.event.ProductChanged;
 import com.codeja.master_acdc.catalog.domain.exception.ConcurrentProductModificationException;
 import com.codeja.master_acdc.catalog.domain.exception.InvalidProductException;
 import com.codeja.master_acdc.catalog.domain.exception.ProductNotFoundException;
@@ -13,18 +14,24 @@ import com.codeja.master_acdc.catalog.domain.model.Price;
 import com.codeja.master_acdc.catalog.domain.model.Product;
 import com.codeja.master_acdc.catalog.domain.model.ProductName;
 import com.codeja.master_acdc.catalog.domain.model.Sku;
+import com.codeja.master_acdc.catalog.domain.port.ProductChangedPublisher;
 import com.codeja.master_acdc.catalog.domain.port.ProductEditingRepository;
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class EditProductServiceTest {
 
   private final ProductEditingRepository productRepository = mock(ProductEditingRepository.class);
-  private final EditProductService service = new EditProductService(productRepository);
+  private final ProductChangedPublisher productChangedPublisher =
+      mock(ProductChangedPublisher.class);
+  private final EditProductService service =
+      new EditProductService(productRepository, productChangedPublisher);
 
   @Test
+  @DisplayName("Edición válida invalida la ficha")
   void should_update_name_and_price_when_version_is_current() {
     Product current = product();
     given(productRepository.findById(current.id())).willReturn(Optional.of(current));
@@ -48,9 +55,11 @@ class EditProductServiceTest {
     assertThat(edited.version()).isEqualTo(1L);
     assertThat(expectedToSave.version()).isEqualTo(0L);
     then(productRepository).should().save(expectedToSave);
+    then(productChangedPublisher).should().publish(new ProductChanged("ABC-123"));
   }
 
   @Test
+  @DisplayName("Edición rechazada conserva la ficha cacheada")
   void should_reject_when_client_version_is_stale() {
     Product current = product();
     given(productRepository.findById(current.id())).willReturn(Optional.of(current));
@@ -60,6 +69,7 @@ class EditProductServiceTest {
 
     then(productRepository).should().findById(current.id());
     then(productRepository).shouldHaveNoMoreInteractions();
+    then(productChangedPublisher).shouldHaveNoInteractions();
   }
 
   @Test
@@ -71,6 +81,7 @@ class EditProductServiceTest {
         .isInstanceOf(InvalidProductException.class);
 
     then(productRepository).shouldHaveNoInteractions();
+    then(productChangedPublisher).shouldHaveNoInteractions();
   }
 
   @Test

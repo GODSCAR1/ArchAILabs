@@ -9,16 +9,20 @@ import com.codeja.master_acdc.catalog.application.port.EditProductUseCase;
 import com.codeja.master_acdc.catalog.application.port.ProductDetailUseCase;
 import com.codeja.master_acdc.catalog.application.port.ProductReviewsUseCase;
 import com.codeja.master_acdc.catalog.application.port.ProductSearchUseCase;
+import com.codeja.master_acdc.catalog.domain.port.ProductChangedPublisher;
 import com.codeja.master_acdc.catalog.domain.port.ProductDetailRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductEditingRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductSearchRepository;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache.CachedProductDetailUseCase;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.events.SpringProductChangedPublisher;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogDetailMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogIndexInitializer;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogSchemaValidator;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductEditingMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductSearchMongoRepositoryAdapter;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -55,10 +59,18 @@ public class ProductConfiguration {
   }
 
   @Bean
+  public ProductChangedPublisher productChangedPublisher(
+      ApplicationEventPublisher applicationEventPublisher) {
+    return new SpringProductChangedPublisher(applicationEventPublisher);
+  }
+
+  @Bean
   public EditProductUseCase editProductUseCase(
       ProductEditingRepository productEditingRepository,
+      ProductChangedPublisher productChangedPublisher,
       PlatformTransactionManager transactionManager) {
-    EditProductService delegate = new EditProductService(productEditingRepository);
+    EditProductService delegate =
+        new EditProductService(productEditingRepository, productChangedPublisher);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
     return (productId, name, price, version) ->
         transactionTemplate.execute(status -> delegate.edit(productId, name, price, version));
@@ -85,7 +97,9 @@ public class ProductConfiguration {
       ProductDetailRepository repository, PlatformTransactionManager transactionManager) {
     ProductDetailService delegate = new ProductDetailService(repository);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-    return sku -> transactionTemplate.execute(status -> delegate.findBySku(sku));
+    ProductDetailUseCase transactional =
+        sku -> transactionTemplate.execute(status -> delegate.findBySku(sku));
+    return new CachedProductDetailUseCase(transactional);
   }
 
   @Bean
