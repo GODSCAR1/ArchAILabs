@@ -1,7 +1,6 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache;
 
 import com.codeja.master_acdc.catalog.domain.model.ProductDetail;
-import java.time.Duration;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -13,8 +12,6 @@ import org.springframework.data.redis.core.ScanOptions;
 public final class RedisProductDetailCache extends AbstractValueAdaptingCache {
 
   private static final String PREFIX = "shop:cache:v1:products:";
-  private static final Duration TTL = Duration.ofMinutes(10);
-
   private final RedisTemplate<String, ProductDetail> redis;
 
   public RedisProductDetailCache(RedisTemplate<String, ProductDetail> redis) {
@@ -44,7 +41,12 @@ public final class RedisProductDetailCache extends AbstractValueAdaptingCache {
 
   @Override
   public void put(Object key, Object value) {
-    redis.opsForValue().set(redisKey(key), (ProductDetail) value, jitteredTtl());
+    redis
+        .opsForValue()
+        .set(
+            redisKey(key),
+            (ProductDetail) value,
+            CacheTtlPolicy.jitter(CacheTtlPolicy.PRODUCTS_L2_TTL));
   }
 
   @Override
@@ -69,9 +71,5 @@ public final class RedisProductDetailCache extends AbstractValueAdaptingCache {
 
   private static String redisKey(Object key) {
     return PREFIX + key;
-  }
-
-  private static Duration jitteredTtl() {
-    return ProductCacheTtl.jitter(TTL);
   }
 }

@@ -89,6 +89,16 @@ Lee los dos documentos antes de tocar el catálogo: el modelo sale de los patron
 - `availableStock` es una copia de `stock.available` (dueño: inventory) que refresca `CatalogStockProjectionJob`; NUNCA reserves ni valides stock contra el documento del catálogo.
 - La ficha se resuelve en 1 operación y el buscador en 2 (página + count); el número de operaciones no depende de variantes, atributos ni reseñas. (verificador: `ProductDetailQueryCountMongoTest` y `CatalogSearchMongoQueryCountTest`)
 
+## Cache — ADR `docs/adr/0010-cache-multinivel.md` y tabla `docs/caching.md`
+Lee los dos antes de tocar una cache.
+- Toda cache tiene su fila en `docs/caching.md` ANTES del código (clave, TTL L1/L2, estrategia, quién invalida). Sin fila no hay cache.
+- Clave explícita (`key = "#..."`) y `sync = true`; NUNCA `unless` ni varias caches en la misma anotación. Motivo: sin `sync`, cada miss concurrente va a MongoDB (stampede). (verificador: tests de concurrencia de la cache y `verify-quality.sh`)
+- Solo valores inmutables del dominio (`ProductDetail`); NUNCA documentos Mongo ni `@Entity`. (verificador: `CatalogMongoArchitectureTest`)
+- TTL de L1 < 30 s con jitter incluido y jitter ±10 % en L1 y L2. Los TTL viven solo en `CacheTtlPolicy` (zona protegida): si un TTL debe cambiar, detente y pídelo. Motivo: el TTL de L1 es la red de seguridad cuando se pierde un mensaje de invalidación. (verificador: `CacheTtlPolicyTest`, `protect-verify.sh` y el plugin de verificación)
+- El checkout (`ordering`, `inventory`) NUNCA lee de la cache ni de `ProductDetailUseCase`, y el stock NUNCA se cachea como dato para decidir. (verificador: `CatalogMongoArchitectureTest`)
+- Invalida tras el commit (`ProductChanged` + `AFTER_COMMIT`); NUNCA antes del commit ni con `transactionAware()` solo en L2.
+- Redis caído = miss; NUNCA un 5xx por la cache. Si cambia la forma de un valor cacheado, sube la versión del prefijo `shop:cache:vN:`.
+
 ## Seguridad
 - NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)
 - Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código ni archivos versionados. (pendiente: Gitleaks en S12)
@@ -98,7 +108,7 @@ Lee los dos documentos antes de tocar el catálogo: el modelo sale de los patron
 - Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
-- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`. Si hace falta, detente y pide permiso a una persona.
+- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`. Si hace falta, detente y pide permiso a una persona.
 
 ## graphify
 - Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.

@@ -20,3 +20,4 @@
 ## 4. Medición de la cache local
 
 - [x] 4.1 Configurar la capacidad L1 mediante `catalog.cache.local.maximum-size`, con valor predeterminado `10000` definido en código y sin modificar `application.properties`. Con capacidad `0`, L1 no retiene entradas y las lecturas pasan a L2. Verificar en un test unitario que, con L2 precalentada y capacidad L1 `0`, dos lecturas consecutivas registran `miss` en `products.l1` y `hit` en `products.l2`.
+- [x] 4.2 Centralizar en `CacheTtlPolicy` los TTL y el jitter de L1/L2; reemplazar `ProductCacheTtl` y los TTL literales existentes. Verificar con `CacheTtlPolicyTest` que el máximo L1 es menor que 30 s, L2 es mayor que L1 y 1.000 muestras para cada base permanecen en ±10% y no son iguales.

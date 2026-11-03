@@ -1,13 +1,12 @@
 package com.codeja.master_acdc.catalog.infrastructure.config;
 
 import com.codeja.master_acdc.catalog.domain.model.ProductDetail;
-import com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache.ProductCacheTtl;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache.CacheTtlPolicy;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache.ProductChangedCacheListener;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache.ProductDetailCache;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache.RedisProductDetailCache;
 import io.lettuce.core.ClientOptions;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.time.Duration;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -145,13 +144,13 @@ public class ProductCacheConfiguration implements CachingConfigurer {
             new com.github.benmanes.caffeine.cache.Expiry<Object, Object>() {
               @Override
               public long expireAfterCreate(Object key, Object value, long currentTime) {
-                return ProductCacheTtl.jitter(Duration.ofSeconds(15)).toNanos();
+                return CacheTtlPolicy.jitter(CacheTtlPolicy.PRODUCTS_L1_TTL).toNanos();
               }
 
               @Override
               public long expireAfterUpdate(
                   Object key, Object value, long currentTime, long currentDuration) {
-                return ProductCacheTtl.jitter(Duration.ofSeconds(15)).toNanos();
+                return CacheTtlPolicy.jitter(CacheTtlPolicy.PRODUCTS_L1_TTL).toNanos();
               }
 
               @Override

@@ -77,7 +77,7 @@ class ProductDetailCacheTest {
   void should_jitter_product_cache_ttl_when_ttl_is_generated() {
     List<Duration> values =
         java.util.stream.IntStream.range(0, 100)
-            .mapToObj(index -> ProductCacheTtl.jitter(Duration.ofSeconds(15)))
+            .mapToObj(index -> CacheTtlPolicy.jitter(CacheTtlPolicy.PRODUCTS_L1_TTL))
             .toList();
 
     assertThat(values)

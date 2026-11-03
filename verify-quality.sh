@@ -32,6 +32,22 @@ if [[ -n "$MONGO_BAD" ]]; then
   echo "AC/DC: consultas o agregaciones del catálogo con el nombre de la colección o Document.class. Usa la clase de entrada (CatalogProduct.class, CatalogReview.class) y una proyección si solo necesitas campos:" >&2
   echo "$MONGO_BAD" >&2; exit 1
 fi
+echo "▶ Cache multinivel (ADR docs/adr/0010-cache-multinivel.md)"
+# Segunda capa (lab S11, paso 8): no depende de que el guard de la zona protegida haya funcionado.
+CACHE_DIR=src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache
+for f in CacheTtlPolicy.java ProductDetailCache.java; do
+  [[ -f "$CACHE_DIR/$f" ]] \
+    || { echo "AC/DC: falta $CACHE_DIR/$f (ADR 0010, docs/caching.md). Restáuralo; solo una persona lo retira." >&2; exit 1; }
+done
+CACHEABLE=$(grep -rn -A2 '@Cacheable(' src/main/java --include=*.java || true)
+if grep -qE 'unless|cacheNames *= *\{' <<< "$CACHEABLE"; then
+  echo "AC/DC: @Cacheable con unless o varias caches es incompatible con sync = true (docs/caching.md):" >&2
+  echo "$CACHEABLE" >&2; exit 1
+fi
+CACHEABLE_TOTAL=$(grep -rn '@Cacheable(' src/main/java --include=*.java | wc -l)
+CACHEABLE_SYNC=$(grep -rn '@Cacheable(.*sync *= *true' src/main/java --include=*.java | wc -l)
+(( CACHEABLE_TOTAL == CACHEABLE_SYNC )) \
+  || { echo "AC/DC: todo @Cacheable lleva sync = true en la misma línea (protección contra stampede, docs/caching.md)." >&2; exit 1; }
 echo "▶ Tests guardianes (lab S09: scripts/protected-tests.txt)"
 # Segunda capa: si un guardián desaparece por una vía que ningún hook vio, Verify falla igual.
 GUARDS_MISSING=0
