@@ -39,15 +39,15 @@ for f in CacheTtlPolicy.java ProductDetailCache.java; do
   [[ -f "$CACHE_DIR/$f" ]] \
     || { echo "AC/DC: falta $CACHE_DIR/$f (ADR 0010, docs/caching.md). Restáuralo; solo una persona lo retira." >&2; exit 1; }
 done
-CACHEABLE=$(grep -rn -A2 '@Cacheable(' src/main/java --include=*.java || true)
-if grep -qE 'unless|cacheNames *= *\{' <<< "$CACHEABLE"; then
-  echo "AC/DC: @Cacheable con unless o varias caches es incompatible con sync = true (docs/caching.md):" >&2
-  echo "$CACHEABLE" >&2; exit 1
-fi
-CACHEABLE_TOTAL=$(grep -rn '@Cacheable(' src/main/java --include=*.java | wc -l)
-CACHEABLE_SYNC=$(grep -rn '@Cacheable(.*sync *= *true' src/main/java --include=*.java | wc -l)
-(( CACHEABLE_TOTAL == CACHEABLE_SYNC )) \
-  || { echo "AC/DC: todo @Cacheable lleva sync = true en la misma línea (protección contra stampede, docs/caching.md)." >&2; exit 1; }
+# Analiza cada @Cacheable completo (aunque el formateador lo parta en varias líneas).
+CACHEABLE_BAD=$(find src/main/java -name '*.java' -print0 | xargs -0 perl -0777 -ne '
+  while (/\@Cacheable(\((?:[^()]++|(?1))*\))/g) {
+    my $a = $1;
+    print "$ARGV: sin sync = true\n"            unless $a =~ /sync\s*=\s*true/;
+    print "$ARGV: unless o varias caches\n"     if $a =~ /unless|cacheNames\s*=\s*\{/;
+  }' || true)
+[[ -z "$CACHEABLE_BAD" ]] \
+  || { echo "AC/DC: todo @Cacheable lleva sync = true, sin unless ni varias caches (protección contra stampede, docs/caching.md):" >&2; echo "$CACHEABLE_BAD" >&2; exit 1; }
 echo "▶ Tests guardianes (lab S09: scripts/protected-tests.txt)"
 # Segunda capa: si un guardián desaparece por una vía que ningún hook vio, Verify falla igual.
 GUARDS_MISSING=0
