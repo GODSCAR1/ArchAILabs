@@ -9,6 +9,13 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/bench/results"
 JAR="$(ls "$ROOT"/target/master-acdc-*.jar | grep -v plain | head -1)"
 PORT=8080
+# El jar sale con una fecha fija (build reproducible), así que su fecha no sirve para
+# saber si está al día. Se compara la config empaquetada con la de src/main.
+if ! cmp -s "$ROOT/src/main/resources/application.properties" \
+    "$ROOT/target/classes/application.properties"; then
+  echo "target/ no coincide con src/main: ejecuta 'bash ./mvnw -q -DskipTests package' antes de medir" >&2
+  exit 1
+fi
 mkdir -p "$OUT"
 
 # k6: PATH, variable K6 o las rutas típicas de winget/scoop en Windows
