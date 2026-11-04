@@ -15,3 +15,11 @@ src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/C
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/ProductSearchPaginationMongoTest.java
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/ProductDetailQueryCountMongoTest.java
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogMongoStructureIT.java
+# Lab S11: guardianes de la cache multinivel
+src/test/java/com/codeja/master_acdc/arch/CatalogMongoArchitectureTest.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/CacheTtlPolicyTest.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductDetailCacheTest.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductDetailCacheRedisIT.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductCacheMultiInstanceIT.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CatalogProductCacheEditingIT.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogStockProjectionCacheInvalidationIT.java

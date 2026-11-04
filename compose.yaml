@@ -1,0 +1,24 @@
+# Lab S11 paso 7: infraestructura local para la prueba de carga de la ficha.
+# docker compose up -d
+services:
+  postgres:
+    image: postgres:17
+    container_name: acdc-postgres
+    environment:
+      POSTGRES_DB: acdc
+      POSTGRES_USER: acdc
+      POSTGRES_PASSWORD: acdc
+    ports:
+      - "5432:5432"
+
+  mongo:
+    image: mongo:7
+    container_name: acdc-mongo
+    ports:
+      - "27017:27017"
+
+  redis:
+    image: redis:7
+    container_name: acdc-redis
+    ports:
+      - "6379:6379"

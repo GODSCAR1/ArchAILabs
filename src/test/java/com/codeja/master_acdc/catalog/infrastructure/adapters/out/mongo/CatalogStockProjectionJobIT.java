@@ -2,6 +2,8 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.catalog.domain.event.ProductChanged;
+import com.codeja.master_acdc.catalog.domain.port.ProductChangedPublisher;
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.BDDMockito;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -48,6 +51,7 @@ class CatalogStockProjectionJobIT {
   private static MongoTemplate mongoTemplate;
   private static DriverManagerDataSource dataSource;
   private CountingJdbcTemplate jdbcTemplate;
+  private ProductChangedPublisher publisher;
 
   @BeforeAll
   static void initialize_databases() {
@@ -80,12 +84,13 @@ class CatalogStockProjectionJobIT {
     jdbc.update("insert into stock values (?, ?)", PRODUCT_IDS.get(2), 4);
     mongoTemplate.insertAll(PRODUCT_IDS.stream().map(this::product).toList());
     jdbcTemplate = new CountingJdbcTemplate(dataSource);
+    publisher = org.mockito.Mockito.mock(ProductChangedPublisher.class);
   }
 
   @Test
   @DisplayName("Actualización periódica de stock")
   void should_update_stock_when_products_have_stock_and_missing_rows() {
-    new CatalogStockProjectionJob(jdbcTemplate, mongoTemplate, 2).synchronizeStock();
+    new CatalogStockProjectionJob(jdbcTemplate, mongoTemplate, 2, publisher).synchronizeStock();
 
     assertThat(stock(PRODUCT_IDS.get(0))).isEqualTo(7);
     assertThat(stock(PRODUCT_IDS.get(1))).isZero();
@@ -94,13 +99,24 @@ class CatalogStockProjectionJobIT {
   }
 
   @Test
+  @DisplayName("Cambio de stock en la proyección")
+  void should_invalidate_only_skus_when_available_stock_changed() {
+    new CatalogStockProjectionJob(jdbcTemplate, mongoTemplate, 2, publisher).synchronizeStock();
+
+    BDDMockito.then(publisher).should().publish(new ProductChanged("SKU-STOCK-0"));
+    BDDMockito.then(publisher).should().publish(new ProductChanged("SKU-STOCK-2"));
+    BDDMockito.then(publisher).shouldHaveNoMoreInteractions();
+  }
+
+  @Test
   @DisplayName("Producto sin fila de stock")
   void should_assign_zero_when_stock_rows_are_absent() {
     new NamedParameterJdbcTemplate(dataSource).getJdbcTemplate().execute("truncate table stock");
 
-    new CatalogStockProjectionJob(jdbcTemplate, mongoTemplate, 2).synchronizeStock();
+    new CatalogStockProjectionJob(jdbcTemplate, mongoTemplate, 2, publisher).synchronizeStock();
 
     assertThat(PRODUCT_IDS).allSatisfy(id -> assertThat(stock(id)).isZero());
+    BDDMockito.then(publisher).shouldHaveNoInteractions();
   }
 
   private int stock(UUID id) {

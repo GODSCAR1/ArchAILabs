@@ -99,6 +99,20 @@ class ProductDetailControllerTest {
   }
 
   @Test
+  @DisplayName("Reseñas paginadas")
+  void should_return_requested_reviews_page_when_page_number_is_supplied() throws Exception {
+    given(productReviewsUseCase.findBySku("SKU-CAFE", 1, 10))
+        .willReturn(new ProductReviewPage(List.of(), 1, 10, 11, 2));
+
+    mockMvc
+        .perform(
+            get("/api/products/SKU-CAFE/reviews").queryParam("page", "1").queryParam("size", "10"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.page").value(1))
+        .andExpect(jsonPath("$.size").value(10));
+  }
+
+  @Test
   @DisplayName("Tamaño superior al máximo")
   void should_return_reviews_page_when_size_exceeds_maximum() throws Exception {
     given(productReviewsUseCase.findBySku("SKU-CAFE", 0, 1000))
