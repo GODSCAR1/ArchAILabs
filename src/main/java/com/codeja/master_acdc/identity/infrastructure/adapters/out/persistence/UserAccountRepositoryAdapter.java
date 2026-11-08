@@ -7,9 +7,12 @@ import java.util.UUID;
 
 public final class UserAccountRepositoryAdapter implements UserAccounts {
   private final UserAccountJpaRepository accounts;
+  private final jakarta.persistence.EntityManager entityManager;
 
-  public UserAccountRepositoryAdapter(UserAccountJpaRepository accounts) {
+  public UserAccountRepositoryAdapter(
+      UserAccountJpaRepository accounts, jakarta.persistence.EntityManager entityManager) {
     this.accounts = accounts;
+    this.entityManager = entityManager;
   }
 
   @Override
@@ -24,6 +27,13 @@ public final class UserAccountRepositoryAdapter implements UserAccounts {
 
   @Override
   public Optional<UserAccount> findForUpdate(UUID id) {
-    return accounts.findForUpdate(id).map(UserAccountPersistenceMapper::toDomain);
+    return accounts
+        .findForUpdate(id)
+        .map(
+            entity -> {
+              // Login may have read the account before waiting for a concurrent password change.
+              entityManager.refresh(entity);
+              return UserAccountPersistenceMapper.toDomain(entity);
+            });
   }
 }

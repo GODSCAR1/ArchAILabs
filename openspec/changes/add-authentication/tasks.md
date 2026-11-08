@@ -1,6 +1,6 @@
 # Tasks
 
-Aplicación parcial autorizada para 1.3, 2 y 3. Las tareas **HUMANA** no las ejecuta el agente. La extensión global de test aporta claves y propiedades, no sustituye las adaptaciones humanas de autenticación HTTP. La persona autorizó conservar los 48 fallos base 401/403, sin tocar guardianes ni activar la sección 5; cualquier fallo adicional exige revisión.
+Aplicación parcial autorizada para 1.3, 2, 3 y los servicios/decoradores transaccionales de 4. Las tareas **HUMANA** no las ejecuta el agente. La extensión global de test aporta claves y propiedades, no sustituye las adaptaciones humanas de autenticación HTTP. La persona autorizó conservar los 48 fallos base 401/403, sin tocar guardianes ni activar la sección 5; cualquier fallo adicional exige revisión.
 
 Cada test de escenario usa `@DisplayName("<nombre exacto del escenario>")` del delta correspondiente, y nombre Java `should_<comportamiento>_when_<condición>`. Los tests mencionados son verificaciones previstas, no pruebas ya implementadas.
 
@@ -39,6 +39,8 @@ Cada test de escenario usa `@DisplayName("<nombre exacto del escenario>")` del d
 
 ## 4. Familias, revocación y contraseña
 
+Alcance revisado de esta entrega: servicios con sus decoradores transaccionales contra PostgreSQL, incluidas invocaciones concurrentes independientes. Las casillas permanecen pendientes hasta completar sus verificaciones HTTP en la sección 5; los componentes ya acreditados se detallan en la evidencia siguiente. No se sustituyen las pruebas HTTP por pruebas de servicios ni se declaran verificados los estados HTTP y cabeceras.
+
 - [ ] 4.1 Implementar generación opaca y hash SHA-256, doble caducidad y rotación con lock de cuenta antes de SELECT FOR UPDATE por hash; mantener familia y tope absoluto. Verificación: RefreshServiceTest con Clock fijo, IdentityPersistenceIT y AuthFlowIT con «Refresh válido emite nuevo par», «Refresh vencido o desconocido» y «Rotación no prolonga la familia»; assert de hash y ausencia de secreto en BD.
 - [ ] 4.2 Implementar replay como resultado rechazado con revocación confirmada antes del 401, sin rollback accidental. Verificación: RefreshServiceTest y AuthFlowIT con «Reutilización invalida todos los sucesores», usando el sucesor después del error y comprobando que otra familia permanece activa.
 - [ ] 4.3 Cubrir concurrencia y espera acotada sin mocks de BD: dos peticiones independientes con barrera y locks/hints reales. Verificación: RefreshTokenConcurrencyIT con «Dos refresh simultáneos tienen un solo ganador» (exactamente 200/401, sucesor revocado) y RefreshTokenLockTimeoutIT con «Familia ocupada no produce rotación parcial» (503, Retry-After y rollback).
@@ -66,6 +68,19 @@ Cada test de escenario usa `@DisplayName("<nombre exacto del escenario>")` del d
 - [ ] 7.2 Ejecutar `bash ./mvnw spotless:apply`, `graphify update .` después de implementar código, `openspec validate add-authentication --strict --no-interactive`, `bash ./verify-quality.sh --fast` y `bash ./mvnw -q verify`; pegar salida completa de Verify. Verificación: tests unitarios, ArchUnit y todos los IT en verde, guardianes intactos salvo cambios humanos revisados, sin bajar PIT 75%. Si se necesita cambiar el loop protegido, detenerse y pedir permiso; fast no acredita PIT ni Gitleaks.
 
 ## Workflow follow-up
+
+### Evidencia de servicios de la sección 4 (2026-11-08)
+
+- 4.1: `RefreshServiceTest` y `SessionLifecycleIT` acreditan nuevo secreto opaco de 32 bytes, SHA-256 persistido, marca de rotación, sucesor y vencimiento `min(created_at + 7 días, family_expires_at)`. Se copia el tope original y se prueba el día 29 y el rechazo en el día 30. Una avería SQL después de crear el sucesor revierte también la marca del anterior.
+- 4.2: el replay devuelve `RefreshResult.rejected()`, sin excepción en ese camino dentro de `IdentityTransactions`. Tras volver del decorador, una lectura independiente comprueba la revocación confirmada del anterior y su sucesor; el sucesor se rechaza y otra familia sigue operativa.
+- 4.3: `RefreshTokenConcurrencyIT` usa dos hilos con barrera y el caso de uso decorado real, sin transacción envolvente ni mocks: un resultado aceptado y otro rechazado, dos filas revocadas y sucesor inutilizable. `RefreshTokenLockTimeoutIT` bloquea por separado cuenta y token desde otra conexión, obtiene `authentication-busy` aproximadamente a los dos segundos y comprueba rollback, liberación del lock y posibilidad de renovar después. Se conserva `@Lock(PESSIMISTIC_WRITE)` y el hint; PostgreSQL aplica además `SET LOCAL lock_timeout = '2s'` en la frontera transaccional.
+- 4.4: logout localiza incluso tokens rotados, revoca solo esa familia y permite repetir sin alterar las fechas ya confirmadas. Ausente/desconocido devuelve rechazo y otras familias siguen operativas.
+- 4.5: contraseña actual, política nueva, hash y revocación por usuario se procesan bajo el lock de cuenta y en una transacción. Se prueban rechazos sin cambios y rollback de hash/revocaciones tras fallo SQL. `PasswordSessionConcurrencyIT` demuestra ambos órdenes de carrera password/refresh y el rechazo de login con una cuenta leída antes del cambio. La relectura con `EntityManager.refresh` después de obtener el lock evita que login utilice un hash antiguo de la caché de primer nivel.
+- Orden único en `RefreshTokenAccess`: proyección escalar de userId por hash → `UserAccounts.findForUpdate` → `RefreshTokens.findForUpdateByHash`. Ninguna lectura inicial materializa el token como entidad gestionada. Login y cambio de contraseña comparten el lock de cuenta.
+- Suite conjunta de identity: 75 tests en 23 clases, 0 fallos, 0 errores, 0 omitidos. De ellos, 25 son de esta sección (10 unitarios y 15 IT PostgreSQL). Formato, Checkstyle y arquitectura pasan.
+- Verify fast: 229 tests, exactamente los 48 fallos base, 0 errores, 0 omitidos. Listas ordenadas por `clase#método` idénticas, diff vacío, sin fallos nuevos. Los 47 fallos de estado son 401/403; las trazas HTTP de la misma ejecución confirman 51 respuestas 401 para el guardián de stock (su fallo agregado de conteo tampoco introduce otra causa).
+- Evidencia externa en `C:/Users/oscar/AppData/Local/Temp/opencode/`: `add-authentication-section4-tests.log`, `add-authentication-section4-verify.log`, `add-authentication-section4-failures.txt`, `add-authentication-section4-failures.diff`, `add-authentication-section4-summary.txt` y `compare-authentication-section4.py`. Se conserva intacta la lista base original.
+- Pendiente para la sección 5: endpoints refresh/logout/password y sus cookies, CSRF, 200/401 del replay/concurrencia, 204 y borrado de cookie en logout, 503 con `Retry-After: 1` para `authentication-busy`, y ProblemDetail. Las pruebas actuales acreditan resultados de dominio y commits/rollbacks, no esos contratos HTTP. Las casillas 4.1–4.5 siguen abiertas por esa verificación pendiente, igual que 3.3/3.4.
 
 ### Evidencia del recorte revisado (2026-11-08)
 

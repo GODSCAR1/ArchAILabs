@@ -17,13 +17,18 @@ public final class SecureRefreshSecretGenerator implements RefreshSecretGenerato
     byte[] bytes = new byte[32];
     random.nextBytes(bytes);
     String value = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    return new RefreshSecret(value, hash(value));
+  }
+
+  @Override
+  public String hash(String value) {
     try {
       String hash =
           HexFormat.of()
               .formatHex(
                   MessageDigest.getInstance("SHA-256")
                       .digest(value.getBytes(StandardCharsets.US_ASCII)));
-      return new RefreshSecret(value, hash);
+      return hash;
     } catch (NoSuchAlgorithmException exception) {
       throw new IllegalStateException("SHA-256 unavailable", exception);
     }

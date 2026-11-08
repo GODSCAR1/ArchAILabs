@@ -25,8 +25,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Configuration
 public class IdentityConfiguration {
   @Bean
-  public UserAccounts userAccounts(UserAccountJpaRepository accounts) {
-    return new UserAccountRepositoryAdapter(accounts);
+  public UserAccounts userAccounts(
+      UserAccountJpaRepository accounts, jakarta.persistence.EntityManager entityManager) {
+    return new UserAccountRepositoryAdapter(accounts, entityManager);
   }
 
   @Bean

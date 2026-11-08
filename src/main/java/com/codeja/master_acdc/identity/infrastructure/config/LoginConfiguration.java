@@ -16,8 +16,6 @@ import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
 public class LoginConfiguration {
@@ -48,9 +46,8 @@ public class LoginConfiguration {
       UserAccounts accounts,
       Passwords passwords,
       LoginService.TokenDependencies tokens,
-      PlatformTransactionManager manager) {
+      IdentityTransactions transactions) {
     var delegate = new LoginService(accounts, passwords, tokens);
-    var transactions = new TransactionTemplate(manager);
-    return login -> transactions.execute(status -> delegate.login(login));
+    return login -> transactions.execute(() -> delegate.login(login));
   }
 }

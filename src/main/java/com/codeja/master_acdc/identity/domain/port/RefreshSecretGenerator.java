@@ -4,4 +4,6 @@ import com.codeja.master_acdc.identity.domain.model.RefreshSecret;
 
 public interface RefreshSecretGenerator {
   RefreshSecret generate();
+
+  String hash(String secret);
 }
