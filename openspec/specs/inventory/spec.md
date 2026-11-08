@@ -93,3 +93,14 @@ El sistema SHALL limitar a dos segundos la espera para adquirir el bloqueo neces
 #### Scenario: Reservas concurrentes en venta flash
 - **WHEN** 50 reservas simultáneas de una unidad compiten por un stock inicial de 30 unidades
 - **THEN** exactamente 30 peticiones devuelven HTTP 201, 20 devuelven HTTP 409 con type `https://api.master-acdc.dev/problems/insufficient-stock`, el stock final es 0 y nunca es negativo
+
+### Requirement: Reserva HTTP autenticada
+El sistema SHALL exigir JWT válido en POST `/api/products/{id}/reservations` antes de validar unidades o reservar stock. Los escenarios HTTP de reserva existentes SHALL ejecutarse con esa precondición, conservando resultados, atomicidad y espera máxima. Esta autenticación SHALL no afectar a las operaciones internas de reserva y liberación entre módulos.
+
+#### Scenario: Reserva anónima no llega al inventario
+- **WHEN** se solicita POST `/api/products/{id}/reservations` sin JWT válido
+- **THEN** responde HTTP 401 con type `https://api.master-acdc.dev/problems/unauthorized`, sin crear pedidos ni modificar stock
+
+#### Scenario: Reserva con JWT conserva contrato de éxito
+- **WHEN** se solicita POST `/api/products/{id}/reservations` con JWT válido, units 1 y stock inicial 2
+- **THEN** responde HTTP 201 con productId, units 1 y disponible 1; no crea ni modifica pedidos
