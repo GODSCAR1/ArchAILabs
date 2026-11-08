@@ -39,3 +39,4 @@ graphify-out/
 ### Exports de sesiones de agentes
 session-*.md
 bench/results/
+*.pem

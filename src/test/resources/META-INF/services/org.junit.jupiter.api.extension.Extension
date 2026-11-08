@@ -1,1 +1,2 @@
 com.codeja.master_acdc.GlobalMongoTestContainerExtension
+com.codeja.master_acdc.GlobalIdentityTestExtension
