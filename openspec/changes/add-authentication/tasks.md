@@ -6,8 +6,8 @@ Cada test de escenario usa `@DisplayName("<nombre exacto del escenario>")` del d
 
 ## 1. Preparación y decisiones protegidas
 
-- [ ] 1.1 **HUMANA** revisar propuesta, conservar/revisar el diff existente de pom.xml con Security/Resource Server/tests y autorizar cualquier ajuste de dependencias necesario. Verificación: compilación de tests y resolución de `jwt()` de spring-security-test, sin editar dependencias por iniciativa del agente.
-- [ ] 1.2 **HUMANA** incorporar el siguiente bloque en `src/main/resources/application.properties`, proporcionar PEM RSA externo y variables SHOP_JWT_PRIVATE_KEY/SHOP_OPS_USER/SHOP_OPS_PASSWORD_HASH. Issuer y audience están decididos; conservar las dos líneas existentes de Actuator sin duplicarlas ni cambiar su exposición. Verificación: JwtConfigurationTest para valores exactos y configuración ausente/inválida, y ActuatorSecurityIT; ningún PEM ni secreto versionado.
+- [x] 1.1 **HUMANA** revisar propuesta, conservar/revisar el diff existente de pom.xml con Security/Resource Server/tests y autorizar cualquier ajuste de dependencias necesario. Verificación: compilación de tests y resolución de `jwt()` de spring-security-test, sin editar dependencias por iniciativa del agente.
+- [x] 1.2 **HUMANA** incorporar el siguiente bloque en `src/main/resources/application.properties`, proporcionar PEM RSA externo y variables SHOP_JWT_PRIVATE_KEY/SHOP_OPS_USER/SHOP_OPS_PASSWORD_HASH. Issuer y audience están decididos; conservar las dos líneas existentes de Actuator sin duplicarlas ni cambiar su exposición. Verificación: JwtConfigurationTest para valores exactos y configuración ausente/inválida, y ActuatorSecurityIT; ningún PEM ni secreto versionado.
 
   ```properties
   shop.jwt.private-key=${SHOP_JWT_PRIVATE_KEY}
