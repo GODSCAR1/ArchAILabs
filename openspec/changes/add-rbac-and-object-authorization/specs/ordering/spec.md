@@ -2,6 +2,10 @@
 
 ## REMOVED Requirements
 
+### Requirement: Autenticación previa a los contratos de pedidos
+**Reason**: El requisito incorporado al archivar add-authentication conserva X-Customer-Id y la validación de cabecera, incompatibles con la identidad derivada de la cuenta.
+**Migration**: Mantener JWT obligatorio en todas las rutas de pedidos según authorization y api-security; aplicar los permisos y precedencias de este delta y obtener el cliente de la cuenta. La ausencia de X-Customer-Id deja de ser un error; los rechazos anónimos siguen siendo 401 sin cambios de pedidos ni stock.
+
 ### Requirement: Identificación de cliente obligatoria
 **Reason**: La cabecera deja de identificar al cliente.
 **Migration**: Usar bearer y el cliente asociado a su sujeto; véase Identidad de cliente derivada de la cuenta.
@@ -60,7 +64,7 @@ El sistema SHALL comprobar autenticación (401), permiso y cliente asociado (403
 - **THEN** responde HTTP 422 con type `https://api.master-acdc.dev/problems/unknown-product`; no crea pedido y stock de B sigue 1
 
 ### Requirement: Cancelación de pedido cancelable
-El sistema SHALL exigir `order:cancel-own` en POST `/api/orders/{id}/cancellation` y limitar la consulta al cliente de la cuenta, salvo si también posee `order:read-any`. PENDING y PAID SHALL pasar a CANCELLED, responder 200 con id/status/lines sin customerId y liberar todas sus líneas una sola vez.
+El sistema SHALL exigir `order:cancel-own` en POST `/api/orders/{id}/cancellation` y limitar siempre la consulta y la modificación al cliente de la cuenta, incluso si también posee `order:read-any`. PENDING y PAID SHALL pasar a CANCELLED, responder 200 con id/status/lines sin customerId y liberar todas sus líneas una sola vez.
 
 #### Scenario: Pedido PENDING cancelado libera stock de todas sus líneas
 - **GIVEN** pedido propio PENDING con (A, 3), (B, 2), stocks 7 y 8
@@ -101,6 +105,11 @@ Con permiso de cancelación, el sistema SHALL responder 404 con type `https://ap
 #### Scenario: Pedido de otro cliente
 - **WHEN** CUSTOMER solicita cancelación del pedido PENDING de otro cliente
 - **THEN** responde HTTP 404 con type `https://api.master-acdc.dev/problems/order-not-found`; conserva el pedido PENDING y su stock
+
+#### Scenario: Usuario multirrol no puede cancelar un pedido ajeno
+- **GIVEN** una cuenta CUSTOMER+SUPPORT con order:cancel-own y order:read-any y un pedido PENDING de otro cliente
+- **WHEN** solicita POST `/api/orders/{id}/cancellation` para ese pedido ajeno con bearer válido
+- **THEN** responde HTTP 404 con type `https://api.master-acdc.dev/problems/order-not-found`; el pedido permanece PENDING y ningún stock se modifica
 
 ### Requirement: Precedencia de errores de cancelación
 El sistema SHALL comprobar autenticación (401), permiso (403), existencia dentro del alcance (404) y estado (409), en ese orden, sin modificar pedido ni stock en rechazos.

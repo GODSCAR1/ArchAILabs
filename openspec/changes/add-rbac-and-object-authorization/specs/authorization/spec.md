@@ -67,7 +67,7 @@ El sistema SHALL producir la siguiente matriz para peticiones válidas con recur
 - **AND** cada éxito aplica solo el efecto contratado; las lecturas no modifican datos y metrics no acepta bearer de API
 
 ### Requirement: Permisos antes de consultar propiedad
-El sistema SHALL rechazar operaciones sin permiso antes de consultar el pedido o su propietario. `order:read-any` SHALL ampliar el alcance de consulta pero no conceder `order:cancel-own`, `order:create` ni `order:refund`.
+El sistema SHALL rechazar operaciones sin permiso antes de consultar el pedido o su propietario. `order:read-any` SHALL ampliar solo el alcance de listado y detalle; SHALL nunca ampliar el alcance de una escritura ni conceder `order:cancel-own`, `order:create` o `order:refund`.
 
 #### Scenario: Ausencia de permiso de lectura oculta existencia
 - **WHEN** CATALOG_MANAGER consulta GET `/api/orders/{id}` propio, ajeno o inexistente

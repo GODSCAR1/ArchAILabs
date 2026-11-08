@@ -1,6 +1,6 @@
 # Tasks
 
-Plan pendiente de revisión. Cada escenario usa `@DisplayName("<nombre exacto del escenario>")` de los tres deltas y métodos `should_<comportamiento>_when_<condición>`. Tests mencionados son previstos, no implementados. Las tareas HUMANA no las ejecuta el agente; son bloqueos para los pasos afectados, no permiso implícito de edición.
+Plan pendiente de revisión. Cada escenario usa `@DisplayName("<nombre exacto del escenario>")` de los cinco deltas y métodos `should_<comportamiento>_when_<condición>`. Tests mencionados son previstos, no implementados. Las tareas HUMANA no las ejecuta el agente; son bloqueos para los pasos afectados, no permiso implícito de edición.
 
 ## 1. Coordinación de contratos y guardianes
 
@@ -23,7 +23,7 @@ Plan pendiente de revisión. Cada escenario usa `@DisplayName("<nombre exacto de
 - [ ] 3.3 Extraer conversiones tocadas a OrderWebMapper, OrderPersistenceMapper y mapper de resúmenes, sin conversiones en DTO/entidad/controller. Verificación: tests unitarios de cada mapper y AuthorizationArchitectureTest; actualizar ejemplos HTTP en docs/lab-s12.md.
 - [ ] 3.4 Tras 1.4, cambiar listado a criterio estado/alcance, Specification tipada y proyección agregada; actualizar callers ListOrdersByStatusServiceTest, OrderSummaryQueryAdapterIT, OrderSummaryProfilingIT y OrderControllerTest. Verificación: ListOrdersByStatusServiceTest, OrderListingIT y OrderSummaryQueryAdapterIT cubren propios/globales, lista vacía, métricas, líneas vacías, nombre null y errores status originales.
 - [ ] 3.5 Añadir GetOrderUseCase/Service y GET detalle con consulta id/alcance y una colección precargada. Verificación: GetOrderServiceTest y OrderDetailIT trazan «Detalle propio y lectura global», «Detalle ajeno o inexistente», «Ausencia de permiso de lectura oculta existencia» y «Cliente ausente no abre el alcance»; rechazos sin cambios.
-- [ ] 3.6 Aplicar alcance también a lectura/update condicional de cancelación. Verificación: CancelOrderServiceTest, OrderCancellationIT y OrderRepositoryAdapterIT conservan todos los escenarios de cancelación actualizados, concurrencia y liberación única; añadir multirrol CUSTOMER+SUPPORT para excepción de alcance global y SUPPORT solo 403.
+- [ ] 3.6 Limitar siempre la lectura/update condicional de cancelación al id y cliente de la cuenta, incluso con order:read-any. Verificación: CancelOrderServiceTest, OrderCancellationIT y OrderRepositoryAdapterIT conservan los escenarios de cancelación, concurrencia y liberación única; «Usuario multirrol no puede cancelar un pedido ajeno» demuestra que CUSTOMER+SUPPORT recibe 404 sin modificar pedido ni stock; SUPPORT solo conserva 403.
 - [ ] 3.7 Adaptar OrderPlacementIT, OrderCancellationIT, OrderListingIT, ApiSecurityTest y AuthFlowIT a cuentas/bearer, eliminando contratos 400 de cabecera. Verificación: esas suites mantienen atomicidad, validaciones, 404 ajeno y claims; los dos nombres históricos de precedencia usan pasos nuevos del delta sin pretender cabecera obligatoria.
 - [ ] 3.8 Añadir OrderAuthorizationQueryCountTest fast con 120 pedidos, flush/clear/Statistics.clear, datos propios/ajenos. Verificación: ≤2 sentencias por listado HTTP (incluida PK de cuenta), para CUSTOMER y SUPPORT, sin depender del número de filas; guardián humano de conteo en verde.
 
@@ -53,5 +53,5 @@ Plan pendiente de revisión. Cada escenario usa `@DisplayName("<nombre exacto de
 ## Workflow follow-up
 
 - **HUMANA, paso 8 posterior:** proteger HttpSecurityConfiguration (SecurityConfig del enunciado), Role, servicio de tokens y SecurityMatrixTest en hooks/plugin/scripts; comprobar manualmente la protección y la selección de tests. No editar esos mecanismos en este cambio por el agente.
-- Una persona revisa las specs temporales de add-authentication y gestiona sincronización/archive en orden; el agente no ejecuta ninguno.
+- add-authentication ya está archivado. Una persona revisa la eliminación del requisito heredado de cabecera y los deltas de permisos de este change antes de gestionar su sincronización/archive; el agente no ejecuta ninguno.
 - add-session-version-revocation incorpora sv y revocación inmediata por separado.

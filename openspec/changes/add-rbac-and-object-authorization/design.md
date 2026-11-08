@@ -42,7 +42,7 @@ Esta interfaz es contrato público entre módulos, no un puerto de salida de app
 
 Después del permiso, cada petición de pedidos resuelve una sola vez la cuenta por PK, incluso para lectura global; no cache L1/L2 ni lookup por email. Cuenta inexistente: 403 forbidden sin consultar pedidos; cliente null: crear 403, lectura propia lista vacía/detalle 404, cancelación 404. SUPPORT/ADMIN con cuenta existente y cliente null pueden leer globalmente y reembolsar. Validación de UUID de sub falla cerrada. No se introduce validación de sv/enabled en este change.
 
-Para un usuario multirrol con order:cancel-own y order:read-any, la cancelación admite alcance global tal como pide «salvo order:read-any». SUPPORT/ADMIN solos siguen dando 403 porque falta cancel-own. Añadir test explícito de esta combinación para no confundir alcance con permiso.
+Para un usuario multirrol con order:cancel-own y order:read-any, la cancelación siempre se limita al cliente de la cuenta. order:read-any amplía exclusivamente listado y detalle, nunca escrituras. El test CUSTOMER+SUPPORT debe demostrar 404 al cancelar un pedido ajeno y ausencia de cambios de pedido y stock. SUPPORT/ADMIN solos siguen dando 403 porque falta cancel-own.
 
 ### Reglas de arquitectura
 
@@ -59,7 +59,7 @@ Eliminar cabecera, parseCustomerId y excepciones missing/invalid-customer-id de 
 
 ListOrdersByStatusUseCase recibe un criterio de dominio con estado y alcance explícito; no usar null como «todos». Consulta JPA tipada con Specification y metamodelo, allOf para estado/propietario; proyección agregada conserva LEFT JOIN, count(l.productId), coalesce(sum(...),0), cliente sin nombre y colección vacía. Proponer reemplazar findByStatus(status) por consulta con criterio obligatorio: la rotura del guardián de conteo debe resolverla una persona **antes** de cambiar la firma. No mantener sobrecarga global de compatibilidad para evitarlo.
 
-Detalle usa id + alcance en la consulta, con EntityGraph de una sola colección (lines). Cancelación lee con id + alcance y repite ese predicado en UPDATE condicional, conservando comprobación PENDING/PAID. No recuperar por id global y comparar cliente en Java ni filtrar listas en memoria. Nuevos criterios combinados tipados, consultas parametrizadas, sin SQL/JPQL dinámico concatenado. La proyección del listado no hace consultas por fila.
+Detalle usa id + alcance de lectura en la consulta, con EntityGraph de una sola colección (lines). Cancelación lee siempre con id + cliente de la cuenta y repite ese predicado en UPDATE condicional, conservando comprobación PENDING/PAID; no reutiliza el alcance global de lectura aunque exista order:read-any. No recuperar por id global y comparar cliente en Java ni filtrar listas en memoria. Nuevos criterios combinados tipados, consultas parametrizadas, sin SQL/JPQL dinámico concatenado. La proyección del listado no hace consultas por fila.
 
 RefundOrderService valida PAID/SHIPPED en dominio y guarda mediante UPDATE condicional por estado dentro de TransactionTemplate. Un resultado de cero filas tras lectura válida se traduce a order-not-refundable (409); id ausente a order-not-found (404). No publicar OrderCancelled ni llamar InventoryFacade. La cancelación existente y el reembolso compiten por el mismo estado con updates condicionales: solo uno puede ganar desde PAID; probar carreras con PostgreSQL real. No modificar firmas protegidas por iniciativa propia.
 
@@ -113,7 +113,7 @@ Los otros 16 guardianes del manifiesto se ejecutan intactos: StockReservationTra
 - [Filtrado null abre acceso global] → alcance explícito y tests de cuenta sin cliente; global solo tras autoridad comprobada.
 - [CGLIB no intercepta final o lambda] → decorador no final registrado como bean y prueba de invocación denegada real.
 - [Rollback a versión que desconoce REFUNDED] → no ejecutar versión anterior sobre esos pedidos; preferir corrección hacia delante. No convertir estados ni reabrir API con cabecera.
-- [Specs previas aún activas] → una persona sincroniza add-authentication antes y reconcilia sus requisitos temporales; este workflow no archiva ni sincroniza. Dos nombres históricos de escenarios de cabecera se conservan por trazabilidad del validador, con pasos actualizados a permisos.
+- [Contratos heredados tras archivar add-authentication] → el delta de ordering elimina explícitamente «Autenticación previa a los contratos de pedidos», incompatible con retirar X-Customer-Id. Los deltas de inventory y product-editing añaden los permisos a sus precondiciones HTTP; authentication y api-security permanecen compatibles. No hay sincronización pendiente de add-authentication. Dos nombres históricos de escenarios de cabecera se conservan por trazabilidad del validador, con pasos actualizados a permisos.
 
 ## Migration Plan
 
