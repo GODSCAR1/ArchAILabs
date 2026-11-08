@@ -7,6 +7,12 @@ import java.util.UUID;
 public final class IdentityWebMapper {
   private IdentityWebMapper() {}
 
+  public static com.codeja.master_acdc.identity.domain.model.PasswordChange toPasswordChange(
+      String subject, PasswordChangeRequest request) {
+    return new com.codeja.master_acdc.identity.domain.model.PasswordChange(
+        UUID.fromString(subject), request.currentPassword(), request.newPassword());
+  }
+
   public static com.codeja.master_acdc.identity.domain.model.Login toLogin(LoginRequest request) {
     return new com.codeja.master_acdc.identity.domain.model.Login(
         request.email(), request.password());

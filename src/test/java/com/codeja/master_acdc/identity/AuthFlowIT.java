@@ -1,34 +1,285 @@
 package com.codeja.master_acdc.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.codeja.master_acdc.identity.application.port.RegisterUseCase;
 import com.codeja.master_acdc.identity.domain.model.Registration;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import tools.jackson.databind.ObjectMapper;
 
-class AuthFlowIT extends IdentityIntegrationSupport {
-  @Autowired private MockMvc mvc;
-  @Autowired private JdbcTemplate jdbc;
-  @Autowired private RegisterUseCase register;
-  @Autowired private JwtDecoder decoder;
-  @Autowired private ObjectMapper json;
+class AuthFlowIT extends AuthHttpConcurrencyScenarios {
+  @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+  private java.time.Clock identityClock;
+
+  @Test
+  @DisplayName("Registro seguido de login y llamada autenticada")
+  void should_call_orders_when_registered_user_presents_real_bearer() throws Exception {
+    var browser = session();
+    mvc.perform(
+            get("/api/orders")
+                .secure(true)
+                .param("status", "PAID")
+                .header("Authorization", "Bearer " + browser.access()))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  @DisplayName("Token inválido no autentica")
+  void should_reject_bearer_when_claims_key_algorithm_or_kid_are_invalid() throws Exception {
+    var before = jdbc.queryForList("select * from orders");
+    for (var claims :
+        java.util.List.of(
+            java.util.Map.<String, Object>of("aud", "other"),
+            java.util.Map.<String, Object>of("iss", "https://other.example"),
+            java.util.Map.<String, Object>of("iss", "https://api.master-acdc.dev/"),
+            java.util.Map.<String, Object>of(
+                "exp", java.util.Date.from(java.time.Instant.now().minusSeconds(1))))) {
+      invalidBearer(signedToken(claims, key.getKeyID(), key, com.nimbusds.jose.JWSAlgorithm.RS256));
+    }
+    invalidBearer(
+        signedToken(java.util.Map.of(), "wrong-kid", key, com.nimbusds.jose.JWSAlgorithm.RS256));
+    invalidBearer(signedToken(java.util.Map.of(), null, key, com.nimbusds.jose.JWSAlgorithm.RS256));
+    invalidBearer(
+        signedToken(java.util.Map.of(), key.getKeyID(), key, com.nimbusds.jose.JWSAlgorithm.RS512));
+    var other = new com.nimbusds.jose.jwk.gen.RSAKeyGenerator(2048).generate();
+    invalidBearer(
+        signedToken(
+            java.util.Map.of(), key.getKeyID(), other, com.nimbusds.jose.JWSAlgorithm.RS256));
+    assertThat(jdbc.queryForList("select * from orders")).isEqualTo(before);
+  }
+
+  @Test
+  @DisplayName("Refresh válido emite nuevo par")
+  void should_rotate_secret_and_preserve_family_when_refresh_is_valid() throws Exception {
+    var original = session();
+    var before = tokens(original.user()).getFirst();
+    var successor = rotate(original);
+    assertThat(successor.refresh().getValue()).isNotEqualTo(original.refresh().getValue());
+    assertThat(successor.access()).isNotEqualTo(original.access());
+    assertThat(tokens(original.user()))
+        .hasSize(2)
+        .allSatisfy(
+            row -> {
+              assertThat(row.get("family_id")).isEqualTo(before.get("family_id"));
+              assertThat(row.get("family_expires_at")).isEqualTo(before.get("family_expires_at"));
+              assertThat(row.values())
+                  .doesNotContain(original.refresh().getValue(), successor.refresh().getValue());
+            });
+  }
+
+  @Test
+  @DisplayName("Refresh vencido o desconocido")
+  void should_reject_without_successor_when_refresh_is_missing_unknown_expired_or_revoked()
+      throws Exception {
+    var browser = session();
+    var missing =
+        post("/api/auth/refresh")
+            .secure(true)
+            .cookie(browser.csrf())
+            .header("X-XSRF-TOKEN", browser.csrf().getValue());
+    problem(missing, 401, "invalid-refresh-token");
+    var unknown =
+        new Browser(
+            browser.user(),
+            new jakarta.servlet.http.Cookie("refresh_token", "unknown"),
+            browser.csrf(),
+            browser.access());
+    problem(cookiePost("/api/auth/refresh", unknown), 401, "invalid-refresh-token");
+    var expiration =
+        ((java.sql.Timestamp) tokens(browser.user()).getFirst().get("expires_at")).toInstant();
+    org.mockito.Mockito.doReturn(expiration).when(identityClock).instant();
+    problem(cookiePost("/api/auth/refresh", browser), 401, "invalid-refresh-token");
+    assertThat(tokens(browser.user())).hasSize(1);
+    assertThat(tokens(browser.user()).getFirst().get("rotated_at")).isNull();
+  }
+
+  @Test
+  @DisplayName("Rotación no prolonga la familia")
+  void should_expire_at_original_day_thirty_when_rotating_on_day_twenty_nine() throws Exception {
+    var browser = session();
+    var created =
+        ((java.sql.Timestamp) tokens(browser.user()).getFirst().get("created_at")).toInstant();
+    for (int day : new int[] {6, 12, 18, 24, 29}) {
+      org.mockito.Mockito.doReturn(created.plus(java.time.Duration.ofDays(day)))
+          .when(identityClock)
+          .instant();
+      browser = rotate(browser);
+    }
+    var last = tokens(browser.user()).getLast();
+    assertThat(last.get("expires_at")).isEqualTo(last.get("family_expires_at"));
+    org.mockito.Mockito.doReturn(created.plus(java.time.Duration.ofDays(30)))
+        .when(identityClock)
+        .instant();
+    problem(cookiePost("/api/auth/refresh", browser), 401, "invalid-refresh-token");
+  }
+
+  @Test
+  @DisplayName("Reutilización invalida todos los sucesores")
+  void should_commit_family_revocation_when_rotated_secret_is_replayed() throws Exception {
+    var browser = session();
+    String email =
+        jdbc.queryForObject(
+            "select email from user_account where id=?", String.class, browser.user());
+    var other = browser(browser.user(), login(email, PASSWORD).andReturn());
+    var successor = rotate(browser);
+    problem(cookiePost("/api/auth/refresh", browser), 401, "invalid-refresh-token");
+    problem(cookiePost("/api/auth/refresh", successor), 401, "invalid-refresh-token");
+    assertThat(tokens(browser.user())).filteredOn(row -> row.get("revoked_at") != null).hasSize(2);
+    rotate(other);
+  }
+
+  @Test
+  @DisplayName("Logout impide renovar esa familia")
+  void should_clear_cookie_and_keep_other_device_when_logout_is_repeated() throws Exception {
+    var browser = session();
+    String email =
+        jdbc.queryForObject(
+            "select email from user_account where id=?", String.class, browser.user());
+    var other = browser(browser.user(), login(email, PASSWORD).andReturn());
+    var response =
+        mvc.perform(cookiePost("/api/auth/logout", browser))
+            .andExpect(status().isNoContent())
+            .andReturn();
+    var cookie = response.getResponse().getCookie("refresh_token");
+    assertThat(cookie.getMaxAge()).isZero();
+    assertThat(cookie.getPath()).isEqualTo("/api/auth");
+    assertThat(cookie.isHttpOnly()).isTrue();
+    assertThat(cookie.getSecure()).isTrue();
+    assertThat(cookie.getAttribute("SameSite")).isEqualTo("Strict");
+    mvc.perform(cookiePost("/api/auth/logout", browser)).andExpect(status().isNoContent());
+    problem(cookiePost("/api/auth/refresh", browser), 401, "invalid-refresh-token");
+    rotate(other);
+  }
+
+  @Test
+  @DisplayName("Logout sin refresh conocido")
+  void should_reject_logout_when_refresh_is_missing_or_unknown() throws Exception {
+    var browser = session();
+    var before = tokens(browser.user());
+    problem(
+        post("/api/auth/logout")
+            .secure(true)
+            .cookie(browser.csrf())
+            .header("X-XSRF-TOKEN", browser.csrf().getValue()),
+        401,
+        "invalid-refresh-token");
+    var unknown =
+        new Browser(
+            browser.user(),
+            new jakarta.servlet.http.Cookie("refresh_token", "unknown"),
+            browser.csrf(),
+            browser.access());
+    problem(cookiePost("/api/auth/logout", unknown), 401, "invalid-refresh-token");
+    assertThat(tokens(browser.user())).isEqualTo(before);
+  }
+
+  @Test
+  @DisplayName("Cambio de contraseña cierra renovación de otro dispositivo")
+  void should_revoke_all_user_families_when_password_changes() throws Exception {
+    var browser = session();
+    var outsider = session();
+    String email =
+        jdbc.queryForObject(
+            "select email from user_account where id=?", String.class, browser.user());
+    var other = browser(browser.user(), login(email, PASSWORD).andReturn());
+    mvc.perform(password(browser, PASSWORD, "Changed!12345X")).andExpect(status().isNoContent());
+    problem(cookiePost("/api/auth/refresh", browser), 401, "invalid-refresh-token");
+    problem(cookiePost("/api/auth/refresh", other), 401, "invalid-refresh-token");
+    login(email, "Changed!12345X").andExpect(status().isOk());
+    rotate(outsider);
+  }
+
+  @Test
+  @DisplayName("Contraseña actual incorrecta")
+  void should_preserve_credentials_and_families_when_password_change_is_rejected()
+      throws Exception {
+    var browser = session();
+    var before = tokens(browser.user());
+    var hash =
+        jdbc.queryForObject(
+            "select password_hash from user_account where id=?", String.class, browser.user());
+    problem(password(browser, "wrong", "Changed!12345X"), 401, "invalid-credentials");
+    for (String invalid : new String[] {"short", "password1234", "é".repeat(37)}) {
+      problem(password(browser, PASSWORD, invalid), 400, "invalid-password");
+    }
+    assertThat(tokens(browser.user())).isEqualTo(before);
+    assertThat(
+            jdbc.queryForObject(
+                "select password_hash from user_account where id=?", String.class, browser.user()))
+        .isEqualTo(hash);
+    rotate(browser);
+  }
+
+  @Test
+  @DisplayName("Refresh sin cabecera CSRF")
+  void should_not_consume_refresh_when_csrf_header_is_missing() throws Exception {
+    var browser = session();
+    var before = tokens(browser.user());
+    problem(
+        post("/api/auth/refresh").secure(true).cookie(browser.refresh(), browser.csrf()),
+        403,
+        "forbidden");
+    assertThat(tokens(browser.user())).isEqualTo(before);
+    rotate(browser);
+  }
+
+  @Test
+  @DisplayName("Logout con CSRF incorrecto")
+  void should_preserve_family_when_csrf_is_wrong_or_cookie_is_missing() throws Exception {
+    var browser = session();
+    var before = tokens(browser.user());
+    problem(
+        post("/api/auth/logout")
+            .secure(true)
+            .cookie(browser.refresh(), browser.csrf())
+            .header("X-XSRF-TOKEN", "wrong"),
+        403,
+        "forbidden");
+    problem(
+        post("/api/auth/logout")
+            .secure(true)
+            .cookie(browser.refresh())
+            .header("X-XSRF-TOKEN", browser.csrf().getValue()),
+        403,
+        "forbidden");
+    assertThat(tokens(browser.user())).isEqualTo(before);
+  }
+
+  @Test
+  @DisplayName("Cabecera CSRF acepta valor crudo")
+  void should_accept_cookie_value_from_spa_path_when_csrf_header_is_raw() throws Exception {
+    var browser = session();
+    assertThat(browser.csrf().getPath()).isEqualTo("/");
+    assertThat(browser.csrf().isHttpOnly()).isFalse();
+    rotate(browser);
+  }
+
+  @Test
+  @DisplayName("Registro y login no requieren CSRF")
+  void should_materialize_csrf_when_public_login_has_no_previous_cookie() throws Exception {
+    assertThat(session().csrf()).isNotNull();
+  }
+
+  private void invalidBearer(String token) throws Exception {
+    problem(
+            get("/api/orders")
+                .secure(true)
+                .param("status", "PAID")
+                .header("Authorization", "Bearer " + token),
+            401,
+            "unauthorized")
+        .andExpect(
+            header()
+                .string(
+                    "WWW-Authenticate",
+                    org.hamcrest.Matchers.startsWith("Bearer error=\"invalid_token\"")));
+  }
 
   @Test
   @DisplayName("Registro con nombre explícito")
@@ -201,7 +452,7 @@ class AuthFlowIT extends IdentityIntegrationSupport {
   @DisplayName("JWKS público verifica la firma")
   void should_publish_only_public_key_when_jwks_handler_is_called() throws Exception {
     var result =
-        mvc.perform(get("/.well-known/jwks.json").with(user("identity-fixture")))
+        mvc.perform(get("/.well-known/jwks.json").secure(true))
             .andExpect(status().isOk())
             .andReturn();
     var keys = com.nimbusds.jose.jwk.JWKSet.parse(result.getResponse().getContentAsString());
@@ -220,47 +471,5 @@ class AuthFlowIT extends IdentityIntegrationSupport {
             jwt.verify(
                 new com.nimbusds.jose.crypto.RSASSAVerifier(keys.getKeys().getFirst().toRSAKey())))
         .isTrue();
-  }
-
-  private MockHttpServletRequestBuilder registration(String email, String password, String name)
-      throws Exception {
-    var fields = new java.util.HashMap<String, Object>();
-    fields.put("email", email);
-    fields.put("password", password);
-    if (name != null) {
-      fields.put("name", name);
-    }
-    return authorizedPost("/api/auth/register").content(json.writeValueAsString(fields));
-  }
-
-  private org.springframework.test.web.servlet.ResultActions login(String email, String password)
-      throws Exception {
-    return mvc.perform(
-        authorizedPost("/api/auth/login")
-            .content(
-                json.writeValueAsString(java.util.Map.of("email", email, "password", password))));
-  }
-
-  private MockHttpServletRequestBuilder authorizedPost(String path) {
-    // Section 5 will replace this fixture authentication with the public-route and real-bearer
-    // scenarios.
-    return post(path)
-        .secure(true)
-        .with(user("identity-fixture"))
-        .with(csrf())
-        .contentType(MediaType.APPLICATION_JSON);
-  }
-
-  private long count(String table) {
-    return switch (table) {
-      case "customers" -> jdbc.queryForObject("select count(*) from customers", Long.class);
-      case "user_account" -> jdbc.queryForObject("select count(*) from user_account", Long.class);
-      case "refresh_token" -> jdbc.queryForObject("select count(*) from refresh_token", Long.class);
-      default -> throw new IllegalArgumentException("Unknown table");
-    };
-  }
-
-  private static String email() {
-    return UUID.randomUUID() + "@example.com";
   }
 }

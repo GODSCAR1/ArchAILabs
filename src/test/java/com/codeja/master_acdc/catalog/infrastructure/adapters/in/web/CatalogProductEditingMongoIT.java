@@ -1,6 +1,7 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -57,7 +58,10 @@ class CatalogProductEditingMongoIT {
   void should_create_product_with_initial_state_when_store_is_mongo() throws Exception {
     mockMvc
         .perform(
-            post("/api/products").contentType(MediaType.APPLICATION_JSON).content(createBody()))
+            post("/api/products")
+                .with(jwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createBody()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.version").value(0));
 
@@ -85,7 +89,10 @@ class CatalogProductEditingMongoIT {
 
     mockMvc
         .perform(
-            post("/api/products").contentType(MediaType.APPLICATION_JSON).content(createBody()))
+            post("/api/products")
+                .with(jwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createBody()))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value("about:blank"));
 
@@ -104,6 +111,7 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("New name", 250, 0)))
         .andExpect(status().isOk())
@@ -117,12 +125,14 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("First", 200, 0)))
         .andExpect(status().isOk());
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Rejected", 300, 0)))
         .andExpect(status().isConflict())
@@ -142,6 +152,7 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody(" ", 200, 0)))
         .andExpect(status().isBadRequest());
@@ -156,6 +167,7 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Changed\",\"price\":200}"))
         .andExpect(status().isBadRequest());
@@ -168,6 +180,7 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", UUID.randomUUID())
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Missing", 100, 0)))
         .andExpect(status().isNotFound())
@@ -179,7 +192,10 @@ class CatalogProductEditingMongoIT {
     MvcResult response =
         mockMvc
             .perform(
-                post("/api/products").contentType(MediaType.APPLICATION_JSON).content(createBody()))
+                post("/api/products")
+                    .with(jwt())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(createBody()))
             .andExpect(status().isCreated())
             .andReturn();
     String body = response.getResponse().getContentAsString();

@@ -2,6 +2,7 @@ package com.codeja.master_acdc.ordering;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -349,7 +350,7 @@ class OrderCancellationIT {
   }
 
   private ResultActions cancel(String orderId, String customerId) throws Exception {
-    var request = post("/api/orders/{id}/cancellation", orderId);
+    var request = post("/api/orders/{id}/cancellation", orderId).with(jwt());
     if (customerId != null) {
       request.header("X-Customer-Id", customerId);
     }

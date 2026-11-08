@@ -3,6 +3,7 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -26,6 +27,8 @@ import com.codeja.master_acdc.catalog.domain.model.ProductSearchPage;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchRow;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
 import com.codeja.master_acdc.catalog.domain.model.Sku;
+import com.codeja.master_acdc.identity.infrastructure.config.HttpSecurityConfiguration;
+import com.codeja.master_acdc.identity.infrastructure.config.JwtConfiguration;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -34,12 +37,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest({ProductController.class, ProductDetailController.class})
+@Import({HttpSecurityConfiguration.class, JwtConfiguration.class})
 class ProductControllerTest {
 
   private static final String INVALID_SEARCH_PARAMETER_TYPE =
@@ -63,6 +68,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             post("/api/products")
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe\",\"price\":100,\"sku\":\"caf-500\"}"))
         .andExpect(status().isCreated())
@@ -76,6 +82,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             post("/api/products")
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe\",\"sku\":\"CAF-500\"}"))
         .andExpect(status().isBadRequest())
@@ -85,7 +92,11 @@ class ProductControllerTest {
   @Test
   void should_return_400_problem_when_body_is_malformed() throws Exception {
     mockMvc
-        .perform(post("/api/products").contentType(MediaType.APPLICATION_JSON).content("{not-json"))
+        .perform(
+            post("/api/products")
+                .with(jwt())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{not-json"))
         .andExpect(status().isBadRequest())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
   }
@@ -98,6 +109,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             post("/api/products")
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe\",\"price\":100,\"sku\":\"AB\"}"))
         .andExpect(status().isBadRequest())
@@ -112,6 +124,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             post("/api/products")
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe\",\"price\":100,\"sku\":\"CAF-500\"}"))
         .andExpect(status().isConflict())
@@ -134,6 +147,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             put("/api/products/{id}", productId)
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe nuevo\",\"price\":125,\"version\":0}"))
         .andExpect(status().isOk());

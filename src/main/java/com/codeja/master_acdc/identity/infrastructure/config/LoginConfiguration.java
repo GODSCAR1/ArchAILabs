@@ -20,8 +20,8 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 @Configuration
 public class LoginConfiguration {
   @Bean
-  public IdentityCookies identityCookies() {
-    return new IdentityCookies();
+  public IdentityCookies identityCookies(Clock clock) {
+    return new IdentityCookies(clock);
   }
 
   @Bean

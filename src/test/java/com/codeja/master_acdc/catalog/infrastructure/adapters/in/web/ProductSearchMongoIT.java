@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -91,6 +92,7 @@ class ProductSearchMongoIT {
     mockMvc
         .perform(
             post("/api/products")
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Creado en Mongo\",\"price\":50,\"sku\":\"HTTP-NEW\"}"))
         .andExpect(status().isCreated());

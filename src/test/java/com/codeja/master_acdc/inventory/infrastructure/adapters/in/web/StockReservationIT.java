@@ -1,6 +1,7 @@
 package com.codeja.master_acdc.inventory.infrastructure.adapters.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -113,6 +114,7 @@ class StockReservationIT {
   private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder reserve(
       String body) {
     return post("/api/products/{id}/reservations", PRODUCT_ID)
+        .with(jwt())
         .contentType(MediaType.APPLICATION_JSON)
         .content(body);
   }

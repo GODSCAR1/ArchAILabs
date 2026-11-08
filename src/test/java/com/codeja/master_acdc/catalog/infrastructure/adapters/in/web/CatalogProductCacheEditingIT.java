@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -77,6 +78,7 @@ class CatalogProductCacheEditingIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Changed", 12000, 0)))
         .andExpect(status().isOk());
@@ -91,6 +93,7 @@ class CatalogProductCacheEditingIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Current", 11000, 0)))
         .andExpect(status().isOk());
@@ -99,6 +102,7 @@ class CatalogProductCacheEditingIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(jwt())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Rejected", 12000, 0)))
         .andExpect(status().isConflict())
@@ -127,6 +131,7 @@ class CatalogProductCacheEditingIT {
         mockMvc
             .perform(
                 post("/api/products")
+                    .with(jwt())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"name\":\"Original\",\"price\":100,\"sku\":\"" + SKU + "\"}"))
             .andExpect(status().isCreated())

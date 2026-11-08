@@ -1,6 +1,7 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
 import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,7 +52,7 @@ class OrderListingIT {
     insertOrder(PAID, "PAID", 3, 2);
 
     mockMvc
-        .perform(get("/api/orders").param("status", "PAID"))
+        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(PAID.toString()))
         .andExpect(jsonPath("$[0].customerName").value("Ada Lovelace"))
@@ -66,7 +67,7 @@ class OrderListingIT {
     insertOrder(PENDING, "PENDING", 2);
 
     mockMvc
-        .perform(get("/api/orders").param("status", "PAID"))
+        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(PAID.toString()))
         .andExpect(jsonPath("$[1]").doesNotExist());
@@ -76,7 +77,7 @@ class OrderListingIT {
   @DisplayName("Sin pedidos PAID")
   void should_return_empty_list_when_no_paid_orders_exist() throws Exception {
     mockMvc
-        .perform(get("/api/orders").param("status", "PAID"))
+        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$").isEmpty());
   }
@@ -85,7 +86,7 @@ class OrderListingIT {
   @DisplayName("Status inválido")
   void should_reject_unknown_status_when_status_is_unknown() throws Exception {
     mockMvc
-        .perform(get("/api/orders").param("status", "FOO"))
+        .perform(get("/api/orders").with(jwt()).param("status", "FOO"))
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.type").value("https://api.master-acdc.dev/problems/invalid-order-status"));
@@ -95,7 +96,7 @@ class OrderListingIT {
   @DisplayName("Status en minúsculas")
   void should_reject_lowercase_status_when_status_is_lowercase() throws Exception {
     mockMvc
-        .perform(get("/api/orders").param("status", "paid"))
+        .perform(get("/api/orders").with(jwt()).param("status", "paid"))
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.type").value("https://api.master-acdc.dev/problems/invalid-order-status"));
@@ -105,7 +106,7 @@ class OrderListingIT {
   @DisplayName("Sin parámetro status")
   void should_reject_missing_status_when_parameter_is_absent() throws Exception {
     mockMvc
-        .perform(get("/api/orders"))
+        .perform(get("/api/orders").with(jwt()))
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.type").value("https://api.master-acdc.dev/problems/missing-order-status"));
@@ -117,7 +118,7 @@ class OrderListingIT {
     insertOrder(ORPHAN, "PAID", 3);
 
     mockMvc
-        .perform(get("/api/orders").param("status", "PAID"))
+        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(ORPHAN.toString()))
         .andExpect(jsonPath("$[0].customerName").value(nullValue()));

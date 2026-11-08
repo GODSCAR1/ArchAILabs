@@ -10,6 +10,18 @@ import org.junit.jupiter.api.Test;
 
 class IdentityWebMapperTest {
   @Test
+  void should_use_authenticated_subject_when_mapping_password_change() {
+    UUID id = UUID.randomUUID();
+    var change =
+        IdentityWebMapper.toPasswordChange(
+            id.toString(), new PasswordChangeRequest("current", "new"));
+    assertThat(change.userId()).isEqualTo(id);
+    assertThat(change.currentPassword()).isEqualTo("current");
+    assertThat(change.newPassword()).isEqualTo("new");
+    assertThat(change.toString()).doesNotContain("current", "new");
+  }
+
+  @Test
   void should_map_only_public_fields_when_registration_succeeds() {
     var registration =
         IdentityWebMapper.toRegistration(

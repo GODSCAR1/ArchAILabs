@@ -2,6 +2,7 @@ package com.codeja.master_acdc.ordering;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -350,7 +351,7 @@ class OrderPlacementIT {
 
   private ResultActions placeOrder(String customerId, String body) throws Exception {
     MockHttpServletRequestBuilder request =
-        post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(body);
+        post("/api/orders").with(jwt()).contentType(MediaType.APPLICATION_JSON).content(body);
     if (customerId != null) {
       request.header("X-Customer-Id", customerId);
     }

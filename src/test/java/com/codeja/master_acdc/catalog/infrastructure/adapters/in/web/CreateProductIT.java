@@ -2,6 +2,7 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -203,7 +204,7 @@ class CreateProductIT {
 
   private ResultActions postProduct(String json) throws Exception {
     return mockMvc.perform(
-        post("/api/products").contentType(MediaType.APPLICATION_JSON).content(json));
+        post("/api/products").with(jwt()).contentType(MediaType.APPLICATION_JSON).content(json));
   }
 
   private int productCount() {

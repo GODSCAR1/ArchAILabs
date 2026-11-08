@@ -3,6 +3,7 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -10,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.identity.infrastructure.config.HttpSecurityConfiguration;
+import com.codeja.master_acdc.identity.infrastructure.config.JwtConfiguration;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
@@ -29,6 +32,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -37,6 +41,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(OrderController.class)
+@Import({HttpSecurityConfiguration.class, JwtConfiguration.class})
 class OrderControllerTest {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
@@ -148,7 +153,7 @@ class OrderControllerTest {
 
   private ResultActions perform(String customerId, String body) throws Exception {
     MockHttpServletRequestBuilder request =
-        post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(body);
+        post("/api/orders").with(jwt()).contentType(MediaType.APPLICATION_JSON).content(body);
     if (customerId != null) {
       request.header("X-Customer-Id", customerId);
     }
@@ -166,7 +171,9 @@ class OrderControllerTest {
   @Test
   void should_respond_400_missing_customer_id_when_header_absent_on_cancel() throws Exception {
     mockMvc
-        .perform(post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000"))
+        .perform(
+            post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
   }
@@ -176,6 +183,7 @@ class OrderControllerTest {
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt())
                 .header("X-Customer-Id", "no-es-uuid"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-customer-id"));
@@ -184,7 +192,10 @@ class OrderControllerTest {
   @Test
   void should_respond_404_order_not_found_when_order_id_not_uuid() throws Exception {
     mockMvc
-        .perform(post("/api/orders/{id}/cancellation", "no-uuid").header("X-Customer-Id", CUSTOMER))
+        .perform(
+            post("/api/orders/{id}/cancellation", "no-uuid")
+                .with(jwt())
+                .header("X-Customer-Id", CUSTOMER))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
   }
@@ -196,6 +207,7 @@ class OrderControllerTest {
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt())
                 .header("X-Customer-Id", CUSTOMER))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -209,6 +221,7 @@ class OrderControllerTest {
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt())
                 .header("X-Customer-Id", CUSTOMER))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-cancellable"));
@@ -227,6 +240,7 @@ class OrderControllerTest {
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt())
                 .header("X-Customer-Id", CUSTOMER))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CANCELLED"));
@@ -239,7 +253,7 @@ class OrderControllerTest {
         .willReturn(List.of(new OrderSummary(UUID.randomUUID(), "Ada", 2, 5)));
 
     mockMvc
-        .perform(get("/api/orders").param("status", "PAID"))
+        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].customerName").value("Ada"))
         .andExpect(jsonPath("$[0].lineCount").value(2))
@@ -250,7 +264,7 @@ class OrderControllerTest {
   @DisplayName("Status en minúsculas")
   void should_reject_lowercase_status_when_status_name_is_not_exact() throws Exception {
     mockMvc
-        .perform(get("/api/orders").param("status", "paid"))
+        .perform(get("/api/orders").with(jwt()).param("status", "paid"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-order-status"));
   }
@@ -259,7 +273,7 @@ class OrderControllerTest {
   @DisplayName("Sin parámetro status")
   void should_reject_missing_status_when_status_parameter_is_absent() throws Exception {
     mockMvc
-        .perform(get("/api/orders"))
+        .perform(get("/api/orders").with(jwt()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-order-status"));
   }

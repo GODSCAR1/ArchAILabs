@@ -3,6 +3,8 @@ package com.codeja.master_acdc.inventory.infrastructure.adapters.in.web;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.identity.domain.model.UserAccount;
+import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -13,6 +15,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -49,11 +52,25 @@ class StockReservationConcurrencyTest {
   @LocalServerPort int port;
   @Autowired JdbcTemplate jdbcTemplate;
   @Autowired DataSource dataSource;
+  @Autowired AccessTokenIssuer accessTokenIssuer;
+
+  // Lab S12: la reserva HTTP exige JWT. Bearer real firmado por la misma clave que valida la API
+  // (HttpClient contra RANDOM_PORT no admite jwt() de MockMvc). Las cantidades no cambian.
+  private String bearer;
 
   @BeforeEach
   void setUp() {
     jdbcTemplate.update("delete from stock");
     jdbcTemplate.update("insert into stock (product_id, available) values (?, ?)", PRODUCT_ID, 30);
+    bearer =
+        accessTokenIssuer
+            .issue(
+                new UserAccount(
+                    UUID.randomUUID(),
+                    "stock-guardian@example.com",
+                    "{noop}unused",
+                    new UserAccount.Profile(Set.of("CUSTOMER"), true, 0, null)))
+            .value();
   }
 
   @Test
@@ -126,6 +143,7 @@ class StockReservationConcurrencyTest {
                     "http://localhost:" + port + "/api/products/" + PRODUCT_ID + "/reservations"))
             .timeout(Duration.ofSeconds(10))
             .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer " + bearer)
             .POST(HttpRequest.BodyPublishers.ofString("{\"units\":" + units + "}"))
             .build();
     return HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
