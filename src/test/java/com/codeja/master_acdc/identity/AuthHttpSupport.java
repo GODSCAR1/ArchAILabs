@@ -150,15 +150,22 @@ abstract class AuthHttpSupport extends IdentityIntegrationSupport {
   protected String signedToken(
       Map<String, Object> overrides, String kid, RSAKey signingKey, JWSAlgorithm algorithm)
       throws JOSEException {
+    UUID account =
+        register.register(
+            new com.codeja.master_acdc.identity.domain.model.Registration(email(), PASSWORD, null));
+    long version =
+        jdbc.queryForObject(
+            "select session_version from user_account where id=?", Long.class, account);
     var claims =
         new JWTClaimsSet.Builder()
             .issuer("https://api.master-acdc.dev")
             .audience("master-acdc-api")
-            .subject(UUID.randomUUID().toString())
+            .subject(account.toString())
             .issueTime(java.util.Date.from(Instant.now()))
             .expirationTime(java.util.Date.from(Instant.now().plusSeconds(900)))
             .jwtID(UUID.randomUUID().toString())
-            .claim("roles", List.of("ADMIN"));
+            .claim("roles", List.of("ADMIN"))
+            .claim("sv", version);
     overrides.forEach(claims::claim);
     var jwt = new SignedJWT(new JWSHeader.Builder(algorithm).keyID(kid).build(), claims.build());
     jwt.sign(new RSASSASigner(signingKey));

@@ -16,9 +16,19 @@ abstract class AdminUsersSupport extends IdentityIntegrationSupport {
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
   @Autowired AccessTokenIssuer issuer;
+  @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
+  @Autowired org.springframework.security.oauth2.jwt.JwtDecoder decoder;
 
   @BeforeEach
   void seed_120_accounts() {
+    redis.delete(
+        IntStream.range(0, 120)
+            .mapToObj(
+                index ->
+                    com.codeja.master_acdc.identity.infrastructure.adapters.out.redis
+                            .RedisSessionVersions.PREFIX
+                        + idFor(index))
+            .toList());
     jdbc.update("delete from refresh_token");
     jdbc.update("delete from user_account");
     var rows =
@@ -39,15 +49,24 @@ abstract class AdminUsersSupport extends IdentityIntegrationSupport {
   }
 
   String bearer(String role) {
-    return "Bearer "
-        + issuer
+    String token =
+        issuer
             .issue(
                 new UserAccount(
                     idFor(0),
                     "admin-fixture-0@example.com",
                     "unused-fixture-hash",
-                    new UserAccount.Profile(Set.of(role), true, 0, null)))
+                    new UserAccount.Profile(
+                        Set.of(role),
+                        true,
+                        jdbc.queryForObject(
+                            "select session_version from user_account where id=?",
+                            Long.class,
+                            idFor(0)),
+                        null)))
             .value();
+    decoder.decode(token);
+    return "Bearer " + token;
   }
 
   UUID idFor(int index) {

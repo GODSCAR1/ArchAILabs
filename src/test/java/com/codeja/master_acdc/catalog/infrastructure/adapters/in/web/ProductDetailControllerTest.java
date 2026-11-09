@@ -30,6 +30,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(ProductDetailController.class)
 @Import({HttpSecurityConfiguration.class, JwtConfiguration.class})
 class ProductDetailControllerTest {
+  @org.springframework.test.context.bean.override.mockito.MockitoBean
+  private com.codeja.master_acdc.identity.domain.port.SessionVersions versions;
 
   @Autowired MockMvc mockMvc;
 

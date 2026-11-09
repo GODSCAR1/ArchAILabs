@@ -47,6 +47,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest({ProductController.class, ProductDetailController.class})
 @Import({HttpSecurityConfiguration.class, JwtConfiguration.class})
 class ProductControllerTest {
+  @org.springframework.test.context.bean.override.mockito.MockitoBean
+  private com.codeja.master_acdc.identity.domain.port.SessionVersions versions;
 
   private static final String INVALID_SEARCH_PARAMETER_TYPE =
       "https://api.master-acdc.dev/problems/invalid-search-parameter";

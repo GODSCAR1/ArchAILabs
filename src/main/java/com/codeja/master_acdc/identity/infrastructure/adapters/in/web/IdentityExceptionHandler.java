@@ -21,7 +21,7 @@ public class IdentityExceptionHandler {
         switch (exception.code()) {
           case "email-already-registered" -> 409;
           case "invalid-credentials", "invalid-refresh-token" -> 401;
-          case "authentication-busy" -> 503;
+          case "authentication-busy", "session-version-unavailable" -> 503;
           default -> 400;
         };
     ProblemDetail problem =

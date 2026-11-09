@@ -29,6 +29,7 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
   @Autowired MongoTemplate mongo;
   @Autowired CacheManager caches;
   @Autowired ObjectMapper json;
+  @Autowired org.springframework.security.oauth2.jwt.JwtDecoder decoder;
   UUID customer;
   UUID foreignCustomer;
   UUID own;
@@ -70,7 +71,9 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
   }
 
   String bearer(String... roles) {
-    return "Bearer " + OrderBearer.issue(jdbc, issuer, customer, roles);
+    String token = OrderBearer.issue(jdbc, issuer, customer, roles);
+    decoder.decode(token);
+    return "Bearer " + token;
   }
 
   MockHttpServletRequestBuilder createProduct(String sku) {

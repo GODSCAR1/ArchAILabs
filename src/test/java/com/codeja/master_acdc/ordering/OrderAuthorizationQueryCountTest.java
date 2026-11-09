@@ -38,6 +38,7 @@ class OrderAuthorizationQueryCountTest extends IdentityIntegrationSupport {
   @Autowired private AccessTokenIssuer issuer;
   @Autowired private EntityManager entityManager;
   @Autowired private EntityManagerFactory factory;
+  @Autowired private org.springframework.security.oauth2.jwt.JwtDecoder decoder;
 
   @BeforeEach
   void seed_more_orders_than_batch_size() {
@@ -63,6 +64,7 @@ class OrderAuthorizationQueryCountTest extends IdentityIntegrationSupport {
       throws Exception {
     boolean own = role.equals("CUSTOMER");
     String token = OrderBearer.issue(jdbc, issuer, own ? owner : null, role);
+    decoder.decode(token);
     Statistics statistics = clearStatistics();
     mvc.perform(
             get("/api/orders").param("status", "PAID").header("Authorization", "Bearer " + token))
@@ -79,6 +81,7 @@ class OrderAuthorizationQueryCountTest extends IdentityIntegrationSupport {
   @Test
   void should_skip_identity_and_orders_when_http_actor_lacks_read_permission() throws Exception {
     String token = OrderBearer.issue(jdbc, issuer, owner, "CATALOG_MANAGER");
+    decoder.decode(token);
     Statistics statistics = clearStatistics();
     mvc.perform(
             get("/api/orders")
@@ -92,6 +95,7 @@ class OrderAuthorizationQueryCountTest extends IdentityIntegrationSupport {
   @Test
   void should_only_resolve_account_when_customer_has_no_association() throws Exception {
     String token = OrderBearer.issue(jdbc, issuer, null, "CUSTOMER");
+    decoder.decode(token);
     Statistics statistics = clearStatistics();
     mvc.perform(
             get("/api/orders").param("status", "PAID").header("Authorization", "Bearer " + token))

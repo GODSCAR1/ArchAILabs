@@ -1,0 +1,135 @@
+package com.codeja.master_acdc.identity;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+
+import com.codeja.master_acdc.identity.domain.model.IdentityException;
+import com.codeja.master_acdc.identity.domain.model.PasswordChange;
+import com.codeja.master_acdc.identity.domain.model.SessionVersion;
+import com.codeja.master_acdc.identity.domain.model.UserAccount;
+import com.codeja.master_acdc.identity.infrastructure.adapters.out.redis.RedisSessionVersions;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+
+class SessionVersionRevocationIT extends SessionIntegrationSupport {
+  @MockitoSpyBean RedisSessionVersions barrier;
+  @Autowired StringRedisTemplate redis;
+  @Autowired com.codeja.master_acdc.identity.domain.port.SessionVersions versions;
+
+  @Test
+  @DisplayName("Carga concurrente no sobrescribe la revocación")
+  void should_serialize_reconstruction_when_password_change_holds_account() throws Exception {
+    var user = registered();
+    login(user);
+    var publishing = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    doAnswer(
+            invocation -> {
+              publishing.countDown();
+              await(release);
+              return invocation.callRealMethod();
+            })
+        .when(barrier)
+        .publish(eq(user.id()), any());
+    try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+      var writer = executor.submit(() -> change.changePassword(command(user)));
+      await(publishing);
+      var reader = executor.submit(() -> versions.current(user.id()));
+      try {
+        awaitAccountWaiter();
+      } finally {
+        release.countDown();
+      }
+      writer.get(10, java.util.concurrent.TimeUnit.SECONDS);
+      assertThat(reader.get(10, java.util.concurrent.TimeUnit.SECONDS))
+          .isEqualTo(new SessionVersion(1));
+    }
+  }
+
+  @Test
+  void should_commit_hash_version_and_revocation_when_barrier_is_confirmed() {
+    var user = registered();
+    login(user);
+    change.changePassword(command(user));
+    assertThat(accounts.findByEmail(user.email()).orElseThrow().profile().sessionVersion())
+        .isEqualTo(1);
+    assertThat(barrier.find(user.id())).contains(new SessionVersion(1));
+    assertThat(rows(user.id())).allSatisfy(row -> assertThat(row.get("revoked_at")).isNotNull());
+  }
+
+  @Test
+  @DisplayName("Fallo compartido durante escritura impide confirmar contraseña")
+  void should_roll_back_all_persistent_changes_when_publication_fails() {
+    var user = registered();
+    login(user);
+    var before = rows(user.id());
+    redis.opsForValue().set(RedisSessionVersions.PREFIX + user.id(), "corrupt");
+    assertThatThrownBy(() -> change.changePassword(command(user)))
+        .hasMessage("session-version-unavailable");
+    assertUnchanged(user, before);
+  }
+
+  @Test
+  void should_keep_applied_barrier_when_write_confirmation_is_lost() {
+    var user = registered();
+    login(user);
+    var before = rows(user.id());
+    doAnswer(
+            invocation -> {
+              invocation.callRealMethod();
+              throw new IdentityException("session-version-unavailable");
+            })
+        .when(barrier)
+        .publish(eq(user.id()), any());
+    assertThatThrownBy(() -> change.changePassword(command(user)))
+        .hasMessage("session-version-unavailable");
+    assertUnchanged(user, before);
+    assertThat(barrier.find(user.id())).contains(new SessionVersion(1));
+  }
+
+  @Test
+  @DisplayName("Rollback posterior a la barrera no restaura sesiones")
+  void should_keep_barrier_when_database_fails_before_commit() {
+    var user = registered();
+    login(user);
+    var before = rows(user.id());
+    doAnswer(
+            invocation -> {
+              invocation.callRealMethod();
+              TransactionSynchronizationManager.registerSynchronization(
+                  new TransactionSynchronization() {
+                    @Override
+                    public void beforeCommit(boolean readOnly) {
+                      throw new DataAccessResourceFailureException(
+                          "Injected commit availability failure");
+                    }
+                  });
+              return null;
+            })
+        .when(barrier)
+        .publish(eq(user.id()), any());
+    assertThatThrownBy(() -> change.changePassword(command(user)))
+        .hasMessage("session-version-unavailable");
+    assertUnchanged(user, before);
+    assertThat(barrier.find(user.id())).contains(new SessionVersion(1));
+  }
+
+  private void assertUnchanged(
+      UserAccount user, java.util.List<java.util.Map<String, Object>> before) {
+    assertThat(accounts.findByEmail(user.email())).contains(user);
+    assertThat(rows(user.id())).isEqualTo(before);
+  }
+
+  private static PasswordChange command(UserAccount user) {
+    return new PasswordChange(user.id(), PASSWORD, NEW_PASSWORD);
+  }
+}

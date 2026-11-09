@@ -21,11 +21,11 @@ class JwtConfigurationTest {
   @Test
   void should_reuse_pem_when_independent_spring_contexts_start() {
     try (var first =
-            new SpringApplicationBuilder(JwtConfiguration.class)
+            new SpringApplicationBuilder(JwtConfiguration.class, VersionConfiguration.class)
                 .web(WebApplicationType.NONE)
                 .run();
         var second =
-            new SpringApplicationBuilder(JwtConfiguration.class)
+            new SpringApplicationBuilder(JwtConfiguration.class, VersionConfiguration.class)
                 .web(WebApplicationType.NONE)
                 .run()) {
       var settings = first.getBean(JwtSettings.class);
@@ -56,5 +56,13 @@ class JwtConfigurationTest {
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> new JwtSettings("key", "https://api.master-acdc.dev", ""))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @org.springframework.boot.test.context.TestConfiguration
+  static class VersionConfiguration {
+    @org.springframework.context.annotation.Bean
+    com.codeja.master_acdc.identity.domain.port.SessionVersions versions() {
+      return id -> new com.codeja.master_acdc.identity.domain.model.SessionVersion(0);
+    }
   }
 }

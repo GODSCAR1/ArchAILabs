@@ -22,6 +22,7 @@ class OrderDetailIT extends IdentityIntegrationSupport {
   @Autowired private MockMvc mvc;
   @Autowired private JdbcTemplate jdbc;
   @Autowired private AccessTokenIssuer issuer;
+  @Autowired private com.codeja.master_acdc.identity.domain.port.SessionVersions sessionVersions;
   private UUID owner;
   private UUID order;
   private UUID product;
@@ -98,6 +99,8 @@ class OrderDetailIT extends IdentityIntegrationSupport {
   @Test
   void should_reject_missing_account_when_bearer_has_read_permission() throws Exception {
     String token = OrderBearer.issue(jdbc, issuer, null, "SUPPORT");
+    sessionVersions.current(
+        UUID.fromString(com.nimbusds.jwt.SignedJWT.parse(token).getJWTClaimsSet().getSubject()));
     UUID id =
         UUID.fromString(com.nimbusds.jwt.SignedJWT.parse(token).getJWTClaimsSet().getSubject());
     jdbc.update("delete from user_account where id=?", id);

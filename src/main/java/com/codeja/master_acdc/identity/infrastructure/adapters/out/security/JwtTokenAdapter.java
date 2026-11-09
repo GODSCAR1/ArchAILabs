@@ -37,6 +37,7 @@ public final class JwtTokenAdapter implements AccessTokenIssuer {
             .expiresAt(now.plusSeconds(900))
             .id(UUID.randomUUID().toString())
             .claim("roles", account.profile().roles().stream().sorted().toList())
+            .claim("sv", account.profile().sessionVersion())
             .build();
     var header = JwsHeader.with(SignatureAlgorithm.RS256).keyId(kid).build();
     return new AccessToken(

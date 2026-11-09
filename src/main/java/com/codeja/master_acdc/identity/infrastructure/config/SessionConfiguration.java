@@ -12,6 +12,7 @@ import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import com.codeja.master_acdc.identity.domain.port.Passwords;
 import com.codeja.master_acdc.identity.domain.port.RefreshSecretGenerator;
 import com.codeja.master_acdc.identity.domain.port.RefreshTokens;
+import com.codeja.master_acdc.identity.domain.port.SessionVersionBarrier;
 import com.codeja.master_acdc.identity.domain.port.UserAccounts;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
@@ -60,24 +61,24 @@ public class SessionConfiguration {
   }
 
   @Bean
+  public ChangePasswordService.Revocation passwordRevocation(
+      UserAccounts accounts, RefreshTokens tokens, SessionVersionBarrier barrier) {
+    return new ChangePasswordService.Revocation(accounts, tokens, barrier);
+  }
+
+  @Bean
   public ChangePasswordService changePasswordService(
-      UserAccounts accounts,
+      ChangePasswordService.Revocation revocation,
       Passwords passwords,
       PasswordPolicy policy,
-      RefreshTokens tokens,
       Clock clock) {
-    return new ChangePasswordService(accounts, passwords, policy, tokens, clock);
+    return new ChangePasswordService(revocation, passwords, policy, clock);
   }
 
   @Bean
   @org.springframework.context.annotation.Primary
   public ChangePasswordUseCase changePasswordUseCase(
       ChangePasswordService service, IdentityTransactions transactions) {
-    return command ->
-        transactions.execute(
-            () -> {
-              service.changePassword(command);
-              return null;
-            });
+    return new TransactionalPasswordChange(service, transactions);
   }
 }

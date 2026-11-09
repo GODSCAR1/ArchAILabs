@@ -36,7 +36,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
-@Import(GlobalMongoClientTestConfiguration.class)
+@Import({
+  GlobalMongoClientTestConfiguration.class,
+  com.codeja.master_acdc.RedisTestConfiguration.class
+})
 class ProductSearchMongoIT {
 
   private static final UUID CATEGORY_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -48,6 +51,7 @@ class ProductSearchMongoIT {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private AccessTokenIssuer tokenIssuer;
+  @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
   @BeforeEach
   void clear_catalog_products() {
@@ -94,7 +98,7 @@ class ProductSearchMongoIT {
     mockMvc
         .perform(
             post("/api/products")
-                .header("Authorization", "Bearer " + CatalogManagerToken.issue(tokenIssuer))
+                .header("Authorization", "Bearer " + CatalogManagerToken.issue(jdbc, tokenIssuer))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Creado en Mongo\",\"price\":50,\"sku\":\"HTTP-NEW\"}"))
         .andExpect(status().isCreated());

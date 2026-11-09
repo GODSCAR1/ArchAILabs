@@ -36,6 +36,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@org.springframework.context.annotation.Import(com.codeja.master_acdc.RedisTestConfiguration.class)
 class OrderPlacementIT {
 
   @Container @ServiceConnection

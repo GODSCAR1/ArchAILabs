@@ -10,19 +10,21 @@ import static org.mockito.Mockito.when;
 
 import com.codeja.master_acdc.identity.domain.model.PasswordChange;
 import com.codeja.master_acdc.identity.domain.model.PasswordPolicy;
+import com.codeja.master_acdc.identity.domain.model.SessionVersion;
 import com.codeja.master_acdc.identity.domain.model.UserAccount;
 import com.codeja.master_acdc.identity.domain.port.Passwords;
+import com.codeja.master_acdc.identity.domain.port.SessionVersionBarrier;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class ChangePasswordServiceTest extends SessionServiceTestSupport {
   private final Passwords passwords = mock(Passwords.class);
+  private final SessionVersionBarrier barrier = mock(SessionVersionBarrier.class);
   private final ChangePasswordService service =
       new ChangePasswordService(
-          accounts,
+          new ChangePasswordService.Revocation(accounts, tokens, barrier),
           passwords,
           new PasswordPolicy(value -> value.equals("password1234")),
-          tokens,
           clock);
 
   @Test
@@ -31,14 +33,26 @@ class ChangePasswordServiceTest extends SessionServiceTestSupport {
     when(passwords.matches("current", "hash")).thenReturn(true);
     when(passwords.encode("Unique!67890Z")).thenReturn("new-hash");
     service.changePassword(new PasswordChange(account.id(), "current", "Unique!67890Z"));
-    var order = inOrder(accounts, passwords, tokens);
+    var order = inOrder(accounts, passwords, tokens, barrier);
     order.verify(accounts).findForUpdate(account.id());
     order.verify(passwords).matches("current", "hash");
     order.verify(passwords).encode("Unique!67890Z");
     order
         .verify(accounts)
-        .save(new UserAccount(account.id(), account.email(), "new-hash", account.profile()));
+        .save(
+            new UserAccount(
+                account.id(),
+                account.email(),
+                "new-hash",
+                new UserAccount.Profile(
+                    account.profile().roles(),
+                    true,
+                    account.profile().sessionVersion() + 1,
+                    account.profile().customerId())));
     order.verify(tokens).revokeUser(account.id(), now);
+    order
+        .verify(barrier)
+        .publish(account.id(), new SessionVersion(account.profile().sessionVersion() + 1));
   }
 
   @Test
@@ -50,6 +64,7 @@ class ChangePasswordServiceTest extends SessionServiceTestSupport {
         .hasMessage("invalid-credentials");
     verify(accounts, never()).save(any());
     verify(tokens, never()).revokeUser(any(), any());
+    verify(barrier, never()).publish(any(), any());
   }
 
   @Test
@@ -62,5 +77,6 @@ class ChangePasswordServiceTest extends SessionServiceTestSupport {
     }
     verify(accounts, never()).save(any());
     verify(tokens, never()).revokeUser(any(), any());
+    verify(barrier, never()).publish(any(), any());
   }
 }

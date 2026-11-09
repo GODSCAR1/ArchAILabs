@@ -18,7 +18,10 @@ public final class JwtDecoderFactory {
   private JwtDecoderFactory() {}
 
   public static NimbusJwtDecoder create(
-      JWKSource<SecurityContext> source, JwtSettings settings, Clock clock) {
+      JWKSource<SecurityContext> source,
+      JwtSettings settings,
+      Clock clock,
+      SessionVersionValidator versions) {
     var processor = new DefaultJWTProcessor<SecurityContext>();
     var selector = new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, source);
     processor.setJWSKeySelector(
@@ -34,7 +37,8 @@ public final class JwtDecoderFactory {
                 jwt.getAudience().contains(settings.audience())
                     ? OAuth2TokenValidatorResult.success()
                     : invalid(),
-            jwt -> validateTime(jwt, clock)));
+            jwt -> validateTime(jwt, clock),
+            java.util.Objects.requireNonNull(versions)));
     return decoder;
   }
 

@@ -1,8 +1,10 @@
 package com.codeja.master_acdc.identity.infrastructure.config;
 
+import com.codeja.master_acdc.identity.domain.port.SessionVersions;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.security.JwtDecoderFactory;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.security.JwtSettings;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.security.PemKeyLoader;
+import com.codeja.master_acdc.identity.infrastructure.adapters.out.security.SessionVersionValidator;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
@@ -48,7 +50,10 @@ public class JwtConfiguration {
 
   @Bean
   public JwtDecoder identityJwtDecoder(
-      JWKSource<SecurityContext> source, JwtSettings settings, Clock clock) {
-    return JwtDecoderFactory.create(source, settings, clock);
+      JWKSource<SecurityContext> source,
+      JwtSettings settings,
+      Clock clock,
+      SessionVersions versions) {
+    return JwtDecoderFactory.create(source, settings, clock, new SessionVersionValidator(versions));
   }
 }

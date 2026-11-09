@@ -13,7 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
 
-class AuthFlowIT extends AuthHttpConcurrencyScenarios {
+class AuthFlowIT extends AuthSessionVersionScenarios {
   @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
   private java.time.Clock identityClock;
 
@@ -54,6 +54,9 @@ class AuthFlowIT extends AuthHttpConcurrencyScenarios {
     var original = session();
     var before = tokens(original.user()).getFirst();
     var successor = rotate(original);
+    var claims = decoder.decode(successor.access()).getClaims();
+    assertThat(claims).containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles", "sv");
+    assertThat(((Number) claims.get("sv")).longValue()).isZero();
     assertThat(successor.refresh().getValue()).isNotEqualTo(original.refresh().getValue());
     assertThat(successor.access()).isNotEqualTo(original.access());
     assertThat(tokens(original.user()))
@@ -185,6 +188,8 @@ class AuthFlowIT extends AuthHttpConcurrencyScenarios {
     mvc.perform(password(browser, PASSWORD, "Changed!12345X")).andExpect(status().isNoContent());
     problem(cookiePost("/api/auth/refresh", browser), 401, "invalid-refresh-token");
     problem(cookiePost("/api/auth/refresh", other), 401, "invalid-refresh-token");
+    invalidBearer(browser.access());
+    invalidBearer(other.access());
     login(email, "Changed!12345X").andExpect(status().isOk());
     rotate(outsider);
   }
@@ -207,6 +212,10 @@ class AuthFlowIT extends AuthHttpConcurrencyScenarios {
             jdbc.queryForObject(
                 "select password_hash from user_account where id=?", String.class, browser.user()))
         .isEqualTo(hash);
+    assertThat(
+            jdbc.queryForObject(
+                "select session_version from user_account where id=?", Long.class, browser.user()))
+        .isZero();
     rotate(browser);
   }
 
@@ -377,7 +386,9 @@ class AuthFlowIT extends AuthHttpConcurrencyScenarios {
     var body = json.readTree(response.getResponse().getContentAsString());
     assertThat(body.size()).isEqualTo(2);
     var jwt = decoder.decode(body.get("accessToken").asString());
-    assertThat(jwt.getClaims()).containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles");
+    assertThat(jwt.getClaims())
+        .containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles", "sv");
+    assertThat(((Number) jwt.getClaims().get("sv")).longValue()).isZero();
     assertThat(jwt.getSubject()).isEqualTo(id.toString());
     assertThat(jwt.getExpiresAt().getEpochSecond() - jwt.getIssuedAt().getEpochSecond())
         .isEqualTo(900);
@@ -386,9 +397,10 @@ class AuthFlowIT extends AuthHttpConcurrencyScenarios {
 
   @Test
   @DisplayName("Claims permanecen exactos tras login")
-  void should_keep_exact_seven_claims_when_login_issues_access_token() throws Exception {
+  void should_keep_exact_eight_claims_when_login_issues_access_token() throws Exception {
     var jwt = decoder.decode(session().access());
-    assertThat(jwt.getClaims()).containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles");
+    assertThat(jwt.getClaims())
+        .containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles", "sv");
     assertThat(jwt.getClaimAsStringList("roles")).containsExactly("CUSTOMER");
   }
 

@@ -32,6 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@org.springframework.context.annotation.Import(com.codeja.master_acdc.RedisTestConfiguration.class)
 class OrderCancellationIT {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";

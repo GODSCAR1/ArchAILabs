@@ -36,7 +36,12 @@ public final class OrderBearer {
                 account,
                 account + "@example.com",
                 "unused",
-                new UserAccount.Profile(Set.of(roles), true, 0, customer)))
+                new UserAccount.Profile(
+                    Set.of(roles),
+                    true,
+                    jdbc.queryForObject(
+                        "select session_version from user_account where id=?", Long.class, account),
+                    customer)))
         .value();
   }
 }

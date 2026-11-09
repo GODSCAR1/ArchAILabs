@@ -26,6 +26,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@org.springframework.context.annotation.Import(com.codeja.master_acdc.RedisTestConfiguration.class)
 class StockReservationIT {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
@@ -116,7 +117,7 @@ class StockReservationIT {
   private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder reserve(
       String body) {
     return post("/api/products/{id}/reservations", PRODUCT_ID)
-        .header("Authorization", "Bearer " + CatalogManagerToken.issue(tokenIssuer))
+        .header("Authorization", "Bearer " + CatalogManagerToken.issue(jdbcTemplate, tokenIssuer))
         .contentType(MediaType.APPLICATION_JSON)
         .content(body);
   }

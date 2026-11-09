@@ -34,7 +34,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
-@Import(GlobalMongoClientTestConfiguration.class)
+@Import({
+  GlobalMongoClientTestConfiguration.class,
+  com.codeja.master_acdc.RedisTestConfiguration.class
+})
 class CreateProductIT {
 
   @Container @ServiceConnection
@@ -43,6 +46,7 @@ class CreateProductIT {
   @Autowired MockMvc mockMvc;
   @Autowired MongoTemplate mongoTemplate;
   @Autowired AccessTokenIssuer tokenIssuer;
+  @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
   @BeforeEach
   void cleanDatabase() {
@@ -207,7 +211,7 @@ class CreateProductIT {
   private ResultActions postProduct(String json) throws Exception {
     return mockMvc.perform(
         post("/api/products")
-            .header("Authorization", "Bearer " + CatalogManagerToken.issue(tokenIssuer))
+            .header("Authorization", "Bearer " + CatalogManagerToken.issue(jdbc, tokenIssuer))
             .contentType(MediaType.APPLICATION_JSON)
             .content(json));
   }

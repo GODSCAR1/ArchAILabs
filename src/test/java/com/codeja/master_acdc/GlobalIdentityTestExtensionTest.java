@@ -17,6 +17,9 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 @SpringJUnitConfig(JwtConfiguration.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GlobalIdentityTestExtensionTest {
+  @org.springframework.test.context.bean.override.mockito.MockitoBean
+  private com.codeja.master_acdc.identity.domain.port.SessionVersions versions;
+
   private final String pathBeforePostProcessing =
       Objects.requireNonNull(System.getProperty("shop.jwt.private-key"));
   @Autowired private JwtSettings settings;

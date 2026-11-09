@@ -43,6 +43,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 @WebMvcTest(OrderController.class)
 @Import({HttpSecurityConfiguration.class, JwtConfiguration.class})
 class OrderControllerTest {
+  @org.springframework.test.context.bean.override.mockito.MockitoBean
+  private com.codeja.master_acdc.identity.domain.port.SessionVersions versions;
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
   private static final String CUSTOMER = "550e8400-e29b-41d4-a716-446655440000";

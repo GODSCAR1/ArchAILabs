@@ -29,6 +29,9 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 class JwtTokenAdapterTest {
+  private final SessionVersionValidator versions =
+      new SessionVersionValidator(
+          id -> new com.codeja.master_acdc.identity.domain.model.SessionVersion(0));
   private final JwtSettings settings =
       new JwtSettings(
           System.getProperty("shop.jwt.private-key"),
@@ -48,17 +51,30 @@ class JwtTokenAdapterTest {
           new UserAccount.Profile(Set.of("CUSTOMER"), true, 0, UUID.randomUUID()));
 
   @Test
+  void should_reject_valid_signature_when_required_session_validator_disagrees() {
+    var rejecting =
+        new SessionVersionValidator(
+            id -> new com.codeja.master_acdc.identity.domain.model.SessionVersion(1));
+    var decoder = JwtDecoderFactory.create(source, settings, clock, rejecting);
+    String token = adapter.issue(account).value();
+    assertThatThrownBy(() -> decoder.decode(token)).isInstanceOf(JwtException.class);
+  }
+
+  @Test
   @DisplayName("Claims exactos del access token")
   void should_issue_exact_claims_when_account_logs_in() {
     var token = adapter.issue(account);
-    var jwt = JwtDecoderFactory.create(source, settings, clock).decode(token.value());
-    assertThat(jwt.getClaims()).containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles");
+    var jwt = JwtDecoderFactory.create(source, settings, clock, versions).decode(token.value());
+    assertThat(jwt.getClaims())
+        .containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles", "sv");
+    assertThat(((Number) jwt.getClaims().get("sv")).longValue())
+        .isEqualTo(account.profile().sessionVersion());
     assertThat(jwt.getSubject()).isEqualTo(account.id().toString());
     assertThat(jwt.getExpiresAt()).isEqualTo(clock.instant().plusSeconds(900));
     assertThat(jwt.getClaimAsStringList("roles")).containsExactly("CUSTOMER");
     assertThat(jwt.getHeaders().get("kid")).isEqualTo(key.getKeyID());
     assertThat(
-            JwtDecoderFactory.create(source, settings, clock)
+            JwtDecoderFactory.create(source, settings, clock, versions)
                 .decode(adapter.issue(account).value())
                 .getId())
         .isNotEqualTo(jwt.getId());
@@ -69,7 +85,7 @@ class JwtTokenAdapterTest {
   @DisplayName("Token inválido no autentica")
   void should_reject_token_when_claims_algorithm_or_kid_are_invalid() throws Exception {
     var claims = SignedJWT.parse(adapter.issue(account).value()).getJWTClaimsSet();
-    var decoder = JwtDecoderFactory.create(source, settings, clock);
+    var decoder = JwtDecoderFactory.create(source, settings, clock, versions);
     for (var changed :
         new JWTClaimsSet[] {
           new JWTClaimsSet.Builder(claims).issuer(settings.issuer() + "/").build(),
@@ -95,7 +111,10 @@ class JwtTokenAdapterTest {
     String valid = adapter.issue(account).value();
     var expired =
         JwtDecoderFactory.create(
-            source, settings, Clock.fixed(clock.instant().plusSeconds(900), ZoneOffset.UTC));
+            source,
+            settings,
+            Clock.fixed(clock.instant().plusSeconds(900), ZoneOffset.UTC),
+            versions);
     assertThatThrownBy(() -> expired.decode(valid)).isInstanceOf(JwtException.class);
   }
 
@@ -124,8 +143,11 @@ class JwtTokenAdapterTest {
             account.email(),
             account.passwordHash(),
             new UserAccount.Profile(roles, true, 0, null));
-    var jwt = JwtDecoderFactory.create(source, settings, clock).decode(adapter.issue(user).value());
-    assertThat(jwt.getClaims()).containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles");
+    var jwt =
+        JwtDecoderFactory.create(source, settings, clock, versions)
+            .decode(adapter.issue(user).value());
+    assertThat(jwt.getClaims())
+        .containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles", "sv");
     assertThat(jwt.getClaimAsStringList("roles"))
         .containsExactlyElementsOf(roles.stream().sorted().toList());
     assertThat(new RolesAndPermissionsConverter().convert(jwt))
@@ -140,7 +162,7 @@ class JwtTokenAdapterTest {
     var original = SignedJWT.parse(adapter.issue(account).value()).getJWTClaimsSet();
     var changed = new JWTClaimsSet.Builder(original).claim("roles", roles).build();
     var jwt =
-        JwtDecoderFactory.create(source, settings, clock)
+        JwtDecoderFactory.create(source, settings, clock, versions)
             .decode(sign(changed, key.getKeyID(), JWSAlgorithm.RS256, key));
     assertThat(new RolesAndPermissionsConverter().convert(jwt)).isEmpty();
   }

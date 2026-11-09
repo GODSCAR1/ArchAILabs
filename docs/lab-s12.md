@@ -479,6 +479,62 @@ No se infiere de este fast una ejecución de IT ni una medición PIT; umbral vig
 
 ## 7. Matriz de tests
 
+### Continuación de revocación: secciones 2 y 3 (2026-11-09)
+
+La persona confirma completas 1.2 y 1.3: el guardián usa `OrderBearer`, cuenta persistida,
+Redis real y GET autenticado 403 de precalentado; `compose.yaml` declara `noeviction`.
+El agente conserva el guardián sin edición y el protocolo operativo aprobado de recuperación vacía.
+La base completa previa a editar (`bash ./mvnw -q verify`) pasa, con lista de fallos `[]`.
+
+`SessionVersions` reconstruye el miss bajo el lock transaccional de cuenta, relee Redis y usa SETNX.
+El hit hace un GET. `RedisSessionVersions` publica el máximo mediante un script de una clave,
+comparando cadenas decimales canónicas sin pérdida de precisión de long. Sin TTL ni L1.
+Se verifica el timeout de 200 ms y REJECT_COMMANDS también con cache de catálogo desactivada.
+Los contextos completos sin Redis arrancan sin consultar el almacén durante el ensamblaje.
+
+Contraseña ahora guarda hash/versión incrementada y revoca familias en la transacción existente;
+publica la barrera antes del commit. El test unitario comprueba ese orden. Los tests PostgreSQL/Redis
+reales comprueban commit y rollback; espías coordinan intercalados e inyectan pérdida de confirmación
+después de la escritura real, desconexión del cliente y fallo de disponibilidad antes del commit.
+La carrera miss/contraseña observa al lector esperando el lock y devolviendo la versión nueva tras
+liberarlo. Las carreras existentes login/refresh frente a contraseña pasan sin cambiar umbrales.
+Escrituras antiguas n y n+1, y SETNX tardío, conservan la barrera n+2; se comprueba también Long.MAX_VALUE.
+Una barrera publicada sobrevive al rollback: no hay compensación a la baja. La recuperación requiere
+reintento autorizado/intervención operativa. Un fallo anterior a publicar no acredita revocación.
+Otro proceso Redis vacío reconstruye la versión confirmada desde PostgreSQL.
+
+Login y refresh emiten exactamente ocho claims con sv de la cuenta bloqueada, conservando RS256,
+kid, duración de 900 s y todos los validadores anteriores. El decoder exige el nuevo validador,
+sin overload permisivo. Los tokens previos de siete claims reciben 401 y requieren un nuevo login.
+Tras cambiar contraseña, los access anteriores de ambos dispositivos fallan inmediatamente y sus
+refresh están revocados; nuevo login y refresh llevan versión 1 y funcionan. El test de contraseña
+incorrecta/política conserva hash, versión y familias. Logout conserva su semántica por familia.
+
+`AuthFlowIT` hereda nuevos escenarios de `AuthSessionVersionScenarios` para mantener archivos acotados.
+Se prueban claims inválidos con cuenta real y rechazo aislado, timeout Redis real mediante CLIENT
+PAUSE ALL/WRITE, conexión TCP rechazada y corrupción. El fallo de conexión se dirige solo al GET del
+usuario probado mediante un espía que invoca un adaptador/conexión reales; no se para Redis compartido.
+UNPAUSE usa una conexión independiente, porque una escritura pausada bloquea la cola de su conexión.
+Cada fallo restaura recursos, exige 401 y conserva snapshots de cuenta/familias/pedidos/stock.
+La captura del logger exige WARN sin bearer, refresh, contraseña, email, UUID, clave ni throwable.
+El fallo de publicación tras autenticar da 503 session-version-unavailable y Retry-After 1.
+
+Las fixtures HTTP persisten cuentas y emiten su versión real. Los conteos precalientan autenticación
+antes de flush/clear/Statistics.clear, conservando 120 filas y presupuestos. El caso de cuenta borrada
+de `OrderDetailIT` calienta primero para aislar la denegación de autorización existente; el caso de
+cuenta inexistente sin clave se prueba separadamente como 401 en AuthFlowIT. Slices usan dobles
+explícitos, sin desactivar validación en producción.
+
+Verificación completa de estas secciones: `bash ./mvnw -q verify` correcto; Failsafe acredita 256 tests,
+0 fallos, 0 errores y 0 omitidos. `AuthFlowIT`: 37; `SessionVersionRedisIT`: 7;
+`SessionVersionRevocationIT`: 5; guardián `StockReservationConcurrencyTest`: 2 en verde con el decoder
+nuevo y sin edición. Matriz, conteos, arquitectura y demás guardianes pasan. Las opciones temporales
+JAVA_TOOL_OPTIONS solo reducen logging de arranque. PIT y latencia no medidos; umbral 75 % intacto.
+
+```json
+{"base": [], "final": [], "nuevos": [], "resueltos": [], "persistentes": []}
+```
+
 ### Matriz RBAC y escenarios complementarios (sección 6)
 
 `SecurityMatrixTest` ejecuta 70 celdas (14 endpoints × Anónimo, CUSTOMER,
