@@ -97,7 +97,7 @@ Lee los dos antes de tocar una cache.
 - TTL de L1 < 30 s con jitter incluido y jitter ±10 % en L1 y L2. Los TTL viven solo en `CacheTtlPolicy` (zona protegida): si un TTL debe cambiar, detente y pídelo. Motivo: el TTL de L1 es la red de seguridad cuando se pierde un mensaje de invalidación. (verificador: `CacheTtlPolicyTest`, `protect-verify.sh` y el plugin de verificación)
 - El checkout (`ordering`, `inventory`) NUNCA lee de la cache ni de `ProductDetailUseCase`, y el stock NUNCA se cachea como dato para decidir. (verificador: `CatalogMongoArchitectureTest`)
 - Invalida tras el commit (`ProductChanged` + `AFTER_COMMIT`); NUNCA antes del commit ni con `transactionAware()` solo en L2.
-- Redis caído = miss; NUNCA un 5xx por la cache. Si cambia la forma de un valor cacheado, sube la versión del prefijo `shop:cache:vN:`.
+- Redis caído = miss; NUNCA un 5xx por la cache. Estas reglas son para caches de DATOS (catálogo). EXCEPCIÓN única: la versión de sesión de identity (`shop:identity:session-version:v1:`) es un control de seguridad, no una cache: sin L1 ni TTL, Redis caído = 401 (fail closed) y la barrera se publica ANTES del commit (lab S12, change add-session-version-revocation). No extiendas esta excepción a otras claves. Si cambia la forma de un valor cacheado, sube la versión del prefijo `shop:cache:vN:`.
 
 ## Seguridad
 - NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)
