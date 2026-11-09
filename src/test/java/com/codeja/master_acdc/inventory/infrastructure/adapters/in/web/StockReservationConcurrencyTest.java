@@ -54,7 +54,8 @@ class StockReservationConcurrencyTest {
   @Autowired DataSource dataSource;
   @Autowired AccessTokenIssuer accessTokenIssuer;
 
-  // Lab S12: la reserva HTTP exige JWT. Bearer real firmado por la misma clave que valida la API
+  // Lab S12: la reserva HTTP exige JWT y stock:reserve (CATALOG_MANAGER). Bearer real firmado por
+  // la misma clave que valida la API
   // (HttpClient contra RANDOM_PORT no admite jwt() de MockMvc). Las cantidades no cambian.
   private String bearer;
 
@@ -69,7 +70,7 @@ class StockReservationConcurrencyTest {
                     UUID.randomUUID(),
                     "stock-guardian@example.com",
                     "{noop}unused",
-                    new UserAccount.Profile(Set.of("CUSTOMER"), true, 0, null)))
+                    new UserAccount.Profile(Set.of("CATALOG_MANAGER"), true, 0, null)))
             .value();
   }
 

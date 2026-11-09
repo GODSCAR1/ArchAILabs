@@ -85,6 +85,142 @@ Salida completa conservada por el entorno de herramientas:
 
 ## 5. Permisos y propiedad
 
+### Tabla RBAC de add-rbac-and-object-authorization
+
+| Rol | Permisos |
+|---|---|
+| CUSTOMER | `order:create`, `order:read-own`, `order:cancel-own` |
+| CATALOG_MANAGER | `product:write`, `stock:reserve` |
+| SUPPORT | `order:read-any`, `order:refund` |
+| ADMIN | `product:write`, `stock:reserve`, `order:read-any`, `order:refund`, `user:read` |
+
+`Role` expone conjuntos inmutables. Los roles combinados suman permisos; ADMIN no
+hereda CUSTOMER. El conversor del resource server deriva `ROLE_<nombre>` y permisos
+solo de roles conocidos, sin tomar `scope`/`scp` como permisos. Un claim `roles`
+ausente, no array o con elementos no textuales no concede authorities. Los nombres
+desconocidos se ignoran sin eliminar los roles conocidos del mismo array.
+
+La entrega inicial se detuvo antes de activar seguridad de método por llamadas
+directas sin autenticación en guardianes adicionales a los previstos. En la
+continuación solicitada por la persona se activan los decoradores y se registran
+las incompatibilidades de esos guardianes, sin adaptarlos por el agente.
+
+Evidencia parcial (2026-11-08): base de 439 tests, con fallo en
+`RefreshTokenLockTimeoutIT.should_bound_account_lock_wait_and_roll_back_when_account_is_busy`
+(1073 ms frente a mínimo 1500 ms). Tras 2.1–2.2 se ejecutan 469 tests: las pruebas
+de roles/conversor/JWT y `AuthFlowIT` pasan, pero falla
+`RefreshTokenLockTimeoutIT.should_release_account_lock_and_roll_back_when_token_is_busy`
+(1078 ms frente a mínimo 1500 ms). Son métodos distintos: el segundo es un fallo
+nuevo respecto a la lista base, aunque ambos pertenecen a la misma suite de timeout.
+Se detiene apply sin corregir esa suite ajena a la sección 2. Los recuentos excluyen
+informes históricos de `target`. La ejecución de inventario de fallos usa
+`-Dmaven.test.failure.ignore=true` para completar Surefire y Failsafe; su código de
+salida no acredita éxito. No se ha medido PIT ni alterado su umbral indicado del 75%.
+
+### Continuación: fronteras de método (2.3–2.4)
+
+La persona adaptó y formateó los guardianes de 1.2 y 1.3. Se ejecutaron antes y
+después de activar seguridad de método: `CatalogProductEditingMongoIT` (7),
+`CatalogProductCacheEditingIT` (3) y `StockReservationConcurrencyTest` (2) pasan
+en ambas condiciones. El agente no cambió esos archivos.
+
+`MethodSecurityConfiguration` activa `@EnableMethodSecurity` también fuera del
+contexto web. Los únicos beans públicos de creación/edición de producto y reserva
+directa son decoradores proxificables con `product:write`/`stock:reserve`, antes de
+la frontera transaccional. El checkout interno conserva sus puertos sin ese permiso.
+La cadena API añade `/api/admin/**` con `hasRole("ADMIN")`. `MethodAuthorizationTest`
+prueba beans reales con permisos, sin permisos y sin Authentication, y observa los
+repositorios para comprobar ausencia de delegación denegada. `ApiSecurityTest`
+comprueba 403 ProblemDetail con bearer CUSTOMER real, rechazos administrativos y
+contratos de CSRF/catálogo/versiones. Las fixtures no protegidas de integración
+usan bearer firmado CATALOG_MANAGER; el slice usa authorities explícitas.
+
+Verificación focalizada: 81 tests sin fallos. Suite completa: 479 tests, 10 fallos
+por llamadas directas sin Authentication, en `ProductCacheMultiInstanceIT` (3),
+`CatalogStockProjectionCacheInvalidationIT` (1), `CatalogStockProjectionSchedulingIT`
+(1), `InventoryReservationComparisonIT` (1) y `StockReservationTransactionIT` (4).
+Se detiene apply para revisión humana; no se declara la suite completa en verde.
+
+### Problema abierto: RefreshTokenLockTimeoutIT (retomar al final del change)
+
+La instrumentación temporal descrita a continuación se retiró por decisión humana:
+`RefreshTokenLockTimeoutIT` vuelve al contenido del último commit y se elimina
+`LockTimeoutDiagnostics`. Se conserva esta evidencia histórica, sin dar el problema
+por resuelto ni modificar los umbrales. Se retomará al final del change.
+
+Se instrumentó solo esta clase mediante un espía del DataSource y un observador
+JDBC de test (`LockTimeoutDiagnostics`), sin cambiar SQL, parámetros, configuración
+de timeout ni assertions. No se registran valores de bind. Se hicieron 10 ejecuciones
+aisladas de la clase (20 escenarios, todos pasan):
+
+| Ejecución | Cuenta ocupada (ms) | Token ocupado (ms) | SQLState original |
+|---|---:|---:|---|
+| 1 | 2141 | 2147 | 55P03 / 55P03 |
+| 2 | 2150 | 2145 | 55P03 / 55P03 |
+| 3 | 2147 | 2148 | 55P03 / 55P03 |
+| 4 | 2141 | 2136 | 55P03 / 55P03 |
+| 5 | 2139 | 2137 | 55P03 / 55P03 |
+| 6 | 2129 | 2096 | 55P03 / 55P03 |
+| 7 | 2136 | 2130 | 55P03 / 55P03 |
+| 8 | 2141 | 2136 | 55P03 / 55P03 |
+| 9 | 2153 | 2141 | 55P03 / 55P03 |
+| 10 | 2164 | 2159 | 55P03 / 55P03 |
+
+El mensaje original es `ERROR: canceling statement due to lock timeout`, con
+`while locking tuple ... in relation "user_account"` o `"refresh_token"`.
+En la suite completa instrumentada también pasan ambos (2137/2136 ms, 55P03).
+Los logs históricos de los fallos de ~1 s ya contenían 55P03, no 40P01.
+
+En la conexión del titular, `SHOW lock_timeout` después de su SELECT FOR UPDATE
+devuelve `0` (no necesita esperar). En la transacción contendiente, tras el SET
+de IdentityTransactions y los de Hibernate, antes y después de las lecturas que
+logran bloquear, devuelve `2s`. Hibernate emite:
+
+```sql
+select current_setting('lock_timeout', true);
+set local lock_timeout = 2000;
+select ... from user_account uaje1_0 where uaje1_0.id=? for no key update of uaje1_0;
+select ... from refresh_token rtje1_0 where rtje1_0.token_hash=? for no key update of rtje1_0;
+set local lock_timeout = 2000;
+```
+
+No hay NOWAIT. Tras el SELECT fallido no puede medirse SHOW en esa transacción:
+PostgreSQL devuelve 25P02 (transacción abortada); se registra conservando el 55P03
+original. El valor inmediatamente anterior era 2s.
+
+Conclusión: las esperas reproducidas son lock_timeout, no deadlock; Hibernate
+no reduce aquí los 2 s. La causa de los ~1078 ms no queda demostrada: el observador
+añade latencia y aislamiento de contexto, de modo que no prueba haber eliminado
+una interferencia de suite. Hipótesis pendiente: interacción del contexto/ejecución
+de suite o medición entre host Windows y PostgreSQL en Docker. No hay evidencia
+para bajar umbrales, quitar hints o cambiar el timeout. Propuesta para confirmar
+antes de corregir: medir reloj del servidor y del cliente, identificar backend y
+separar titular/contendiente en hilos y transacciones independientes con barrera.
+La corrección concreta debe esperar a reproducir y atribuir la discrepancia; no
+se aplica ningún cambio de producción ni de umbrales en esta entrega.
+
+Logs en `C:/Users/oscar/AppData/Local/Temp/opencode/`: `refresh-lock-diagnostic-01.log`,
+`refresh-lock-diagnostic-2.log` a `refresh-lock-diagnostic-10.log`,
+`refresh-lock-diagnostic-summary.txt`, `rbac-section2-guardians-before.log`,
+`rbac-section2-guardians-after-and-targeted.log` y `rbac-section2-completed-verify.log`.
+
+### Adaptación posterior de fixtures directas
+
+La persona adaptó `StockReservationTransactionIT`,
+`CatalogStockProjectionCacheInvalidationIT` y `ProductCacheMultiInstanceIT` mediante
+el helper de test `AuthorizedCalls.withAuthorities`. Los dos IT no protegidos
+`CatalogStockProjectionSchedulingIT` e `InventoryReservationComparisonIT` usan el
+mismo helper con `product:write` y `stock:reserve`, respectivamente. En la prueba
+concurrente, el contexto se establece dentro del hilo que invoca el caso de uso.
+Los beans consumidos siguen siendo los decoradores de producción.
+
+Tras estas adaptaciones, `bash ./mvnw -q verify` termina en verde: 479 tests
+(282 Surefire y 197 Failsafe), sin fallos ni errores. Los informes contabilizados
+son solo los de esta ejecución. `RefreshTokenLockTimeoutIT`, restaurado sin
+instrumentación, pasa en esta ejecución; su intermitencia sigue abierta para el
+final del change. Las tareas 2.3 y 2.4 permanecen completadas. Evidencia íntegra:
+`C:/Users/oscar/AppData/Local/Temp/opencode/rbac-section2-fixtures-verify.log`.
+
 ## 6. Revocación inmediata para cuentas bloqueadas
 
 ## 7. Matriz de tests

@@ -38,7 +38,7 @@ class ApiSecurityTest extends AuthHttpSupport {
   @Test
   @DisplayName("Lectura pública del catálogo")
   void should_read_without_session_when_catalog_get_is_anonymous() throws Exception {
-    var browser = session();
+    var browser = catalogManagerSession();
     String sku = ("SEC-" + UUID.randomUUID()).toUpperCase(java.util.Locale.ROOT);
     mvc.perform(create(browser, sku)).andExpect(status().isCreated());
     var response =
@@ -166,7 +166,7 @@ class ApiSecurityTest extends AuthHttpSupport {
   @Test
   @DisplayName("Reserva con JWT conserva contrato de éxito")
   void should_decrement_stock_when_reservation_has_real_jwt() throws Exception {
-    var browser = session();
+    var browser = catalogManagerSession();
     var orders = jdbc.queryForList("select * from orders order by id");
     mvc.perform(reservation().header("Authorization", "Bearer " + browser.access()))
         .andExpect(status().isCreated())
@@ -183,7 +183,7 @@ class ApiSecurityTest extends AuthHttpSupport {
   @Test
   @DisplayName("Escritura anónima no modifica catálogo")
   void should_preserve_catalog_when_create_or_edit_has_no_jwt() throws Exception {
-    var browser = session();
+    var browser = catalogManagerSession();
     String sku = ("SEC-" + UUID.randomUUID()).toUpperCase(java.util.Locale.ROOT);
     var created = mvc.perform(create(browser, sku)).andExpect(status().isCreated()).andReturn();
     UUID id =
@@ -213,7 +213,7 @@ class ApiSecurityTest extends AuthHttpSupport {
   @Test
   @DisplayName("Edición autenticada conserva conflicto de versión")
   void should_preserve_product_when_real_bearer_edits_stale_version() throws Exception {
-    var browser = session();
+    var browser = catalogManagerSession();
     String sku = ("SEC-" + UUID.randomUUID()).toUpperCase(java.util.Locale.ROOT);
     var result = mvc.perform(create(browser, sku)).andExpect(status().isCreated()).andReturn();
     UUID id =
@@ -238,6 +238,38 @@ class ApiSecurityTest extends AuthHttpSupport {
                 .getContentAsString())
         .isEqualTo(detail);
     assertThat(business()).isEqualTo(before);
+  }
+
+  private Browser catalogManagerSession() throws Exception {
+    var browser = session();
+    jdbc.update(
+        "update user_account set roles=ARRAY['CATALOG_MANAGER'] where id=?", browser.user());
+    String email =
+        jdbc.queryForObject(
+            "select email from user_account where id=?", String.class, browser.user());
+    return browser(browser.user(), login(email, PASSWORD).andExpect(status().isOk()).andReturn());
+  }
+
+  @Test
+  void should_preserve_business_state_when_customer_lacks_write_permissions() throws Exception {
+    var browser = session();
+    var before = business();
+    var products = mongo.findAll(CatalogProduct.class);
+    problem(create(browser, "FORBIDDEN-PRODUCT"), 403, "forbidden");
+    problem(edit(browser, UUID.randomUUID(), 0), 403, "forbidden");
+    problem(reservation().header("Authorization", "Bearer " + browser.access()), 403, "forbidden");
+    assertThat(business()).isEqualTo(before);
+    assertThat(mongo.findAll(CatalogProduct.class)).containsExactlyElementsOf(products);
+  }
+
+  @Test
+  void should_require_admin_role_when_request_targets_administration() throws Exception {
+    problem(get("/api/admin/users").secure(true), 401, "unauthorized");
+    var browser = session();
+    problem(
+        get("/api/admin/users").secure(true).header("Authorization", "Bearer " + browser.access()),
+        403,
+        "forbidden");
   }
 
   private MockHttpServletRequestBuilder create(Browser browser, String sku) {

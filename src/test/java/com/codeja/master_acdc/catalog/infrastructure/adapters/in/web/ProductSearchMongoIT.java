@@ -1,16 +1,17 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.CatalogManagerToken;
 import com.codeja.master_acdc.GlobalMongoClientTestConfiguration;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProduct;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CategoryRef;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.RatingSummary;
+import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -46,6 +47,7 @@ class ProductSearchMongoIT {
   @Autowired private MongoTemplate mongoTemplate;
 
   @Autowired private MockMvc mockMvc;
+  @Autowired private AccessTokenIssuer tokenIssuer;
 
   @BeforeEach
   void clear_catalog_products() {
@@ -92,7 +94,7 @@ class ProductSearchMongoIT {
     mockMvc
         .perform(
             post("/api/products")
-                .with(jwt())
+                .header("Authorization", "Bearer " + CatalogManagerToken.issue(tokenIssuer))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Creado en Mongo\",\"price\":50,\"sku\":\"HTTP-NEW\"}"))
         .andExpect(status().isCreated());

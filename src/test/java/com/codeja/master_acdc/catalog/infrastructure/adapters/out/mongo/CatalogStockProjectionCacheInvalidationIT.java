@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
 
+import static com.codeja.master_acdc.AuthorizedCalls.withAuthorities;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.data.mongodb.core.query.Criteria.where;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -86,8 +87,14 @@ class CatalogStockProjectionCacheInvalidationIT {
   @DisplayName("Cambio de stock en la proyección")
   void should_invalidate_only_changed_sku_when_projection_updates_stock() throws Exception {
     var changed =
-        createProductUseCase.create("Changed stock", CHANGED_SKU, new BigDecimal("10000"));
-    var stable = createProductUseCase.create("Stable stock", STABLE_SKU, new BigDecimal("12000"));
+        withAuthorities(
+            () ->
+                createProductUseCase.create("Changed stock", CHANGED_SKU, new BigDecimal("10000")),
+            "product:write");
+    var stable =
+        withAuthorities(
+            () -> createProductUseCase.create("Stable stock", STABLE_SKU, new BigDecimal("12000")),
+            "product:write");
     setProjectedStock(changed.id(), 2);
     setProjectedStock(stable.id(), 6);
     jdbcTemplate.update("insert into stock (product_id, available) values (?, ?)", changed.id(), 5);

@@ -1,6 +1,7 @@
 package com.codeja.master_acdc.identity.infrastructure.config;
 
 import com.codeja.master_acdc.identity.infrastructure.adapters.in.web.SecurityProblems;
+import com.codeja.master_acdc.identity.infrastructure.adapters.out.security.RolesAndPermissionsConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.security.autoconfigure.actuate.web.servlet.EndpointRequest;
@@ -13,6 +14,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
@@ -127,6 +129,8 @@ public class HttpSecurityConfiguration {
                         "/api/auth/refresh",
                         "/api/auth/logout")
                     .permitAll()
+                    .requestMatchers("/api/admin/**")
+                    .hasRole("ADMIN")
                     .anyRequest()
                     .authenticated())
         .csrf(
@@ -140,7 +144,7 @@ public class HttpSecurityConfiguration {
         .oauth2ResourceServer(
             resource ->
                 resource
-                    .jwt(jwt -> {})
+                    .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                     .authenticationEntryPoint(entryPoint)
                     .accessDeniedHandler(denied));
     return http.build();
@@ -150,5 +154,11 @@ public class HttpSecurityConfiguration {
     return new OrRequestMatcher(
         PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/auth/refresh"),
         PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/api/auth/logout"));
+  }
+
+  private JwtAuthenticationConverter jwtAuthenticationConverter() {
+    var converter = new JwtAuthenticationConverter();
+    converter.setJwtGrantedAuthoritiesConverter(new RolesAndPermissionsConverter());
+    return converter;
   }
 }

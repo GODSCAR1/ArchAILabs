@@ -16,10 +16,15 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Date;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
@@ -106,6 +111,53 @@ class JwtTokenAdapterTest {
     assertThat(
             SignedJWT.parse(adapter.issue(account).value()).verify(new RSASSAVerifier(published)))
         .isTrue();
+  }
+
+  @ParameterizedTest
+  @MethodSource("roleClaims")
+  @DisplayName("Authorities derivadas exclusivamente de roles conocidos")
+  void should_preserve_signed_roles_and_derive_authorities_when_token_is_decoded(
+      Set<String> roles, Set<String> expected) {
+    var user =
+        new UserAccount(
+            account.id(),
+            account.email(),
+            account.passwordHash(),
+            new UserAccount.Profile(roles, true, 0, null));
+    var jwt = JwtDecoderFactory.create(source, settings, clock).decode(adapter.issue(user).value());
+    assertThat(jwt.getClaims()).containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles");
+    assertThat(jwt.getClaimAsStringList("roles"))
+        .containsExactlyElementsOf(roles.stream().sorted().toList());
+    assertThat(new RolesAndPermissionsConverter().convert(jwt))
+        .extracting(org.springframework.security.core.GrantedAuthority::getAuthority)
+        .containsExactlyInAnyOrderElementsOf(expected);
+  }
+
+  @ParameterizedTest
+  @MethodSource("malformedRoleClaims")
+  @DisplayName("Rol desconocido no concede acceso")
+  void should_grant_no_authorities_when_signed_roles_are_malformed(Object roles) throws Exception {
+    var original = SignedJWT.parse(adapter.issue(account).value()).getJWTClaimsSet();
+    var changed = new JWTClaimsSet.Builder(original).claim("roles", roles).build();
+    var jwt =
+        JwtDecoderFactory.create(source, settings, clock)
+            .decode(sign(changed, key.getKeyID(), JWSAlgorithm.RS256, key));
+    assertThat(new RolesAndPermissionsConverter().convert(jwt)).isEmpty();
+  }
+
+  private static Stream<Arguments> roleClaims() {
+    return Stream.of(
+        Arguments.of(
+            Set.of("CUSTOMER"),
+            Set.of("ROLE_CUSTOMER", "order:create", "order:read-own", "order:cancel-own")),
+        Arguments.of(Set.of("UNKNOWN"), Set.of()),
+        Arguments.of(
+            Set.of("SUPPORT", "UNKNOWN"),
+            Set.of("ROLE_SUPPORT", "order:read-any", "order:refund")));
+  }
+
+  private static Stream<Object> malformedRoleClaims() {
+    return Stream.of("ADMIN", 42, List.of("ADMIN", 42), List.of());
   }
 
   private static String sign(

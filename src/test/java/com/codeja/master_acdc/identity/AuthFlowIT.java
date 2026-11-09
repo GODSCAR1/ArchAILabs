@@ -391,6 +391,14 @@ class AuthFlowIT extends AuthHttpConcurrencyScenarios {
   }
 
   @Test
+  @DisplayName("Claims permanecen exactos tras login")
+  void should_keep_exact_seven_claims_when_login_issues_access_token() throws Exception {
+    var jwt = decoder.decode(session().access());
+    assertThat(jwt.getClaims()).containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles");
+    assertThat(jwt.getClaimAsStringList("roles")).containsExactly("CUSTOMER");
+  }
+
+  @Test
   @DisplayName("Login no revela existencia del email")
   void should_return_identical_problem_when_user_is_unknown_or_password_is_wrong()
       throws Exception {

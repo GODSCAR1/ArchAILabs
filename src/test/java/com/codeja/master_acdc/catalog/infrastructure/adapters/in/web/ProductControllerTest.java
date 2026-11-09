@@ -40,6 +40,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -68,7 +69,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             post("/api/products")
-                .with(jwt())
+                .with(jwt().authorities(new SimpleGrantedAuthority("product:write")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe\",\"price\":100,\"sku\":\"caf-500\"}"))
         .andExpect(status().isCreated())
@@ -82,7 +83,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             post("/api/products")
-                .with(jwt())
+                .with(jwt().authorities(new SimpleGrantedAuthority("product:write")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe\",\"sku\":\"CAF-500\"}"))
         .andExpect(status().isBadRequest())
@@ -94,7 +95,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             post("/api/products")
-                .with(jwt())
+                .with(jwt().authorities(new SimpleGrantedAuthority("product:write")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{not-json"))
         .andExpect(status().isBadRequest())
@@ -109,7 +110,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             post("/api/products")
-                .with(jwt())
+                .with(jwt().authorities(new SimpleGrantedAuthority("product:write")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe\",\"price\":100,\"sku\":\"AB\"}"))
         .andExpect(status().isBadRequest())
@@ -124,7 +125,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             post("/api/products")
-                .with(jwt())
+                .with(jwt().authorities(new SimpleGrantedAuthority("product:write")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe\",\"price\":100,\"sku\":\"CAF-500\"}"))
         .andExpect(status().isConflict())
@@ -147,7 +148,7 @@ class ProductControllerTest {
     mockMvc
         .perform(
             put("/api/products/{id}", productId)
-                .with(jwt())
+                .with(jwt().authorities(new SimpleGrantedAuthority("product:write")))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Cafe nuevo\",\"price\":125,\"version\":0}"))
         .andExpect(status().isOk());

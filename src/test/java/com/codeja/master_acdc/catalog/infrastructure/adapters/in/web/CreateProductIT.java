@@ -2,16 +2,17 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.matchesPattern;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.CatalogManagerToken;
 import com.codeja.master_acdc.GlobalMongoClientTestConfiguration;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProduct;
+import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,7 @@ class CreateProductIT {
 
   @Autowired MockMvc mockMvc;
   @Autowired MongoTemplate mongoTemplate;
+  @Autowired AccessTokenIssuer tokenIssuer;
 
   @BeforeEach
   void cleanDatabase() {
@@ -204,7 +206,10 @@ class CreateProductIT {
 
   private ResultActions postProduct(String json) throws Exception {
     return mockMvc.perform(
-        post("/api/products").with(jwt()).contentType(MediaType.APPLICATION_JSON).content(json));
+        post("/api/products")
+            .header("Authorization", "Bearer " + CatalogManagerToken.issue(tokenIssuer))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json));
   }
 
   private int productCount() {

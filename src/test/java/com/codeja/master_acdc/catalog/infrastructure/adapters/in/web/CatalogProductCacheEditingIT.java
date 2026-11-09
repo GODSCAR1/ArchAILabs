@@ -25,8 +25,10 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -78,7 +80,7 @@ class CatalogProductCacheEditingIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
-                .with(jwt())
+                .with(catalogManager())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Changed", 12000, 0)))
         .andExpect(status().isOk());
@@ -93,7 +95,7 @@ class CatalogProductCacheEditingIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
-                .with(jwt())
+                .with(catalogManager())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Current", 11000, 0)))
         .andExpect(status().isOk());
@@ -102,7 +104,7 @@ class CatalogProductCacheEditingIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
-                .with(jwt())
+                .with(catalogManager())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Rejected", 12000, 0)))
         .andExpect(status().isConflict())
@@ -131,7 +133,7 @@ class CatalogProductCacheEditingIT {
         mockMvc
             .perform(
                 post("/api/products")
-                    .with(jwt())
+                    .with(catalogManager())
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("{\"name\":\"Original\",\"price\":100,\"sku\":\"" + SKU + "\"}"))
             .andExpect(status().isCreated())
@@ -150,5 +152,13 @@ class CatalogProductCacheEditingIT {
 
   private static String editBody(String name, long price, int version) {
     return "{\"name\":\"" + name + "\",\"price\":" + price + ",\"version\":" + version + "}";
+  }
+
+  // Lab S12 (RBAC): editar catálogo exige product:write (rol CATALOG_MANAGER).
+  private static RequestPostProcessor catalogManager() {
+    return jwt()
+        .authorities(
+            new SimpleGrantedAuthority("ROLE_CATALOG_MANAGER"),
+            new SimpleGrantedAuthority("product:write"));
   }
 }

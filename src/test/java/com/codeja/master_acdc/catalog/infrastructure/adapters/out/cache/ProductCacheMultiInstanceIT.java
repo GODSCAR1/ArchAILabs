@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache;
 
+import static com.codeja.master_acdc.AuthorizedCalls.withAuthorities;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.codeja.master_acdc.MasterAcdcApplication;
@@ -73,9 +74,12 @@ class ProductCacheMultiInstanceIT {
     Product product = createProduct(instanceA, sku);
     warmDetailCaches(sku);
 
-    instanceA
-        .getBean(EditProductUseCase.class)
-        .edit(product.id(), "Changed", new BigDecimal("12000"), 0L);
+    withAuthorities(
+        () ->
+            instanceA
+                .getBean(EditProductUseCase.class)
+                .edit(product.id(), "Changed", new BigDecimal("12000"), 0L),
+        "product:write");
 
     Awaitility.await()
         .atMost(Duration.ofSeconds(1))
@@ -93,9 +97,12 @@ class ProductCacheMultiInstanceIT {
     RedisMessageListenerContainer listenerB = invalidationContainer(instanceB);
     listenerB.stop();
 
-    instanceA
-        .getBean(EditProductUseCase.class)
-        .edit(product.id(), "Changed", new BigDecimal("12000"), 0L);
+    withAuthorities(
+        () ->
+            instanceA
+                .getBean(EditProductUseCase.class)
+                .edit(product.id(), "Changed", new BigDecimal("12000"), 0L),
+        "product:write");
 
     Awaitility.await()
         .atMost(Duration.ofSeconds(30))
@@ -162,9 +169,12 @@ class ProductCacheMultiInstanceIT {
 
   private static Product createProduct(ConfigurableApplicationContext context, String sku) {
     Product product =
-        context
-            .getBean(CreateProductUseCase.class)
-            .create("Cached product", sku, new BigDecimal("10000"));
+        withAuthorities(
+            () ->
+                context
+                    .getBean(CreateProductUseCase.class)
+                    .create("Cached product", sku, new BigDecimal("10000")),
+            "product:write");
     assertThat(context.getBean(ProductDetailRepository.class).findBySku(sku))
         .as("product should be visible from the creating context")
         .isPresent();

@@ -1,12 +1,13 @@
 package com.codeja.master_acdc.inventory.infrastructure.adapters.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.CatalogManagerToken;
+import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +36,7 @@ class StockReservationIT {
 
   @Autowired MockMvc mockMvc;
   @Autowired JdbcTemplate jdbcTemplate;
+  @Autowired AccessTokenIssuer tokenIssuer;
 
   @BeforeEach
   void cleanStock() {
@@ -114,7 +116,7 @@ class StockReservationIT {
   private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder reserve(
       String body) {
     return post("/api/products/{id}/reservations", PRODUCT_ID)
-        .with(jwt())
+        .header("Authorization", "Bearer " + CatalogManagerToken.issue(tokenIssuer))
         .contentType(MediaType.APPLICATION_JSON)
         .content(body);
   }

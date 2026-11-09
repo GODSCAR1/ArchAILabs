@@ -4,17 +4,17 @@ Plan pendiente de revisión. Cada escenario usa `@DisplayName("<nombre exacto de
 
 ## 1. Coordinación de contratos y guardianes
 
-- [ ] 1.1 **HUMANA** revisar breaking (incluidas respuestas sin customerId), tabla de permisos sin herencia ADMIN, excepción de comandos internos, siete claims sin sv y dirección identity → ordering.api. Verificación: revisión de proposal/design y aceptación de la matriz de 70 combinaciones de SecurityMatrixTest.
-- [ ] 1.2 **HUMANA** adaptar CatalogProductEditingMongoIT y CatalogProductCacheEditingIT a product:write/bearer CATALOG_MANAGER. Verificación: ambos guardianes conservan assertions de versión/cache y pasan al activar permisos; diff revisado por la persona.
-- [ ] 1.3 **HUMANA** cambiar el rol emitido por AccessTokenIssuer en StockReservationConcurrencyTest de CUSTOMER a CATALOG_MANAGER. Verificación: guardián original mantiene 50 reservas, 30/20 y espera 1,5–3,5 s, sin relajar asserts.
+- [x] 1.1 **HUMANA** revisar breaking (incluidas respuestas sin customerId), tabla de permisos sin herencia ADMIN, excepción de comandos internos, siete claims sin sv y dirección identity → ordering.api. Verificación: revisión de proposal/design y aceptación de la matriz de 70 combinaciones de SecurityMatrixTest.
+- [x] 1.2 **HUMANA** adaptar CatalogProductEditingMongoIT y CatalogProductCacheEditingIT a product:write/bearer CATALOG_MANAGER. Verificación: ambos guardianes conservan assertions de versión/cache y pasan al activar permisos; diff revisado por la persona.
+- [x] 1.3 **HUMANA** cambiar el rol emitido por AccessTokenIssuer en StockReservationConcurrencyTest de CUSTOMER a CATALOG_MANAGER. Verificación: guardián original mantiene 50 reservas, 30/20 y espera 1,5–3,5 s, sin relajar asserts.
 - [ ] 1.4 **HUMANA** decidir/adaptar la firma con criterio de alcance de OrderSummaryQueryAdapterQueryCountTest antes de cambiar findByStatus. Verificación: compilación coordinada y guardián con 120 filas y ≤2 intactos; si no hay decisión, detener esa parte de apply, sin sobrecarga de compatibilidad.
 
 ## 2. Roles, conversor y fronteras de método
 
-- [ ] 2.1 Leer package-info de paquetes afectados e implementar Role inmutable con la tabla exacta. Verificación: RoleTest parametrizado comprueba cada conjunto, unión, ausencia de herencia y permisos desconocidos; documentar la tabla en docs/lab-s12.md.
-- [ ] 2.2 Implementar conversor conectado al resource server; conservar claims y validadores. Verificación: RolesAndPermissionsConverterTest y JwtTokenAdapterTest cubren roles conocidos/desconocidos/mixtos/vacíos/mal tipados; AuthFlowIT traza «Claims permanecen exactos tras login».
-- [ ] 2.3 Activar @EnableMethodSecurity, decoradores no final de CreateProductUseCase, EditProductUseCase y ReserveProductStockUseCase, y matcher ADMIN. Verificación: MethodAuthorizationTest invoca beans reales y demuestra denegación antes del delegado; ApiSecurityTest conserva ProblemDetail, CSRF, Basic/Bearer y acceso público. No aplicar stock:reserve al checkout interno.
-- [ ] 2.4 Adaptar tests no guardianes de catálogo/inventario enumerados en design (ProductControllerTest, CreateProductIT, ProductSearchMongoIT, StockReservationIT) y ApiSecurityTest para permisos de preparación. Verificación: esos tests pasan con filtros activos y contratos de negocio originales; jwt() con authorities solo en slices, bearer real en integración.
+- [x] 2.1 Leer package-info de paquetes afectados e implementar Role inmutable con la tabla exacta. Verificación: RoleTest parametrizado comprueba cada conjunto, unión, ausencia de herencia y permisos desconocidos; documentar la tabla en docs/lab-s12.md.
+- [x] 2.2 Implementar conversor conectado al resource server; conservar claims y validadores. Verificación: RolesAndPermissionsConverterTest y JwtTokenAdapterTest cubren roles conocidos/desconocidos/mixtos/vacíos/mal tipados; AuthFlowIT traza «Claims permanecen exactos tras login».
+- [x] 2.3 Activar @EnableMethodSecurity, decoradores no final de CreateProductUseCase, EditProductUseCase y ReserveProductStockUseCase, y matcher ADMIN. Verificación: MethodAuthorizationTest invoca beans reales y demuestra denegación antes del delegado; ApiSecurityTest conserva ProblemDetail, CSRF, Basic/Bearer y acceso público. No aplicar stock:reserve al checkout interno.
+- [x] 2.4 Adaptar tests no guardianes de catálogo/inventario enumerados en design (ProductControllerTest, CreateProductIT, ProductSearchMongoIT, StockReservationIT) y ApiSecurityTest para permisos de preparación. Verificación: esos tests pasan con filtros activos y contratos de negocio originales; jwt() con authorities solo en slices, bearer real en integración.
 
 ## 3. Identidad y autorización de pedidos
 
