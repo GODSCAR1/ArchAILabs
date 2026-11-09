@@ -36,7 +36,9 @@ class SessionVersionValidatorTest {
             -1,
             new BigDecimal("7.5"),
             new BigInteger("9223372036854775808"),
-            Double.NaN)) {
+            Double.NaN,
+            7.0d,
+            7.0f)) {
       assertThat(validator.validate(token(value)).hasErrors()).as("%s", value).isTrue();
     }
   }

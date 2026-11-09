@@ -98,7 +98,8 @@ abstract class AuthSessionVersionScenarios extends AuthHttpConcurrencyScenarios 
             List.of(0),
             -1,
             new java.math.BigDecimal("0.5"),
-            new java.math.BigInteger("9223372036854775808"))) {
+            new java.math.BigInteger("9223372036854775808"),
+            new java.math.BigDecimal("1e-400"))) {
       assertRejected(signedToken(Map.of("sv", value), key.getKeyID(), key, JWSAlgorithm.RS256));
     }
   }

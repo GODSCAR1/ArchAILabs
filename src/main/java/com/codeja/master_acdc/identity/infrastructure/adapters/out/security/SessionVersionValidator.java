@@ -23,7 +23,11 @@ public final class SessionVersionValidator implements OAuth2TokenValidator<Jwt> 
   @Override
   public OAuth2TokenValidatorResult validate(Jwt jwt) {
     Object raw = jwt.getClaims().get("sv");
-    if (!(raw instanceof Number number) || jwt.getSubject() == null) {
+    // Floating-point JSON parsing can round fractions into integers before this validator runs.
+    if (!(raw instanceof Number number)
+        || raw instanceof Double
+        || raw instanceof Float
+        || jwt.getSubject() == null) {
       return invalid();
     }
     try {

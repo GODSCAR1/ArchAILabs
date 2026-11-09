@@ -518,6 +518,8 @@ UNPAUSE usa una conexión independiente, porque una escritura pausada bloquea la
 Cada fallo restaura recursos, exige 401 y conserva snapshots de cuenta/familias/pedidos/stock.
 La captura del logger exige WARN sin bearer, refresh, contraseña, email, UUID, clave ni throwable.
 El fallo de publicación tras autenticar da 503 session-version-unavailable y Retry-After 1.
+El validador rechaza valores float/double: Nimbus puede redondear una fracción a un entero antes de
+validarla. La prueba firmada con sv=1e-400 exige 401 aunque el parser lo convierta en 0.0.
 
 Las fixtures HTTP persisten cuentas y emiten su versión real. Los conteos precalientan autenticación
 antes de flush/clear/Statistics.clear, conservando 120 filas y presupuestos. El caso de cuenta borrada
