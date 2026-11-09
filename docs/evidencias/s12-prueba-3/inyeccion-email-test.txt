@@ -1,0 +1,30 @@
+[ERROR] Tests run: 11, Failures: 4, Errors: 0, Skipped: 0, Time elapsed: 2.274 s <<< FAILURE! -- in com.codeja.master_acdc.identity.infrastructure.adapters.out.security.JwtTokenAdapterTest
+[ERROR] com.codeja.master_acdc.identity.infrastructure.adapters.out.security.JwtTokenAdapterTest.should_issue_exact_claims_when_account_logs_in -- Time elapsed: 0.124 s <<< FAILURE!
+Expecting actual:
+  {"aud"=["master-acdc-api"], "email"="a@example.com", "exp"=2026-11-08T12:15:00Z, "iat"=2026-11-08T12:00:00Z, "iss"="https://api.master-acdc.dev", "jti"="e97e01ae-da07-4e0e-84a7-6562362d3c70", "roles"=["CUSTOMER"], "sub"="40cbfe12-8203-403a-980a-fc115137abcd", "sv"=0L}
+and keys not expected:
+  ["email"]
+[ERROR] com.codeja.master_acdc.identity.infrastructure.adapters.out.security.JwtTokenAdapterTest.should_preserve_signed_roles_and_derive_authorities_when_token_is_decoded(Set, Set)[1] -- Time elapsed: 0.012 s <<< FAILURE!
+Expecting actual:
+  {"aud"=["master-acdc-api"], "email"="a@example.com", "exp"=2026-11-08T12:15:00Z, "iat"=2026-11-08T12:00:00Z, "iss"="https://api.master-acdc.dev", "jti"="32451026-4b38-4107-a9a1-9b1e01409dbd", "roles"=["CUSTOMER"], "sub"="5a5ae6cc-6507-473c-a736-fac342dff199", "sv"=0L}
+and keys not expected:
+  ["email"]
+[ERROR] com.codeja.master_acdc.identity.infrastructure.adapters.out.security.JwtTokenAdapterTest.should_preserve_signed_roles_and_derive_authorities_when_token_is_decoded(Set, Set)[2] -- Time elapsed: 0.006 s <<< FAILURE!
+Expecting actual:
+  {"aud"=["master-acdc-api"], "email"="a@example.com", "exp"=2026-11-08T12:15:00Z, "iat"=2026-11-08T12:00:00Z, "iss"="https://api.master-acdc.dev", "jti"="829d2890-f8f2-4b42-a7c5-33d405c65184", "roles"=["UNKNOWN"], "sub"="7e0b7f37-8a6d-4133-a820-fdb8f7576566", "sv"=0L}
+and keys not expected:
+  ["email"]
+[ERROR] com.codeja.master_acdc.identity.infrastructure.adapters.out.security.JwtTokenAdapterTest.should_preserve_signed_roles_and_derive_authorities_when_token_is_decoded(Set, Set)[3] -- Time elapsed: 0.005 s <<< FAILURE!
+Expecting actual:
+  {"aud"=["master-acdc-api"], "email"="a@example.com", "exp"=2026-11-08T12:15:00Z, "iat"=2026-11-08T12:00:00Z, "iss"="https://api.master-acdc.dev", "jti"="12c65284-5c12-4f92-81c4-cd43dbd13ef6", "roles"=["SUPPORT", "UNKNOWN"], "sub"="20c6579f-ae30-4c24-af77-bcc5ae0aeb05", "sv"=0L}
+and keys not expected:
+  ["email"]
+[ERROR] Failures: 
+[ERROR]   JwtTokenAdapterTest.should_issue_exact_claims_when_account_logs_in:69 
+Expecting actual:
+  {"aud"=["master-acdc-api"], "email"="a@example.com", "exp"=2026-11-08T12:15:00Z, "iat"=2026-11-08T12:00:00Z, "iss"="https://api.master-acdc.dev", "jti"="e97e01ae-da07-4e0e-84a7-6562362d3c70", "roles"=["CUSTOMER"], "sub"="40cbfe12-8203-403a-980a-fc115137abcd", "sv"=0L}
+and keys not expected:
+  ["email"]
+[ERROR]   JwtTokenAdapterTest.should_preserve_signed_roles_and_derive_authorities_when_token_is_decoded:150 
+Expecting actual:
+  {"aud"=["master-acdc-api"], "email"="a@example.com", "exp"=2026-11-08T12:15:00Z, "iat"=2026-11-08T12:00:00Z, "iss"="https://api.master-acdc.dev", "jti"="32451026-4b38-4107-a9a1-9b1e01409dbd", "roles"=["CUSTOMER"], "sub"="5a5ae6cc-6507-473c-a736-fac342dff199", "sv"=0L}

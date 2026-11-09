@@ -1,0 +1,12 @@
+diff --git a/src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtTokenAdapter.java b/src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtTokenAdapter.java
+index a1f2881..d7c6821 100644
+--- a/src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtTokenAdapter.java
++++ b/src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtTokenAdapter.java
+@@ -36,6 +36,7 @@ public final class JwtTokenAdapter implements AccessTokenIssuer {
+             .issuedAt(now)
+             .expiresAt(now.plusSeconds(900))
+             .id(UUID.randomUUID().toString())
++            .claim("email", account.email())
+             .claim("roles", account.profile().roles().stream().sorted().toList())
+             .claim("sv", account.profile().sessionVersion())
+             .build();
