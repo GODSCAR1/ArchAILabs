@@ -1,16 +1,27 @@
 package com.codeja.master_acdc.ordering.infrastructure.config;
 
 import com.codeja.master_acdc.inventory.api.InventoryFacade;
+import com.codeja.master_acdc.ordering.api.CurrentOrderActor;
 import com.codeja.master_acdc.ordering.application.CancelOrderService;
 import com.codeja.master_acdc.ordering.application.CreateOrderService;
+import com.codeja.master_acdc.ordering.application.GetOrderService;
 import com.codeja.master_acdc.ordering.application.ListOrdersByStatusService;
+import com.codeja.master_acdc.ordering.application.RefundOrderService;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
+import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
+import com.codeja.master_acdc.ordering.application.port.RefundOrderUseCase;
 import com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
 import com.codeja.master_acdc.ordering.domain.port.StockReserver;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedCancelOrderUseCase;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedCreateOrderUseCase;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedGetOrderUseCase;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedListOrdersByStatusUseCase;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedRefundOrderUseCase;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderActorResolver;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.SpringOrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.OrderCancelledListener;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.StockReserverAdapter;
@@ -25,6 +36,30 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
 public class OrderingConfiguration {
+  @Bean
+  public RefundOrderUseCase refundOrderUseCase(
+      OrderRepository repository, PlatformTransactionManager manager, OrderActorResolver actor) {
+    var service = new RefundOrderService(repository);
+    var transactions = new TransactionTemplate(manager);
+    RefundOrderUseCase transactional = id -> transactions.execute(status -> service.refund(id));
+    return new AuthorizedRefundOrderUseCase(transactional, actor);
+  }
+
+  @Bean
+  public OrderActorResolver orderActorResolver(CurrentOrderActor actor) {
+    return new OrderActorResolver(actor);
+  }
+
+  @Bean
+  public GetOrderUseCase getOrderUseCase(
+      OrderRepository repository, PlatformTransactionManager manager, OrderActorResolver actor) {
+    var service = new GetOrderService(repository);
+    var transactions = new TransactionTemplate(manager);
+    transactions.setReadOnly(true);
+    GetOrderUseCase transactional =
+        (id, scope) -> transactions.execute(status -> service.get(id, scope));
+    return new AuthorizedGetOrderUseCase(transactional, actor);
+  }
 
   @Bean
   public OrderRepository orderRepository(OrderJpaRepository orderJpaRepository) {
@@ -32,17 +67,21 @@ public class OrderingConfiguration {
   }
 
   @Bean
-  public OrderSummaryQuery orderSummaryQuery(OrderJpaRepository orderJpaRepository) {
-    return new OrderSummaryQueryAdapter(orderJpaRepository);
+  public OrderSummaryQuery orderSummaryQuery(jakarta.persistence.EntityManager entityManager) {
+    return new OrderSummaryQueryAdapter(entityManager);
   }
 
   @Bean
   public ListOrdersByStatusUseCase listOrdersByStatusUseCase(
-      OrderSummaryQuery orderSummaryQuery, PlatformTransactionManager transactionManager) {
+      OrderSummaryQuery orderSummaryQuery,
+      PlatformTransactionManager transactionManager,
+      OrderActorResolver actor) {
     ListOrdersByStatusService delegate = new ListOrdersByStatusService(orderSummaryQuery);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
     transactionTemplate.setReadOnly(true);
-    return status -> transactionTemplate.execute(transaction -> delegate.list(status));
+    ListOrdersByStatusUseCase transactional =
+        criteria -> transactionTemplate.execute(transaction -> delegate.list(criteria));
+    return new AuthorizedListOrdersByStatusUseCase(transactional, actor);
   }
 
   @Bean
@@ -69,21 +108,27 @@ public class OrderingConfiguration {
   public CreateOrderUseCase createOrderUseCase(
       OrderRepository orderRepository,
       StockReserver stockReserver,
-      PlatformTransactionManager transactionManager) {
+      PlatformTransactionManager transactionManager,
+      OrderActorResolver actor) {
     CreateOrderService delegate = new CreateOrderService(orderRepository, stockReserver);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-    return (customerId, lines) ->
-        transactionTemplate.execute(status -> delegate.create(customerId, lines));
+    CreateOrderUseCase transactional =
+        (customerId, lines) ->
+            transactionTemplate.execute(status -> delegate.create(customerId, lines));
+    return new AuthorizedCreateOrderUseCase(transactional, actor);
   }
 
   @Bean
   public CancelOrderUseCase cancelOrderUseCase(
       OrderRepository orderRepository,
       OrderCancelledPublisher orderCancelledPublisher,
-      PlatformTransactionManager transactionManager) {
+      PlatformTransactionManager transactionManager,
+      OrderActorResolver actor) {
     CancelOrderService delegate = new CancelOrderService(orderRepository, orderCancelledPublisher);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-    return (orderId, customerId) ->
-        transactionTemplate.execute(status -> delegate.cancel(orderId, customerId));
+    CancelOrderUseCase transactional =
+        (orderId, customerId) ->
+            transactionTemplate.execute(status -> delegate.cancel(orderId, customerId));
+    return new AuthorizedCancelOrderUseCase(transactional, actor);
   }
 }

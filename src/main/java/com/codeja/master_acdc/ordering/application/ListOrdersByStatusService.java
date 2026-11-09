@@ -1,7 +1,8 @@
 package com.codeja.master_acdc.ordering.application;
 
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
-import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
+import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
+import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderSummary;
 import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
 import java.util.List;
@@ -15,7 +16,10 @@ public class ListOrdersByStatusService implements ListOrdersByStatusUseCase {
   }
 
   @Override
-  public List<OrderSummary> list(OrderStatus status) {
-    return orderSummaryQuery.findByStatus(status);
+  public List<OrderSummary> list(OrderListingCriteria criteria) {
+    if (criteria.scope() == OrderReadScope.None.INSTANCE) {
+      return List.of();
+    }
+    return orderSummaryQuery.findByStatus(criteria);
   }
 }

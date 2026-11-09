@@ -9,6 +9,7 @@ import com.codeja.master_acdc.inventory.application.port.ReserveProductStockUseC
 import com.codeja.master_acdc.inventory.application.port.ReserveStockUseCase;
 import com.codeja.master_acdc.inventory.domain.port.StockRepository;
 import com.codeja.master_acdc.inventory.domain.port.StockReservationRepository;
+import com.codeja.master_acdc.inventory.infrastructure.adapters.in.web.AuthorizedReserveProductStockUseCase;
 import com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence.StockJpaRepository;
 import com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence.StockRepositoryAdapter;
 import org.springframework.context.annotation.Bean;
@@ -38,8 +39,10 @@ public class InventoryConfiguration {
       StockReservationRepository stockRepository, PlatformTransactionManager transactionManager) {
     ReserveProductStockService delegate = new ReserveProductStockService(stockRepository);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-    return (productId, units) ->
-        transactionTemplate.execute(status -> delegate.reserve(productId, units));
+    ReserveProductStockUseCase transactional =
+        (productId, units) ->
+            transactionTemplate.execute(status -> delegate.reserve(productId, units));
+    return new AuthorizedReserveProductStockUseCase(transactional);
   }
 
   @Bean

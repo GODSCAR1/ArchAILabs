@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.inventory.infrastructure.config;
 
+import static com.codeja.master_acdc.AuthorizedCalls.withAuthorities;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -60,7 +61,7 @@ class StockReservationTransactionIT {
 
   @Test
   void should_commit_reservation_when_stock_is_available() {
-    ProductReservation result = useCase.reserve(PRODUCT_ID, 3);
+    ProductReservation result = reserve(3);
 
     assertThat(result.available()).isEqualTo(7);
     assertThat(available()).isEqualTo(7);
@@ -68,8 +69,7 @@ class StockReservationTransactionIT {
 
   @Test
   void should_rollback_when_stock_is_insufficient() {
-    assertThatThrownBy(() -> useCase.reserve(PRODUCT_ID, 11))
-        .isInstanceOf(InsufficientStockException.class);
+    assertThatThrownBy(() -> reserve(11)).isInstanceOf(InsufficientStockException.class);
 
     assertThat(available()).isEqualTo(10);
   }
@@ -78,8 +78,7 @@ class StockReservationTransactionIT {
   void should_throw_stock_not_found_when_record_is_missing() {
     jdbcTemplate.update("delete from stock where product_id = ?", PRODUCT_ID);
 
-    assertThatThrownBy(() -> useCase.reserve(PRODUCT_ID, 1))
-        .isInstanceOf(StockRecordNotFoundException.class);
+    assertThatThrownBy(() -> reserve(1)).isInstanceOf(StockRecordNotFoundException.class);
   }
 
   @Test
@@ -98,9 +97,7 @@ class StockReservationTransactionIT {
     try {
       assertTimeoutPreemptively(
           Duration.ofSeconds(5),
-          () ->
-              assertThatThrownBy(() -> useCase.reserve(PRODUCT_ID, 1))
-                  .isInstanceOf(StockBusyException.class));
+          () -> assertThatThrownBy(() -> reserve(1)).isInstanceOf(StockBusyException.class));
     } finally {
       releaseLock.countDown();
       holder.get(10, SECONDS);
@@ -129,5 +126,11 @@ class StockReservationTransactionIT {
   private int available() {
     return jdbcTemplate.queryForObject(
         "select available from stock where product_id = ?", Integer.class, PRODUCT_ID);
+  }
+
+  // Lab S12 (RBAC): el bean público es el decorador con
+  // @PreAuthorize("hasAuthority('stock:reserve')").
+  private ProductReservation reserve(int units) {
+    return withAuthorities(() -> useCase.reserve(PRODUCT_ID, units), "stock:reserve");
   }
 }

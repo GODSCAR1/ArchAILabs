@@ -3,10 +3,11 @@ package com.codeja.master_acdc.ordering.infrastructure.config;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeja.master_acdc.ordering.api.CurrentOrderActor;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
-import com.codeja.master_acdc.ordering.domain.model.OrderLine;
+import com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.jdbc.Sql;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -22,6 +25,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @Testcontainers
 class OrderTransactionIT {
+  @MockitoBean CurrentOrderActor actor;
+
+  @org.junit.jupiter.api.BeforeEach
+  void seed_current_actor() {
+    org.mockito.BDDMockito.given(actor.current())
+        .willReturn(
+            java.util.Optional.of(
+                new CurrentOrderActor.Actor(UUID.randomUUID(), UUID.fromString(CUSTOMER))));
+  }
 
   @Container @ServiceConnection
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
@@ -35,6 +47,7 @@ class OrderTransactionIT {
   @Autowired JdbcTemplate jdbcTemplate;
 
   @Test
+  @WithMockUser(authorities = "order:create")
   @Sql(
       statements = {
         "delete from order_lines",
@@ -57,6 +70,7 @@ class OrderTransactionIT {
   }
 
   @Test
+  @WithMockUser(authorities = "order:cancel-own")
   @Sql(
       statements = {
         "delete from order_lines",
@@ -92,12 +106,18 @@ class OrderTransactionIT {
         .isEqualTo("PENDING");
   }
 
-  private static OrderLine line(String productId, int quantity) {
-    return new OrderLine(UUID.fromString(productId), quantity);
+  private static RequestedOrderLine line(String productId, int quantity) {
+    return new RequestedOrderLine(UUID.fromString(productId), quantity);
   }
 
   private int rowCount(String table) {
-    return jdbcTemplate.queryForObject("select count(*) from " + table, Integer.class);
+    String sql =
+        switch (table) {
+          case "orders" -> "select count(*) from orders";
+          case "order_lines" -> "select count(*) from order_lines";
+          default -> throw new IllegalArgumentException(table);
+        };
+    return jdbcTemplate.queryForObject(sql, Integer.class);
   }
 
   private int availableOf(String productId) {

@@ -8,9 +8,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.CatalogManagerToken;
 import com.codeja.master_acdc.GlobalMongoClientTestConfiguration;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProduct;
+import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +34,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
-@Import(GlobalMongoClientTestConfiguration.class)
+@Import({
+  GlobalMongoClientTestConfiguration.class,
+  com.codeja.master_acdc.RedisTestConfiguration.class
+})
 class CreateProductIT {
 
   @Container @ServiceConnection
@@ -40,6 +45,8 @@ class CreateProductIT {
 
   @Autowired MockMvc mockMvc;
   @Autowired MongoTemplate mongoTemplate;
+  @Autowired AccessTokenIssuer tokenIssuer;
+  @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
 
   @BeforeEach
   void cleanDatabase() {
@@ -203,7 +210,10 @@ class CreateProductIT {
 
   private ResultActions postProduct(String json) throws Exception {
     return mockMvc.perform(
-        post("/api/products").contentType(MediaType.APPLICATION_JSON).content(json));
+        post("/api/products")
+            .header("Authorization", "Bearer " + CatalogManagerToken.issue(jdbc, tokenIssuer))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(json));
   }
 
   private int productCount() {

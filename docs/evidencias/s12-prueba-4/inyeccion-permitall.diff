@@ -1,0 +1,15 @@
+diff --git a/src/main/java/com/codeja/master_acdc/identity/infrastructure/config/HttpSecurityConfiguration.java b/src/main/java/com/codeja/master_acdc/identity/infrastructure/config/HttpSecurityConfiguration.java
+index 65b81a9..ceda65e 100644
+--- a/src/main/java/com/codeja/master_acdc/identity/infrastructure/config/HttpSecurityConfiguration.java
++++ b/src/main/java/com/codeja/master_acdc/identity/infrastructure/config/HttpSecurityConfiguration.java
+@@ -120,7 +120,9 @@ public class HttpSecurityConfiguration {
+         .requestCache(cache -> cache.disable())
+         .authorizeHttpRequests(
+             auth ->
+-                auth.requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**")
++                auth.requestMatchers("/api/admin/**", "/api/orders/**")
++                    .permitAll()
++                    .requestMatchers(HttpMethod.GET, "/api/products/**", "/api/categories/**")
+                     .permitAll()
+                     .requestMatchers(
+                         HttpMethod.POST,

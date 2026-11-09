@@ -20,5 +20,7 @@ services:
   redis:
     image: redis:7
     container_name: acdc-redis
+    # Lab S12: las claves de versión de sesión no pueden expulsarse (fail closed, sin TTL).
+    command: ["redis-server", "--maxmemory-policy", "noeviction"]
     ports:
       - "6379:6379"

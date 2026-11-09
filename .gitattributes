@@ -7,3 +7,5 @@ graphify-out/graph.json merge=graphify
 *.sql text eol=lf
 *.md text eol=lf
 .git-blame-ignore-revs text eol=lf
+# ArchUnit FreezingArchRule: el store se compara línea a línea
+src/test/resources/archunit_store/** text eol=lf

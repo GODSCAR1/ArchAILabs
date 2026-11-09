@@ -2,6 +2,8 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
+import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -56,7 +58,10 @@ class OrderSummaryQueryAdapterQueryCountTest {
     Statistics statistics = statistics();
     statistics.clear();
 
-    var summaries = adapter.findByStatus(OrderStatus.PAID);
+    // Lab S12 (RBAC): el listado exige alcance explícito; global = lectura con order:read-any.
+    var summaries =
+        adapter.findByStatus(
+            new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE));
 
     assertThat(summaries).hasSize(ORDER_COUNT);
     assertThat(statistics.getPrepareStatementCount())

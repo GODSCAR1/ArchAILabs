@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
 
+import static com.codeja.master_acdc.AuthorizedCalls.withAuthorities;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -75,7 +76,10 @@ class CatalogStockProjectionSchedulingIT {
         .isEqualTo("false");
     assertThat(environment.getProperty("spring.data.redis.host")).isEqualTo("localhost");
     assertThat(environment.getProperty("spring.data.redis.port")).isEqualTo("6379");
-    var product = createProductUseCase.create("Scheduled", SKU, new BigDecimal("10000"));
+    var product =
+        withAuthorities(
+            () -> createProductUseCase.create("Scheduled", SKU, new BigDecimal("10000")),
+            "product:write");
     jdbcTemplate.update("insert into stock (product_id, available) values (?, ?)", product.id(), 5);
 
     Awaitility.await()

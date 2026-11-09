@@ -97,18 +97,46 @@ Lee los dos antes de tocar una cache.
 - TTL de L1 < 30 s con jitter incluido y jitter ±10 % en L1 y L2. Los TTL viven solo en `CacheTtlPolicy` (zona protegida): si un TTL debe cambiar, detente y pídelo. Motivo: el TTL de L1 es la red de seguridad cuando se pierde un mensaje de invalidación. (verificador: `CacheTtlPolicyTest`, `protect-verify.sh` y el plugin de verificación)
 - El checkout (`ordering`, `inventory`) NUNCA lee de la cache ni de `ProductDetailUseCase`, y el stock NUNCA se cachea como dato para decidir. (verificador: `CatalogMongoArchitectureTest`)
 - Invalida tras el commit (`ProductChanged` + `AFTER_COMMIT`); NUNCA antes del commit ni con `transactionAware()` solo en L2.
-- Redis caído = miss; NUNCA un 5xx por la cache. Si cambia la forma de un valor cacheado, sube la versión del prefijo `shop:cache:vN:`.
+- Redis caído = miss; NUNCA un 5xx por la cache. Estas reglas son para caches de DATOS (catálogo). EXCEPCIÓN única: la versión de sesión de identity (`shop:identity:session-version:v1:`) es un control de seguridad, no una cache: sin L1 ni TTL, Redis caído = 401 (fail closed) y la barrera se publica ANTES del commit (lab S12, change add-session-version-revocation). No extiendas esta excepción a otras claves. Si cambia la forma de un valor cacheado, sube la versión del prefijo `shop:cache:vN:`.
 
 ## Seguridad
 - NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)
 - Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código ni archivos versionados. (pendiente: Gitleaks en S12)
 - NUNCA SQL concatenado; siempre parámetros. (pendiente: Semgrep en S12)
 
+### Autenticación y autorización — ADR `docs/adr/0011-autenticacion-refresh-y-version-de-sesion.md`
+Lee el ADR antes de tocar seguridad. `HttpSecurityConfiguration`, `JwtTokenAdapter`, `JwtDecoderFactory`, `SessionVersionValidator`, `Role` y la matriz (`SecurityMatrixTest`/`SecurityMatrixSupport`) son zona protegida: si crees que hay que cambiarlos, explica por qué y detente.
+- La API es stateless: bearer JWT RS256 de 15 min; NUNCA sesión HTTP, `permitAll()` amplio ni `anyRequest().permitAll()`. Las rutas públicas se abren por método y ruta exacta. (verificador: `SecurityMatrixTest`)
+- NUNCA desactives CSRF en `/api/auth/refresh` ni `/api/auth/logout`: usan cookie. Si el frontend da 403, le falta la cabecera `X-XSRF-TOKEN` con el valor de la cookie `XSRF-TOKEN`. (verificador: `AuthFlowIT`)
+- Claims EXACTOS del access token: `iss, sub, aud, iat, exp, jti, roles, sv`. NUNCA añadas email, permisos, customerId ni nada "para ahorrar una consulta". (verificador: `AuthFlowIT`, claims exactos)
+- Autorización por PERMISOS: `@PreAuthorize("hasAuthority('<permiso>')")` en un DECORADOR de `infrastructure` NO final (CGLIB) sobre el caso de uso; domain y application sin Spring. `hasRole('X')` busca `ROLE_X`. (verificador: `AuthorizationArchitectureTest`, `MethodAuthorizationTest`)
+- Propiedad del objeto: el cliente sale del `sub` vía la cuenta y se filtra EN LA CONSULTA (también en el UPDATE); un objeto ajeno responde 404, nunca 403 ni 200. NUNCA un parámetro, cabecera o campo `customerId` en la API pública. `order:read-any` amplía solo lecturas. (verificador: `AuthorizationArchitectureTest`, `SecurityMatrixTest`)
+- Todo endpoint nuevo añade sus filas a la matriz (anónimo y los cinco roles), incluida la de objeto ajeno; la matriz la cambia una persona. Errores 401/403 como ProblemDetail conservando `WWW-Authenticate`.
+- Versión de sesión: fail closed (Redis caído = 401), sin cache local ni TTL; incrementar versión, revocar familias y publicar la barrera ANTES del commit, en la misma transacción. (verificador: `SessionVersionRevocationIT`)
+
+| Rol | Permisos |
+|---|---|
+| CUSTOMER | order:create, order:read-own, order:cancel-own |
+| CATALOG_MANAGER | product:write, stock:reserve |
+| SUPPORT | order:read-any, order:refund |
+| ADMIN | product:write, stock:reserve, order:read-any, order:refund, user:read, user:manage |
+
+Spring Security 7 — APIs eliminadas (no las uses aunque aparezcan en ejemplos antiguos):
+
+| Eliminado | Usa |
+|---|---|
+| `WebSecurityConfigurerAdapter` | beans `SecurityFilterChain` |
+| `authorizeRequests()`, `antMatchers()`, `mvcMatchers()` | `authorizeHttpRequests()` + `requestMatchers()` |
+| encadenar con `.and()` | DSL con lambdas (`csrf(c -> ...)`) |
+| `AntPathRequestMatcher` / `MvcRequestMatcher` | `PathPatternRequestMatcher` |
+| `@EnableGlobalMethodSecurity` | `@EnableMethodSecurity` |
+| `NoOpPasswordEncoder`/`{noop}` en producción | `PasswordEncoderFactories.createDelegatingPasswordEncoder()` |
+
 ## Verify (no negociable)
 - Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
-- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`. Si hace falta, detente y pide permiso a una persona.
+- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`. Si hace falta, detente y pide permiso a una persona.
 
 ## graphify
 - Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.

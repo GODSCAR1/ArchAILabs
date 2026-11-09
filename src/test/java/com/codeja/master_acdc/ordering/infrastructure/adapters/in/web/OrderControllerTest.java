@@ -3,6 +3,7 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -10,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.identity.infrastructure.config.HttpSecurityConfiguration;
+import com.codeja.master_acdc.identity.infrastructure.config.JwtConfiguration;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
@@ -29,6 +32,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -37,7 +41,10 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @WebMvcTest(OrderController.class)
+@Import({HttpSecurityConfiguration.class, JwtConfiguration.class})
 class OrderControllerTest {
+  @org.springframework.test.context.bean.override.mockito.MockitoBean
+  private com.codeja.master_acdc.identity.domain.port.SessionVersions versions;
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
   private static final String CUSTOMER = "550e8400-e29b-41d4-a716-446655440000";
@@ -49,6 +56,7 @@ class OrderControllerTest {
   @MockitoBean CancelOrderUseCase cancelOrderUseCase;
   @MockitoBean CreateOrderUseCase createOrderUseCase;
   @MockitoBean ListOrdersByStatusUseCase listOrdersByStatusUseCase;
+  @MockitoBean com.codeja.master_acdc.ordering.application.port.GetOrderUseCase getOrderUseCase;
 
   @Test
   void should_respond_201_when_request_valid() throws Exception {
@@ -65,26 +73,29 @@ class OrderControllerTest {
         .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$.id").isNotEmpty())
-        .andExpect(jsonPath("$.customerId").value(CUSTOMER))
+        .andExpect(jsonPath("$.customerId").doesNotExist())
         .andExpect(jsonPath("$.status").value("PENDING"))
         .andExpect(jsonPath("$.lines[0].productId").value(A))
         .andExpect(jsonPath("$.lines[0].quantity").value(3));
   }
 
   @Test
-  void should_respond_400_missing_customer_id_when_header_absent() throws Exception {
+  void should_respond_forbidden_when_creation_account_has_no_customer() throws Exception {
+    given(createOrderUseCase.create(any(), anyList()))
+        .willThrow(new org.springframework.security.access.AccessDeniedException("forbidden"));
     perform(null, lines(line(A, "3")))
-        .andExpect(status().isBadRequest())
+        .andExpect(status().isForbidden())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
   }
 
   @Test
-  void should_respond_400_invalid_customer_id_when_not_uuid() throws Exception {
+  void should_ignore_legacy_header_when_delegating_creation() throws Exception {
+    given(createOrderUseCase.create(any(), anyList())).willThrow(new UnknownProductException());
     perform("no-es-uuid", lines(line(A, "3")))
-        .andExpect(status().isBadRequest())
+        .andExpect(status().isUnprocessableEntity())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-customer-id"));
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "unknown-product"));
   }
 
   @Test
@@ -110,6 +121,8 @@ class OrderControllerTest {
 
   @Test
   void should_respond_422_invalid_quantity_when_quantity_not_positive() throws Exception {
+    given(createOrderUseCase.create(any(), anyList()))
+        .willThrow(new com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException());
     perform(CUSTOMER, lines(line(A, "0"), line(B, "2")))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -137,18 +150,26 @@ class OrderControllerTest {
   }
 
   @Test
-  void should_respond_400_when_header_error_and_body_and_stock_errors() throws Exception {
-    given(createOrderUseCase.create(any(), anyList())).willThrow(new InsufficientStockException());
+  void should_respond_forbidden_when_permission_precedes_body_and_stock_errors() throws Exception {
+    given(createOrderUseCase.create(any(), anyList()))
+        .willThrow(new org.springframework.security.access.AccessDeniedException("forbidden"));
 
     perform(null, lines(line(A, "0"), line(B, "2")))
-        .andExpect(status().isBadRequest())
+        .andExpect(status().isForbidden())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
   }
 
   private ResultActions perform(String customerId, String body) throws Exception {
     MockHttpServletRequestBuilder request =
-        post("/api/orders").contentType(MediaType.APPLICATION_JSON).content(body);
+        post("/api/orders")
+            .with(
+                jwt()
+                    .authorities(
+                        new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                            "order:create")))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body);
     if (customerId != null) {
       request.header("X-Customer-Id", customerId);
     }
@@ -164,27 +185,37 @@ class OrderControllerTest {
   }
 
   @Test
-  void should_respond_400_missing_customer_id_when_header_absent_on_cancel() throws Exception {
-    mockMvc
-        .perform(post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
-  }
-
-  @Test
-  void should_respond_400_invalid_customer_id_when_header_not_uuid_on_cancel() throws Exception {
+  void should_respond_forbidden_when_cancellation_permission_is_missing() throws Exception {
+    given(cancelOrderUseCase.cancel(any(), any()))
+        .willThrow(new org.springframework.security.access.AccessDeniedException("forbidden"));
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt()))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
+  }
+
+  @Test
+  void should_respond_not_found_when_cancellation_account_has_no_customer() throws Exception {
+    given(cancelOrderUseCase.cancel(any(), any())).willThrow(new OrderNotFoundException(null));
+    mockMvc
+        .perform(
+            post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt())
                 .header("X-Customer-Id", "no-es-uuid"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-customer-id"));
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
   }
 
   @Test
   void should_respond_404_order_not_found_when_order_id_not_uuid() throws Exception {
+    given(cancelOrderUseCase.cancel(any(), any())).willThrow(new OrderNotFoundException(null));
     mockMvc
-        .perform(post("/api/orders/{id}/cancellation", "no-uuid").header("X-Customer-Id", CUSTOMER))
+        .perform(
+            post("/api/orders/{id}/cancellation", "no-uuid")
+                .with(jwt())
+                .header("X-Customer-Id", CUSTOMER))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
   }
@@ -196,6 +227,7 @@ class OrderControllerTest {
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt())
                 .header("X-Customer-Id", CUSTOMER))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -209,6 +241,7 @@ class OrderControllerTest {
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt())
                 .header("X-Customer-Id", CUSTOMER))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-cancellable"));
@@ -227,6 +260,7 @@ class OrderControllerTest {
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
+                .with(jwt())
                 .header("X-Customer-Id", CUSTOMER))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CANCELLED"));
@@ -235,11 +269,22 @@ class OrderControllerTest {
   @Test
   @DisplayName("Pedidos PAID listados con nombre y métricas")
   void should_return_paid_summaries_when_status_is_paid() throws Exception {
-    given(listOrdersByStatusUseCase.list(OrderStatus.PAID))
+    given(
+            listOrdersByStatusUseCase.list(
+                new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
+                    OrderStatus.PAID,
+                    com.codeja.master_acdc.ordering.domain.model.OrderReadScope.None.INSTANCE)))
         .willReturn(List.of(new OrderSummary(UUID.randomUUID(), "Ada", 2, 5)));
 
     mockMvc
-        .perform(get("/api/orders").param("status", "PAID"))
+        .perform(
+            get("/api/orders")
+                .with(
+                    jwt()
+                        .authorities(
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                "order:read-own")))
+                .param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].customerName").value("Ada"))
         .andExpect(jsonPath("$[0].lineCount").value(2))
@@ -250,7 +295,14 @@ class OrderControllerTest {
   @DisplayName("Status en minúsculas")
   void should_reject_lowercase_status_when_status_name_is_not_exact() throws Exception {
     mockMvc
-        .perform(get("/api/orders").param("status", "paid"))
+        .perform(
+            get("/api/orders")
+                .with(
+                    jwt()
+                        .authorities(
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                "order:read-own")))
+                .param("status", "paid"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-order-status"));
   }
@@ -259,7 +311,13 @@ class OrderControllerTest {
   @DisplayName("Sin parámetro status")
   void should_reject_missing_status_when_status_parameter_is_absent() throws Exception {
     mockMvc
-        .perform(get("/api/orders"))
+        .perform(
+            get("/api/orders")
+                .with(
+                    jwt()
+                        .authorities(
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                "order:read-own"))))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-order-status"));
   }

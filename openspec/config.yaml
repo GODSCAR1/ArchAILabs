@@ -2,13 +2,14 @@ schema: spec-driven
 
 context: |
   Proyecto: master-acdc, tienda en Java (paquete com.codeja.master_acdc) con arquitectura hexagonal
-  (domain, application, infrastructure). Hoy solo existe el catálogo de productos (Product, Sku).
-  Módulos nuevos: inventory (stock por producto) y ordering (pedidos).
+  (domain, application, infrastructure). Módulos: catalog (MongoDB + cache L1/L2), inventory (stock),
+  ordering (pedidos) e identity (cuentas, login, refresh tokens, JWT RS256, RBAC por permisos).
   Stack: Java 25, Spring Boot 4, JPA/Hibernate, PostgreSQL, Flyway, Testcontainers.
   Errores HTTP con ProblemDetail (RFC 9457); cada error de negocio tiene un type propio.
   ordering consulta y reserva stock mediante la API pública de inventory; inventory nunca depende de ordering.
   Las liberaciones de stock y demás efectos posteriores entre módulos viajan por eventos de dominio.
-  El cliente se identifica con la cabecera X-Customer-Id (simplificación: no hay autenticación).
+  API stateless con bearer JWT (lab S12): el cliente de un pedido sale del sub del token vía la cuenta;
+  no existe X-Customer-Id. Autorización por permisos derivados de roles y por propiedad del objeto (404).
   Language: es. Keep OpenSpec structural headings and SHALL/MUST keywords in English.
 
 rules:

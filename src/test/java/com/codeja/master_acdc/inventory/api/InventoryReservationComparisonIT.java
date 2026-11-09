@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.inventory.api;
 
+import static com.codeja.master_acdc.AuthorizedCalls.withAuthorities;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -100,7 +101,7 @@ class InventoryReservationComparisonIT {
 
   private Outcome reservePessimistically() {
     try {
-      reserveProductStockUseCase.reserve(PRODUCT_ID, 1);
+      withAuthorities(() -> reserveProductStockUseCase.reserve(PRODUCT_ID, 1), "stock:reserve");
       return Outcome.RESERVED;
     } catch (InsufficientStockException exception) {
       return Outcome.INSUFFICIENT;

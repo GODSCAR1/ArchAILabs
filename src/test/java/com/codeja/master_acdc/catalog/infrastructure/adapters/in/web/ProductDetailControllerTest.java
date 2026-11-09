@@ -13,6 +13,8 @@ import com.codeja.master_acdc.catalog.domain.model.ProductDetail;
 import com.codeja.master_acdc.catalog.domain.model.ProductRating;
 import com.codeja.master_acdc.catalog.domain.model.ProductReviewPage;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
+import com.codeja.master_acdc.identity.infrastructure.config.HttpSecurityConfiguration;
+import com.codeja.master_acdc.identity.infrastructure.config.JwtConfiguration;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
@@ -21,11 +23,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(ProductDetailController.class)
+@Import({HttpSecurityConfiguration.class, JwtConfiguration.class})
 class ProductDetailControllerTest {
+  @org.springframework.test.context.bean.override.mockito.MockitoBean
+  private com.codeja.master_acdc.identity.domain.port.SessionVersions versions;
 
   @Autowired MockMvc mockMvc;
 

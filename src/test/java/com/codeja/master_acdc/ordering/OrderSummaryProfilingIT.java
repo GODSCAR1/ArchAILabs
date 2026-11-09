@@ -2,8 +2,10 @@ package com.codeja.master_acdc.ordering;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
+import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
+import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
+import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
 import jakarta.persistence.EntityManagerFactory;
 import java.util.List;
 import java.util.UUID;
@@ -37,7 +39,7 @@ class OrderSummaryProfilingIT {
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
   @Autowired JdbcTemplate jdbcTemplate;
-  @Autowired ListOrdersByStatusUseCase listOrdersByStatusUseCase;
+  @Autowired OrderSummaryQuery orderSummaryQuery;
   @Autowired EntityManagerFactory entityManagerFactory;
 
   @BeforeEach
@@ -59,12 +61,13 @@ class OrderSummaryProfilingIT {
 
   private void assertMeasuredLoad(int orderCount) {
     insertData(orderCount);
-    listOrdersByStatusUseCase.list(OrderStatus.PAID);
+    var criteria = new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE);
+    orderSummaryQuery.findByStatus(criteria);
 
     Statistics statistics = statistics();
     statistics.clear();
     long startedAt = System.nanoTime();
-    var summaries = listOrdersByStatusUseCase.list(OrderStatus.PAID);
+    var summaries = orderSummaryQuery.findByStatus(criteria);
     long elapsedNanos = System.nanoTime() - startedAt;
 
     LOGGER

@@ -5,11 +5,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.CatalogManagerToken;
 import com.codeja.master_acdc.GlobalMongoClientTestConfiguration;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProduct;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CategoryRef;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.RatingSummary;
+import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -34,7 +36,10 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
-@Import(GlobalMongoClientTestConfiguration.class)
+@Import({
+  GlobalMongoClientTestConfiguration.class,
+  com.codeja.master_acdc.RedisTestConfiguration.class
+})
 class ProductSearchMongoIT {
 
   private static final UUID CATEGORY_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
@@ -45,6 +50,8 @@ class ProductSearchMongoIT {
   @Autowired private MongoTemplate mongoTemplate;
 
   @Autowired private MockMvc mockMvc;
+  @Autowired private AccessTokenIssuer tokenIssuer;
+  @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
   @BeforeEach
   void clear_catalog_products() {
@@ -91,6 +98,7 @@ class ProductSearchMongoIT {
     mockMvc
         .perform(
             post("/api/products")
+                .header("Authorization", "Bearer " + CatalogManagerToken.issue(jdbc, tokenIssuer))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Creado en Mongo\",\"price\":50,\"sku\":\"HTTP-NEW\"}"))
         .andExpect(status().isCreated());

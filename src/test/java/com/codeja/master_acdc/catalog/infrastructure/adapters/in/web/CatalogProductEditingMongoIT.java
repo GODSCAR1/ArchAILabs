@@ -1,6 +1,7 @@
 package com.codeja.master_acdc.catalog.infrastructure.adapters.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,9 +21,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -57,7 +60,10 @@ class CatalogProductEditingMongoIT {
   void should_create_product_with_initial_state_when_store_is_mongo() throws Exception {
     mockMvc
         .perform(
-            post("/api/products").contentType(MediaType.APPLICATION_JSON).content(createBody()))
+            post("/api/products")
+                .with(catalogManager())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createBody()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.version").value(0));
 
@@ -85,7 +91,10 @@ class CatalogProductEditingMongoIT {
 
     mockMvc
         .perform(
-            post("/api/products").contentType(MediaType.APPLICATION_JSON).content(createBody()))
+            post("/api/products")
+                .with(catalogManager())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(createBody()))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value("about:blank"));
 
@@ -104,6 +113,7 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(catalogManager())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("New name", 250, 0)))
         .andExpect(status().isOk())
@@ -117,12 +127,14 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(catalogManager())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("First", 200, 0)))
         .andExpect(status().isOk());
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(catalogManager())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Rejected", 300, 0)))
         .andExpect(status().isConflict())
@@ -142,6 +154,7 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(catalogManager())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody(" ", 200, 0)))
         .andExpect(status().isBadRequest());
@@ -156,6 +169,7 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", id)
+                .with(catalogManager())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Changed\",\"price\":200}"))
         .andExpect(status().isBadRequest());
@@ -168,6 +182,7 @@ class CatalogProductEditingMongoIT {
     mockMvc
         .perform(
             put("/api/products/{id}", UUID.randomUUID())
+                .with(catalogManager())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(editBody("Missing", 100, 0)))
         .andExpect(status().isNotFound())
@@ -179,7 +194,10 @@ class CatalogProductEditingMongoIT {
     MvcResult response =
         mockMvc
             .perform(
-                post("/api/products").contentType(MediaType.APPLICATION_JSON).content(createBody()))
+                post("/api/products")
+                    .with(catalogManager())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(createBody()))
             .andExpect(status().isCreated())
             .andReturn();
     String body = response.getResponse().getContentAsString();
@@ -193,5 +211,13 @@ class CatalogProductEditingMongoIT {
 
   private static String editBody(String name, int price, int version) {
     return "{\"name\":\"" + name + "\",\"price\":" + price + ",\"version\":" + version + "}";
+  }
+
+  // Lab S12 (RBAC): editar catálogo exige product:write (rol CATALOG_MANAGER).
+  private static RequestPostProcessor catalogManager() {
+    return jwt()
+        .authorities(
+            new SimpleGrantedAuthority("ROLE_CATALOG_MANAGER"),
+            new SimpleGrantedAuthority("product:write"));
   }
 }

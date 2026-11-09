@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.OrderBearer;
+import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -30,6 +32,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Testcontainers
+@org.springframework.context.annotation.Import(com.codeja.master_acdc.RedisTestConfiguration.class)
 class OrderCancellationIT {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
@@ -50,6 +53,7 @@ class OrderCancellationIT {
 
   @Autowired MockMvc mockMvc;
   @Autowired JdbcTemplate jdbcTemplate;
+  @Autowired AccessTokenIssuer tokenIssuer;
 
   @Test
   @DisplayName("Pedido PENDING cancelado libera stock de todas sus líneas")
@@ -77,7 +81,7 @@ class OrderCancellationIT {
   void should_release_all_stock_lines_when_pending_order_is_cancelled() throws Exception {
     cancel(PENDING_ORDER, CUSTOMER)
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.customerId").value(CUSTOMER))
+        .andExpect(jsonPath("$.customerId").doesNotExist())
         .andExpect(jsonPath("$.status").value("CANCELLED"))
         .andExpect(jsonPath("$.lines.length()").value(2));
 
@@ -213,7 +217,7 @@ class OrderCancellationIT {
   }
 
   @Test
-  @DisplayName("Cancelación sin cabecera X-Customer-Id")
+  @DisplayName("Lectura global no concede cancelación")
   @Sql(
       statements = {
         CLEANUP,
@@ -229,17 +233,17 @@ class OrderCancellationIT {
             + A
             + "', 1)"
       })
-  void should_reject_cancellation_when_customer_header_is_missing() throws Exception {
+  void should_reject_cancellation_when_support_has_no_cancel_permission() throws Exception {
     cancel(PENDING_ORDER, null)
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
 
     assertThat(statusOf(PENDING_ORDER)).isEqualTo("PENDING");
     assertThat(availableOf(A)).isEqualTo(9);
   }
 
   @Test
-  @DisplayName("Cancelación con X-Customer-Id que no es UUID")
+  @DisplayName("Cliente ausente no abre el alcance")
   @Sql(
       statements = {
         CLEANUP,
@@ -255,10 +259,10 @@ class OrderCancellationIT {
             + A
             + "', 1)"
       })
-  void should_reject_cancellation_when_customer_header_is_not_uuid() throws Exception {
+  void should_hide_order_when_account_has_no_customer() throws Exception {
     cancel(PENDING_ORDER, "no-es-uuid")
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-customer-id"));
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
 
     assertThat(statusOf(PENDING_ORDER)).isEqualTo("PENDING");
     assertThat(availableOf(A)).isEqualTo(9);
@@ -267,10 +271,10 @@ class OrderCancellationIT {
   @Test
   @DisplayName("Precedencia: cabecera antes que existencia")
   @Sql(statements = {CLEANUP})
-  void should_report_missing_header_when_order_also_does_not_exist() throws Exception {
+  void should_report_forbidden_when_support_cancels_missing_order() throws Exception {
     cancel("00000000-0000-0000-0000-000000000000", null)
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
   }
 
   @Test
@@ -349,11 +353,41 @@ class OrderCancellationIT {
   }
 
   private ResultActions cancel(String orderId, String customerId) throws Exception {
-    var request = post("/api/orders/{id}/cancellation", orderId);
+    var request =
+        post("/api/orders/{id}/cancellation", orderId)
+            .header(
+                "Authorization",
+                "Bearer "
+                    + OrderBearer.issue(
+                        jdbcTemplate,
+                        tokenIssuer,
+                        CUSTOMER.equals(customerId) ? UUID.fromString(CUSTOMER) : null,
+                        customerId == null ? "SUPPORT" : "CUSTOMER"));
     if (customerId != null) {
       request.header("X-Customer-Id", customerId);
     }
     return mockMvc.perform(request);
+  }
+
+  @Test
+  @DisplayName("Pedido reembolsado no cancelable")
+  @Sql(statements = {CLEANUP})
+  void should_preserve_order_and_stock_when_cancelling_refunded_order() throws Exception {
+    UUID id = UUID.randomUUID();
+    jdbcTemplate.update("insert into stock(product_id,available) values (?,7)", UUID.fromString(A));
+    jdbcTemplate.update(
+        "insert into orders(id,customer_id,status) values (?,?,'REFUNDED')",
+        id,
+        UUID.fromString(CUSTOMER));
+    jdbcTemplate.update(
+        "insert into order_lines(order_id,product_id,quantity) values (?,?,3)",
+        id,
+        UUID.fromString(A));
+    cancel(id.toString(), CUSTOMER)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-cancellable"));
+    assertThat(statusOf(id.toString())).isEqualTo("REFUNDED");
+    assertThat(availableOf(A)).isEqualTo(7);
   }
 
   private String statusOf(String orderId) {

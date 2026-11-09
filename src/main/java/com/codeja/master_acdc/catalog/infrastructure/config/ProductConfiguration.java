@@ -14,6 +14,8 @@ import com.codeja.master_acdc.catalog.domain.port.ProductDetailRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductEditingRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductRepository;
 import com.codeja.master_acdc.catalog.domain.port.ProductSearchRepository;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.in.web.AuthorizedCreateProductUseCase;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.in.web.AuthorizedEditProductUseCase;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache.CachedProductDetailUseCase;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.events.SpringProductChangedPublisher;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogDetailMongoRepositoryAdapter;
@@ -50,7 +52,7 @@ public class ProductConfiguration {
 
   @Bean
   public CreateProductUseCase createProductUseCase(ProductRepository productRepository) {
-    return new CreateProductService(productRepository);
+    return new AuthorizedCreateProductUseCase(new CreateProductService(productRepository));
   }
 
   @Bean
@@ -72,8 +74,10 @@ public class ProductConfiguration {
     EditProductService delegate =
         new EditProductService(productEditingRepository, productChangedPublisher);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
-    return (productId, name, price, version) ->
-        transactionTemplate.execute(status -> delegate.edit(productId, name, price, version));
+    EditProductUseCase transactional =
+        (productId, name, price, version) ->
+            transactionTemplate.execute(status -> delegate.edit(productId, name, price, version));
+    return new AuthorizedEditProductUseCase(transactional);
   }
 
   @Bean

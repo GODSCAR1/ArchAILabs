@@ -1,24 +1,24 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> {
+public interface OrderJpaRepository
+    extends JpaRepository<OrderJpaEntity, UUID>, JpaSpecificationExecutor<OrderJpaEntity> {
 
+  @Override
+  @EntityGraph(attributePaths = "lines")
+  Optional<OrderJpaEntity> findOne(Specification<OrderJpaEntity> spec);
+
+  @EntityGraph(attributePaths = "lines")
   Optional<OrderJpaEntity> findByIdAndCustomerId(UUID id, UUID customerId);
-
-  @Query(
-      "select new"
-          + " com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryRow(o.id,"
-          + " c.name, count(l.productId), coalesce(sum(l.quantity), 0)) from OrderJpaEntity o left"
-          + " join CustomerJpaEntity c on c.id = o.customerId left join o.lines l where o.status ="
-          + " :status group by o.id, c.name")
-  List<OrderSummaryRow> findByStatus(@Param("status") String status);
 
   @Modifying(flushAutomatically = true)
   @Query(
@@ -26,4 +26,10 @@ public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> 
           + "where o.id = :orderId and o.customerId = :customerId "
           + "and o.status in ('PENDING', 'PAID')")
   int cancelIfCancelable(@Param("orderId") UUID orderId, @Param("customerId") UUID customerId);
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      "update OrderJpaEntity o set o.status = 'REFUNDED' "
+          + "where o.id = :orderId and o.status in ('PAID', 'SHIPPED')")
+  int refundIfRefundable(@Param("orderId") UUID orderId);
 }

@@ -48,6 +48,23 @@ CACHEABLE_BAD=$(find src/main/java -name '*.java' -print0 | xargs -0 perl -0777 
   }' || true)
 [[ -z "$CACHEABLE_BAD" ]] \
   || { echo "AC/DC: todo @Cacheable lleva sync = true, sin unless ni varias caches (protección contra stampede, docs/caching.md):" >&2; echo "$CACHEABLE_BAD" >&2; exit 1; }
+echo "▶ Seguridad (ADR docs/adr/0011-autenticacion-refresh-y-version-de-sesion.md)"
+# Segunda capa (lab S12, paso 8): no depende de que el guard de la zona protegida haya funcionado.
+SEC_DIR=src/main/java/com/codeja/master_acdc/identity
+for f in infrastructure/config/HttpSecurityConfiguration.java \
+         infrastructure/adapters/out/security/JwtTokenAdapter.java \
+         infrastructure/adapters/out/security/JwtDecoderFactory.java \
+         infrastructure/adapters/out/security/SessionVersionValidator.java \
+         domain/model/Role.java; do
+  [[ -f "$SEC_DIR/$f" ]] \
+    || { echo "AC/DC: falta $SEC_DIR/$f (ADR 0011). Restáuralo; solo una persona lo retira." >&2; exit 1; }
+done
+SEC_BAD=$(grep -rnE 'anyRequest\(\)\s*\.permitAll\(\)|requestMatchers\("/(api/)?\*\*"\)\s*\.permitAll|WebSecurityConfigurerAdapter|authorizeRequests\(|antMatchers\(|EnableGlobalMethodSecurity|NoOpPasswordEncoder' src/main/java || true)
+[[ -z "$SEC_BAD" ]] \
+  || { echo "AC/DC: apertura amplia o API eliminada de Spring Security 7 (AGENTS.md, Seguridad):" >&2; echo "$SEC_BAD" >&2; exit 1; }
+CUSTOMER_PARAM=$(grep -rnE '"X-Customer-Id"|@(RequestParam|RequestHeader|PathVariable)\([^)]*customerId' src/main/java/com/codeja/master_acdc/ordering || true)
+[[ -z "$CUSTOMER_PARAM" ]] \
+  || { echo "AC/DC: la API de pedidos no recibe customerId: el cliente sale del sub del token (ADR 0011):" >&2; echo "$CUSTOMER_PARAM" >&2; exit 1; }
 echo "▶ Tests guardianes (lab S09: scripts/protected-tests.txt)"
 # Segunda capa: si un guardián desaparece por una vía que ningún hook vio, Verify falla igual.
 GUARDS_MISSING=0
@@ -65,9 +82,17 @@ echo "▶ Capa 1: formato y estilo"
 ./mvnw -q checkstyle:check
 echo "▶ Tests"
 case "${1:---fast}" in
-  --fast) ./mvnw -q test ;;
+  --fast)
+    ./mvnw -q test
+    # Lab S12: el flujo real de autenticación (Testcontainers) también corre en el loop rápido.
+    ./mvnw -q -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=AuthFlowIT verify ;;
   --full) ./mvnw -q verify ;;
 esac
+# La matriz de seguridad debe haberse ejecutado entera (anónimo + 5 roles por endpoint).
+MATRIX_REPORT=target/surefire-reports/TEST-com.codeja.master_acdc.identity.SecurityMatrixTest.xml
+MATRIX_RUN=$(grep -o 'tests="[0-9]*"' "$MATRIX_REPORT" 2>/dev/null | head -1 | tr -dc '0-9')
+(( ${MATRIX_RUN:-0} >= 90 )) \
+  || { echo "AC/DC: SecurityMatrixTest no se ejecutó completo (${MATRIX_RUN:-0} casos, mínimo 90). No la excluyas ni la recortes." >&2; exit 1; }
 # S12: + gitleaks + semgrep
 # S14: + PIT (--full)
 # S17: + ArchUnit

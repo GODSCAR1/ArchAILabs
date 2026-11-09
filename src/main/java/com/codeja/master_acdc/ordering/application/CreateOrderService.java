@@ -7,6 +7,7 @@ import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockExcepti
 import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
+import com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.StockReserver;
 import java.util.List;
@@ -23,7 +24,11 @@ public class CreateOrderService implements CreateOrderUseCase {
   }
 
   @Override
-  public Order create(UUID customerId, List<OrderLine> lines) {
+  public Order create(UUID customerId, List<RequestedOrderLine> requestedLines) {
+    List<OrderLine> lines =
+        requestedLines.stream()
+            .map(line -> new OrderLine(line.productId(), line.quantity()))
+            .toList();
     Order order = Order.create(customerId, lines);
     // Ordenar por producto alineado con inventario evita interbloqueos entre pedidos concurrentes.
     List<OrderLine> ordered =

@@ -26,6 +26,12 @@ if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
       name=$(basename "$g")
       if grep -qF "$name" <<<"$CMD"; then guard_msg "$g"; exit 2; fi
     done
+    # Lab S12 (ADR 0011): configuración de seguridad, servicio de tokens y roles.
+    for sec in HttpSecurityConfiguration JwtTokenAdapter JwtDecoderFactory SessionVersionValidator identity/domain/model/Role; do
+      if grep -qF "$sec" <<<"$CMD"; then
+        echo "AC/DC: $sec es zona protegida de seguridad (ADR 0011). No se edita, no se desactiva ni se sortea desde la shell: explica el cambio a la persona y detente." >&2; exit 2
+      fi
+    done
     if grep -qF "CatalogSchemaValidator" <<<"$CMD"; then
       echo "AC/DC: CatalogSchemaValidator está en la zona protegida (validador \$jsonSchema del catálogo, ADR 0009). No se edita, no se desactiva ni se sortea: explica el problema a la persona y detente." >&2; exit 2
     fi
@@ -50,6 +56,11 @@ case "$REL" in
   src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogSchemaValidator.java|\
   src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/CacheTtlPolicy.java|\
   src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductDetailCache.java|\
+  src/main/java/com/codeja/master_acdc/identity/infrastructure/config/HttpSecurityConfiguration.java|\
+  src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtTokenAdapter.java|\
+  src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtDecoderFactory.java|\
+  src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/SessionVersionValidator.java|\
+  src/main/java/com/codeja/master_acdc/identity/domain/model/Role.java|\
   config/*|.claude/*|.opencode/*|.github/*|scripts/*|pom.xml|verify-quality.sh|lefthook.yml|openspec/config.yaml|src/main/resources/application*|.env|.env.*)
     echo "AC/DC: $REL está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente." >&2
     exit 2 ;;
