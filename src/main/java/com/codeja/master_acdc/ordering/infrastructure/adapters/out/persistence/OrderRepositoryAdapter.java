@@ -1,9 +1,11 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
 import com.codeja.master_acdc.ordering.domain.model.Order;
+import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.domain.Specification;
 
 public class OrderRepositoryAdapter implements OrderRepository {
 
@@ -15,14 +17,31 @@ public class OrderRepositoryAdapter implements OrderRepository {
 
   @Override
   public void save(Order order) {
-    orderJpaRepository.saveAndFlush(OrderJpaEntity.from(order));
+    orderJpaRepository.saveAndFlush(OrderPersistenceMapper.toEntity(order));
+  }
+
+  @Override
+  public Optional<Order> findVisibleById(UUID orderId, OrderReadScope scope) {
+    Specification<OrderJpaEntity> id =
+        (root, query, builder) -> builder.equal(root.get(OrderJpaEntity_.id), orderId);
+    Specification<OrderJpaEntity> visible =
+        (root, query, builder) ->
+            switch (scope) {
+              case OrderReadScope.Own own ->
+                  builder.equal(root.get(OrderJpaEntity_.customerId), own.customerId());
+              case OrderReadScope.Global ignored -> builder.conjunction();
+              case OrderReadScope.None ignored -> builder.disjunction();
+            };
+    return orderJpaRepository
+        .findOne(Specification.allOf(id, visible))
+        .map(OrderPersistenceMapper::toDomain);
   }
 
   @Override
   public Optional<Order> findByIdAndCustomerId(UUID orderId, UUID customerId) {
     return orderJpaRepository
         .findByIdAndCustomerId(orderId, customerId)
-        .map(OrderJpaEntity::toDomain);
+        .map(OrderPersistenceMapper::toDomain);
   }
 
   @Override

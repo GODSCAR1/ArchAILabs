@@ -221,6 +221,120 @@ instrumentación, pasa en esta ejecución; su intermitencia sigue abierta para e
 final del change. Las tareas 2.3 y 2.4 permanecen completadas. Evidencia íntegra:
 `C:/Users/oscar/AppData/Local/Temp/opencode/rbac-section2-fixtures-verify.log`.
 
+## Avance de sección 3: identidad y objetos de pedidos
+
+Base previa a esta tanda: `bash ./mvnw -q verify`, 479 tests sin fallos.
+`CurrentOrderActor` es una API sin frameworks de ordering implementada desde
+identity.infrastructure mediante una proyección por PK (solo id/customerId).
+No introduce dependencia ordering → identity ni cache de identidad. El resultado
+distingue cuenta ausente, cuenta sin cliente y cuenta vinculada. `OrderReadScope`
+distingue `Own(customerId)`, `Global.INSTANCE` y `None.INSTANCE`, sin interpretar
+un customerId nulo como acceso global. `ModuleDependenciesTest` e
+`IdentityArchitectureTest` comprueban las fronteras de módulos.
+
+Creación, cancelación y detalle usan decoradores proxificables: primero permiso,
+después resolución de cuenta/alcance, después transacción y servicio puro. El cliente
+recibido por la firma interna de creación/cancelación se ignora en la fachada
+autorizada; la cuenta determina siempre el propietario. `RequestedOrderLine` lleva
+la entrada sin validar al servicio para que construir `OrderLine` (y rechazar una
+cantidad inválida) ocurra después de comprobar permiso y cliente asociado.
+
+Los contratos HTTP de creación/cancelación/detalle ya no requieren X-Customer-Id,
+no aceptan un selector de cliente y no exponen customerId. Los nombres históricos
+de los dos escenarios de precedencia se conservan con pasos basados en permisos.
+`OrderWebMapper`, `OrderPersistenceMapper` y `OrderSummaryPersistenceMapper`
+concentran las conversiones, con pruebas unitarias. El detalle filtra id/alcance
+mediante Specification tipada y carga una sola colección con EntityGraph. La
+cancelación conserva tanto la lectura como el UPDATE condicional por id/cliente;
+el permiso de lectura global no amplía las escrituras.
+
+Ejemplos de peticiones (los identificadores de cliente no forman parte del cuerpo):
+
+```http
+POST /api/orders
+Authorization: Bearer <token-customer>
+Content-Type: application/json
+
+{"lines":[{"productId":"11111111-1111-1111-1111-111111111111","quantity":3}]}
+
+GET /api/orders/<id>
+Authorization: Bearer <token-con-permiso-de-lectura>
+
+POST /api/orders/<id>/cancellation
+Authorization: Bearer <token-customer-propietario>
+```
+
+Por confirmación explícita de la persona durante apply, las partes de listado de
+3.2 y 3.7 quedan pendientes junto a 3.4/3.8 y esas dos tareas no se marcan todavía.
+El listado mantiene su comportamiento previo hasta que se adapte el guardián 1.4.
+No se han cambiado la firma de findByStatus ni el test guardián.
+
+### Ajuste humano de trazabilidad de specs
+
+La persona corrigió `scripts/spec-trace.sh`: para cada capability, el script omite
+los escenarios pertenecientes a requirements declarados bajo `## REMOVED Requirements`
+por un change activo. Los changes archivados no aportan estas exclusiones. Así deja
+de exigir pruebas del contrato retirado de X-Customer-Id mientras las specs principales
+esperan su sincronización humana. Los demás escenarios siguen exigiendo su
+`@DisplayName` exacto; no se han restaurado assertions 400 del contrato eliminado
+ni se han modificado las specs principales. El agente no editó el script protegido.
+`bash ./verify-quality.sh --fast` pasa tras este ajuste humano.
+
+### Evidencia al detenerse antes del listado
+
+La comprobación fast tras la corrección humana pasa: specs activas 9/9, archivadas
+12/12, 7 escenarios omitidos por requirements REMOVED y todos los demás trazados,
+Spotless, Checkstyle y 297 tests fast sin fallos, errores ni omitidos.
+`bash ./mvnw -q verify` pasa con 297 tests Surefire y 205 Failsafe (502 en total),
+sin fallos, errores ni omitidos. `RefreshTokenLockTimeoutIT` pasa en esta ejecución;
+el diagnóstico intermitente sigue abierto, sin instrumentación ni cambios de umbral.
+
+La base previa tenía 479 tests y lista de fallos vacía. La lista final también está
+vacía: diff de fallos vacío. Se completan 3.1, 3.3, 3.5 y 3.6 (11/27 tareas totales).
+3.2 y 3.7 conservan pendientes sus partes de listado por el acuerdo explícito con
+la persona; 3.4 y 3.8 siguen bloqueadas por 1.4. El guardián de 120 pedidos y la firma
+actual del puerto de listado conservan diff vacío.
+
+Evidencia íntegra en `C:/Users/oscar/AppData/Local/Temp/opencode/`:
+`rbac-section3-baseline.log`, `rbac-section3-baseline-failures.txt`,
+`rbac-section3-spec-trace-fast.log`, `rbac-section3-final-verify.log`,
+`rbac-section3-final-failures.txt` y `rbac-section3-failures.diff`.
+
+### Propuesta exacta pendiente de 1.4 (no implementada)
+
+Nuevo record en `com.codeja.master_acdc.ordering.domain.model`:
+
+```java
+public record OrderListingCriteria(OrderStatus status, OrderReadScope scope) {
+  public OrderListingCriteria {
+    Objects.requireNonNull(status, "status");
+    Objects.requireNonNull(scope, "scope");
+  }
+}
+```
+
+En el puerto `ordering.domain.port.OrderSummaryQuery` y el adaptador
+`ordering.infrastructure.adapters.out.persistence.OrderSummaryQueryAdapter`:
+
+```java
+List<OrderSummary> findByStatus(OrderListingCriteria criteria);
+```
+
+Se sustituye la firma anterior; no se añade sobrecarga de compatibilidad. En el
+guardián `OrderSummaryQueryAdapterQueryCountTest`, solo cambia la invocación y
+se añaden los imports del criterio y alcance:
+
+```java
+var summaries = adapter.findByStatus(
+    new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE));
+```
+
+Permanecen ORDER_COUNT=120, fixtures, flush/clear/Statistics.clear, tamaño de
+resultado y umbral ≤2 sentencias. La futura proyección filtrará estado/alcance
+en BD; el guardián mide solo el adaptador, mientras 3.8 medirá también el lookup
+de identidad en HTTP. Crear el record y cambiar la firma serán parte de 3.4;
+no se espera que un guardián adaptado a tipos aún inexistentes compile hasta ese paso.
+
 ## 6. Revocación inmediata para cuentas bloqueadas
 
 ## 7. Matriz de tests

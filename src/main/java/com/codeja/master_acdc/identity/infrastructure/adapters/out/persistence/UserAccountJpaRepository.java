@@ -13,6 +13,12 @@ import org.springframework.data.repository.query.Param;
 public interface UserAccountJpaRepository extends JpaRepository<UserAccountJpaEntity, UUID> {
   Optional<UserAccountJpaEntity> findByEmail(String email);
 
+  @Query(
+      "select new"
+          + " com.codeja.master_acdc.identity.infrastructure.adapters.out.persistence.AccountCustomerRow(u.id,"
+          + " u.customerId) from UserAccountJpaEntity u where u.id = :id")
+  Optional<AccountCustomerRow> findCustomerAssociationById(@Param("id") UUID id);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @QueryHints(@QueryHint(name = "jakarta.persistence.lock.timeout", value = "2000"))
   @Query("select u from UserAccountJpaEntity u where u.id = :id")

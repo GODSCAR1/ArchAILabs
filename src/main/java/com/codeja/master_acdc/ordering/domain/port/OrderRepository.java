@@ -1,6 +1,7 @@
 package com.codeja.master_acdc.ordering.domain.port;
 
 import com.codeja.master_acdc.ordering.domain.model.Order;
+import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -8,6 +9,8 @@ import java.util.UUID;
 public interface OrderRepository {
 
   void save(Order order);
+
+  Optional<Order> findVisibleById(UUID orderId, OrderReadScope scope);
 
   /** Pedido propio del cliente, si existe. */
   Optional<Order> findByIdAndCustomerId(UUID orderId, UUID customerId);

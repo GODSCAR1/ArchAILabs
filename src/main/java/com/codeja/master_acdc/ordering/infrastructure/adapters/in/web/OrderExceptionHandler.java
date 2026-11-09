@@ -22,16 +22,6 @@ public class OrderExceptionHandler {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
 
-  @ExceptionHandler(MissingCustomerIdException.class)
-  ProblemDetail handleMissingCustomerId(MissingCustomerIdException exception) {
-    return problem(HttpStatus.BAD_REQUEST, "missing-customer-id", exception.getMessage());
-  }
-
-  @ExceptionHandler(InvalidCustomerIdException.class)
-  ProblemDetail handleInvalidCustomerId(InvalidCustomerIdException exception) {
-    return problem(HttpStatus.BAD_REQUEST, "invalid-customer-id", exception.getMessage());
-  }
-
   @ExceptionHandler(MissingOrderStatusException.class)
   ProblemDetail handleMissingOrderStatus(MissingOrderStatusException exception) {
     return problem(HttpStatus.BAD_REQUEST, "missing-order-status", exception.getMessage());

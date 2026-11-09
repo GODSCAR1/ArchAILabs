@@ -16,13 +16,7 @@ public class OrderSummaryQueryAdapter implements OrderSummaryQuery {
   @Override
   public List<OrderSummary> findByStatus(OrderStatus status) {
     return orderJpaRepository.findByStatus(status.name()).stream()
-        .map(
-            row ->
-                new OrderSummary(
-                    row.id(),
-                    row.customerName(),
-                    Math.toIntExact(row.lineCount()),
-                    Math.toIntExact(row.totalUnits())))
+        .map(OrderSummaryPersistenceMapper::toDomain)
         .toList();
   }
 }

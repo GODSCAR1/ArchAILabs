@@ -3,13 +3,22 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface OrderJpaRepository extends JpaRepository<OrderJpaEntity, UUID> {
+public interface OrderJpaRepository
+    extends JpaRepository<OrderJpaEntity, UUID>, JpaSpecificationExecutor<OrderJpaEntity> {
 
+  @Override
+  @EntityGraph(attributePaths = "lines")
+  Optional<OrderJpaEntity> findOne(Specification<OrderJpaEntity> spec);
+
+  @EntityGraph(attributePaths = "lines")
   Optional<OrderJpaEntity> findByIdAndCustomerId(UUID id, UUID customerId);
 
   @Query(

@@ -13,6 +13,7 @@ import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
+import com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine;
 import com.codeja.master_acdc.ordering.domain.model.ReservationOutcome;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.StockReserver;
@@ -35,7 +36,9 @@ class CreateOrderServiceTest {
     given(stockReserver.reserve(List.of(new OrderLine(A, 3), new OrderLine(B, 2))))
         .willReturn(ReservationOutcome.RESERVED);
 
-    Order order = service.create(CUSTOMER, List.of(new OrderLine(B, 2), new OrderLine(A, 3)));
+    Order order =
+        service.create(
+            CUSTOMER, List.of(new RequestedOrderLine(B, 2), new RequestedOrderLine(A, 3)));
 
     assertThat(order.customerId()).isEqualTo(CUSTOMER);
     assertThat(order.status()).isEqualTo(OrderStatus.PENDING);
@@ -47,7 +50,7 @@ class CreateOrderServiceTest {
   void should_report_insufficient_stock_when_reservation_rejected() {
     given(stockReserver.reserve(any())).willReturn(ReservationOutcome.INSUFFICIENT_STOCK);
 
-    assertThatThrownBy(() -> service.create(CUSTOMER, List.of(new OrderLine(A, 3))))
+    assertThatThrownBy(() -> service.create(CUSTOMER, List.of(new RequestedOrderLine(A, 3))))
         .isInstanceOf(InsufficientStockException.class);
 
     then(orderRepository).should(never()).save(any());
@@ -57,7 +60,7 @@ class CreateOrderServiceTest {
   void should_report_unknown_product_when_reservation_reports_unknown() {
     given(stockReserver.reserve(any())).willReturn(ReservationOutcome.UNKNOWN_PRODUCT);
 
-    assertThatThrownBy(() -> service.create(CUSTOMER, List.of(new OrderLine(A, 3))))
+    assertThatThrownBy(() -> service.create(CUSTOMER, List.of(new RequestedOrderLine(A, 3))))
         .isInstanceOf(UnknownProductException.class);
 
     then(orderRepository).should(never()).save(any());

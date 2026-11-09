@@ -2,12 +2,13 @@ package com.codeja.master_acdc.ordering;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.OrderBearer;
+import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -48,6 +49,7 @@ class OrderPlacementIT {
 
   @Autowired MockMvc mockMvc;
   @Autowired JdbcTemplate jdbcTemplate;
+  @Autowired AccessTokenIssuer tokenIssuer;
 
   @Test
   @DisplayName("Pedido creado con stock disponible")
@@ -63,7 +65,7 @@ class OrderPlacementIT {
     placeOrder(CUSTOMER, lines(line(A, "3"), line(B, "2")))
         .andExpect(status().isCreated())
         .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
-        .andExpect(jsonPath("$.customerId").value(CUSTOMER))
+        .andExpect(jsonPath("$.customerId").doesNotExist())
         .andExpect(jsonPath("$.status").value("PENDING"))
         .andExpect(jsonPath("$.id").isNotEmpty())
         .andExpect(jsonPath("$.lines.length()").value(2));
@@ -110,7 +112,7 @@ class OrderPlacementIT {
   }
 
   @Test
-  @DisplayName("Sin cabecera X-Customer-Id")
+  @DisplayName("Cuenta sin cliente no crea pedido")
   @Sql(
       statements = {
         "delete from order_lines",
@@ -118,17 +120,17 @@ class OrderPlacementIT {
         "delete from stock",
         "insert into stock (product_id, available) values ('" + A + "', 10)"
       })
-  void should_reject_400_missing_customer_id_when_header_absent() throws Exception {
+  void should_reject_creation_when_account_has_no_customer() throws Exception {
     placeOrder(null, lines(line(A, "3")))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
 
     assertThat(orderCount()).isZero();
     assertThat(availableOf(A)).isEqualTo(10);
   }
 
   @Test
-  @DisplayName("X-Customer-Id que no es UUID")
+  @DisplayName("Cabecera antigua no suplanta identidad")
   @Sql(
       statements = {
         "delete from order_lines",
@@ -136,13 +138,15 @@ class OrderPlacementIT {
         "delete from stock",
         "insert into stock (product_id, available) values ('" + A + "', 10)"
       })
-  void should_reject_400_invalid_customer_id_when_not_uuid() throws Exception {
+  void should_ignore_legacy_header_when_account_has_customer() throws Exception {
     placeOrder("no-es-uuid", lines(line(A, "3")))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-customer-id"));
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.customerId").doesNotExist());
 
-    assertThat(orderCount()).isZero();
-    assertThat(availableOf(A)).isEqualTo(10);
+    assertThat(orderCount()).isEqualTo(1);
+    assertThat(availableOf(A)).isEqualTo(7);
+    assertThat(jdbcTemplate.queryForObject("select customer_id from orders", UUID.class))
+        .isEqualTo(UUID.fromString(CUSTOMER));
   }
 
   @Test
@@ -267,10 +271,22 @@ class OrderPlacementIT {
         "insert into stock (product_id, available) values ('" + A + "', 10)",
         "insert into stock (product_id, available) values ('" + B + "', 1)"
       })
-  void should_reject_400_header_precedence_when_header_body_and_stock_errors() throws Exception {
-    placeOrder(null, lines(line(A, "0"), line(B, "2")))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+  void should_reject_permission_before_body_when_actor_cannot_create_orders() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/orders")
+                .header(
+                    "Authorization",
+                    "Bearer "
+                        + OrderBearer.issue(
+                            jdbcTemplate,
+                            tokenIssuer,
+                            UUID.fromString(CUSTOMER),
+                            "CATALOG_MANAGER"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(lines(line(A, "0"), line(B, "2"))))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
 
     assertThat(orderCount()).isZero();
     assertThat(availableOf(A)).isEqualTo(10);
@@ -351,7 +367,17 @@ class OrderPlacementIT {
 
   private ResultActions placeOrder(String customerId, String body) throws Exception {
     MockHttpServletRequestBuilder request =
-        post("/api/orders").with(jwt()).contentType(MediaType.APPLICATION_JSON).content(body);
+        post("/api/orders")
+            .header(
+                "Authorization",
+                "Bearer "
+                    + OrderBearer.issue(
+                        jdbcTemplate,
+                        tokenIssuer,
+                        customerId == null ? null : UUID.fromString(CUSTOMER),
+                        "CUSTOMER"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body);
     if (customerId != null) {
       request.header("X-Customer-Id", customerId);
     }

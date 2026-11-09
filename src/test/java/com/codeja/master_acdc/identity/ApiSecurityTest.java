@@ -122,16 +122,16 @@ class ApiSecurityTest extends AuthHttpSupport {
   }
 
   @Test
-  @DisplayName("Pedido autenticado conserva validación de cabecera")
-  void should_keep_customer_header_contract_when_order_has_bearer() throws Exception {
+  @DisplayName("Pedido autenticado deriva cliente de la cuenta")
+  void should_derive_customer_when_order_has_bearer_without_customer_header() throws Exception {
     var browser = session();
     var before = business();
     problem(
         authorizedPost("/api/orders")
             .header("Authorization", "Bearer " + browser.access())
             .content("{\"lines\":[]}"),
-        400,
-        "missing-customer-id");
+        422,
+        "empty-order");
     assertThat(business()).isEqualTo(before);
     UUID customer =
         jdbc.queryForObject(
@@ -142,7 +142,7 @@ class ApiSecurityTest extends AuthHttpSupport {
                 .header("X-Customer-Id", customer)
                 .content("{\"lines\":[{\"productId\":\"" + product + "\",\"quantity\":1}]}"))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.customerId").value(customer.toString()));
+        .andExpect(jsonPath("$.customerId").doesNotExist());
   }
 
   @Test

@@ -54,6 +54,7 @@ class OrderControllerTest {
   @MockitoBean CancelOrderUseCase cancelOrderUseCase;
   @MockitoBean CreateOrderUseCase createOrderUseCase;
   @MockitoBean ListOrdersByStatusUseCase listOrdersByStatusUseCase;
+  @MockitoBean com.codeja.master_acdc.ordering.application.port.GetOrderUseCase getOrderUseCase;
 
   @Test
   void should_respond_201_when_request_valid() throws Exception {
@@ -70,26 +71,29 @@ class OrderControllerTest {
         .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$.id").isNotEmpty())
-        .andExpect(jsonPath("$.customerId").value(CUSTOMER))
+        .andExpect(jsonPath("$.customerId").doesNotExist())
         .andExpect(jsonPath("$.status").value("PENDING"))
         .andExpect(jsonPath("$.lines[0].productId").value(A))
         .andExpect(jsonPath("$.lines[0].quantity").value(3));
   }
 
   @Test
-  void should_respond_400_missing_customer_id_when_header_absent() throws Exception {
+  void should_respond_forbidden_when_creation_account_has_no_customer() throws Exception {
+    given(createOrderUseCase.create(any(), anyList()))
+        .willThrow(new org.springframework.security.access.AccessDeniedException("forbidden"));
     perform(null, lines(line(A, "3")))
-        .andExpect(status().isBadRequest())
+        .andExpect(status().isForbidden())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
   }
 
   @Test
-  void should_respond_400_invalid_customer_id_when_not_uuid() throws Exception {
+  void should_ignore_legacy_header_when_delegating_creation() throws Exception {
+    given(createOrderUseCase.create(any(), anyList())).willThrow(new UnknownProductException());
     perform("no-es-uuid", lines(line(A, "3")))
-        .andExpect(status().isBadRequest())
+        .andExpect(status().isUnprocessableEntity())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-customer-id"));
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "unknown-product"));
   }
 
   @Test
@@ -115,6 +119,8 @@ class OrderControllerTest {
 
   @Test
   void should_respond_422_invalid_quantity_when_quantity_not_positive() throws Exception {
+    given(createOrderUseCase.create(any(), anyList()))
+        .willThrow(new com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException());
     perform(CUSTOMER, lines(line(A, "0"), line(B, "2")))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -142,18 +148,26 @@ class OrderControllerTest {
   }
 
   @Test
-  void should_respond_400_when_header_error_and_body_and_stock_errors() throws Exception {
-    given(createOrderUseCase.create(any(), anyList())).willThrow(new InsufficientStockException());
+  void should_respond_forbidden_when_permission_precedes_body_and_stock_errors() throws Exception {
+    given(createOrderUseCase.create(any(), anyList()))
+        .willThrow(new org.springframework.security.access.AccessDeniedException("forbidden"));
 
     perform(null, lines(line(A, "0"), line(B, "2")))
-        .andExpect(status().isBadRequest())
+        .andExpect(status().isForbidden())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
   }
 
   private ResultActions perform(String customerId, String body) throws Exception {
     MockHttpServletRequestBuilder request =
-        post("/api/orders").with(jwt()).contentType(MediaType.APPLICATION_JSON).content(body);
+        post("/api/orders")
+            .with(
+                jwt()
+                    .authorities(
+                        new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                            "order:create")))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body);
     if (customerId != null) {
       request.header("X-Customer-Id", customerId);
     }
@@ -169,28 +183,32 @@ class OrderControllerTest {
   }
 
   @Test
-  void should_respond_400_missing_customer_id_when_header_absent_on_cancel() throws Exception {
+  void should_respond_forbidden_when_cancellation_permission_is_missing() throws Exception {
+    given(cancelOrderUseCase.cancel(any(), any()))
+        .willThrow(new org.springframework.security.access.AccessDeniedException("forbidden"));
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
                 .with(jwt()))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-customer-id"));
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
   }
 
   @Test
-  void should_respond_400_invalid_customer_id_when_header_not_uuid_on_cancel() throws Exception {
+  void should_respond_not_found_when_cancellation_account_has_no_customer() throws Exception {
+    given(cancelOrderUseCase.cancel(any(), any())).willThrow(new OrderNotFoundException(null));
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
                 .with(jwt())
                 .header("X-Customer-Id", "no-es-uuid"))
-        .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-customer-id"));
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
   }
 
   @Test
   void should_respond_404_order_not_found_when_order_id_not_uuid() throws Exception {
+    given(cancelOrderUseCase.cancel(any(), any())).willThrow(new OrderNotFoundException(null));
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "no-uuid")

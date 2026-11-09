@@ -36,9 +36,20 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
   @MockitoSpyBean private ProductEditingRepository editing;
   @MockitoSpyBean private StockReservationRepository stock;
 
+  @Autowired
+  private com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase createOrder;
+
+  @Autowired
+  private com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase cancelOrder;
+
+  @Autowired private com.codeja.master_acdc.ordering.application.port.GetOrderUseCase getOrder;
+  @MockitoSpyBean private com.codeja.master_acdc.ordering.api.CurrentOrderActor orderActor;
+  @MockitoSpyBean private com.codeja.master_acdc.ordering.domain.port.OrderRepository orders;
+
   @BeforeEach
   void clear_repository_observations() {
     clearInvocations(products, editing, stock);
+    clearInvocations(orderActor, orders);
   }
 
   @ParameterizedTest
@@ -95,5 +106,27 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
       case "reserve" -> reserve.reserve(UUID.randomUUID(), 1);
       default -> throw new IllegalArgumentException(command);
     }
+  }
+
+  @Test
+  @WithMockUser(authorities = "product:write")
+  void should_deny_order_commands_before_identity_lookup_when_permissions_are_absent() {
+    assertThatThrownBy(
+            () ->
+                createOrder.create(
+                    null,
+                    java.util.List.of(
+                        new com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine(
+                            null, 0))))
+        .isInstanceOf(AccessDeniedException.class);
+    assertThatThrownBy(() -> cancelOrder.cancel(null, null))
+        .isInstanceOf(AccessDeniedException.class);
+    assertThatThrownBy(
+            () ->
+                getOrder.get(
+                    null,
+                    com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Global.INSTANCE))
+        .isInstanceOf(AccessDeniedException.class);
+    verifyNoInteractions(orderActor, orders);
   }
 }

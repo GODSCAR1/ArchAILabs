@@ -8,6 +8,7 @@ import com.codeja.master_acdc.identity.domain.port.CustomerCreator;
 import com.codeja.master_acdc.identity.domain.port.Passwords;
 import com.codeja.master_acdc.identity.domain.port.RefreshTokens;
 import com.codeja.master_acdc.identity.domain.port.UserAccounts;
+import com.codeja.master_acdc.identity.infrastructure.adapters.out.ordering.CurrentOrderActorAdapter;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.ordering.CustomerCreatorAdapter;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.persistence.RefreshTokenJpaRepository;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.persistence.RefreshTokenRepositoryAdapter;
@@ -15,6 +16,7 @@ import com.codeja.master_acdc.identity.infrastructure.adapters.out.persistence.U
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.persistence.UserAccountRepositoryAdapter;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.security.CommonPasswordsAdapter;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.security.PasswordEncoderAdapter;
+import com.codeja.master_acdc.ordering.api.CurrentOrderActor;
 import com.codeja.master_acdc.ordering.api.CustomerRegistrationFacade;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +26,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
 public class IdentityConfiguration {
+  @Bean
+  public CurrentOrderActor currentOrderActor(UserAccountJpaRepository accounts) {
+    return new CurrentOrderActorAdapter(accounts);
+  }
+
   @Bean
   public UserAccounts userAccounts(
       UserAccountJpaRepository accounts, jakarta.persistence.EntityManager entityManager) {
