@@ -1,6 +1,11 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
+import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderStatusException;
+import com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
+import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
+import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
+import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import com.codeja.master_acdc.ordering.domain.model.OrderSummary;
 import com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine;
 import java.util.List;
@@ -8,6 +13,17 @@ import java.util.UUID;
 
 public final class OrderWebMapper {
   private OrderWebMapper() {}
+
+  public static OrderListingCriteria listingCriteria(String status) {
+    if (status == null || status.isBlank()) {
+      throw new MissingOrderStatusException();
+    }
+    try {
+      return new OrderListingCriteria(OrderStatus.valueOf(status), OrderReadScope.None.INSTANCE);
+    } catch (IllegalArgumentException exception) {
+      throw new InvalidOrderStatusException(status);
+    }
+  }
 
   public static List<RequestedOrderLine> toLines(CreateOrderRequest request) {
     if (request == null || request.lines() == null) {

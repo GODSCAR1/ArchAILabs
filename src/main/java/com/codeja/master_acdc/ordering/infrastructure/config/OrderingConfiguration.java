@@ -17,6 +17,7 @@ import com.codeja.master_acdc.ordering.domain.port.StockReserver;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedCancelOrderUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedCreateOrderUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedGetOrderUseCase;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedListOrdersByStatusUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderActorResolver;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.SpringOrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.OrderCancelledListener;
@@ -54,17 +55,21 @@ public class OrderingConfiguration {
   }
 
   @Bean
-  public OrderSummaryQuery orderSummaryQuery(OrderJpaRepository orderJpaRepository) {
-    return new OrderSummaryQueryAdapter(orderJpaRepository);
+  public OrderSummaryQuery orderSummaryQuery(jakarta.persistence.EntityManager entityManager) {
+    return new OrderSummaryQueryAdapter(entityManager);
   }
 
   @Bean
   public ListOrdersByStatusUseCase listOrdersByStatusUseCase(
-      OrderSummaryQuery orderSummaryQuery, PlatformTransactionManager transactionManager) {
+      OrderSummaryQuery orderSummaryQuery,
+      PlatformTransactionManager transactionManager,
+      OrderActorResolver actor) {
     ListOrdersByStatusService delegate = new ListOrdersByStatusService(orderSummaryQuery);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
     transactionTemplate.setReadOnly(true);
-    return status -> transactionTemplate.execute(transaction -> delegate.list(status));
+    ListOrdersByStatusUseCase transactional =
+        criteria -> transactionTemplate.execute(transaction -> delegate.list(criteria));
+    return new AuthorizedListOrdersByStatusUseCase(transactional, actor);
   }
 
   @Bean

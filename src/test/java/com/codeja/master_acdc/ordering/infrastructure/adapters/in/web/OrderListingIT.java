@@ -1,11 +1,12 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
 import static org.hamcrest.Matchers.nullValue;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.OrderBearer;
+import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,12 +38,17 @@ class OrderListingIT {
 
   @Autowired MockMvc mockMvc;
   @Autowired JdbcTemplate jdbcTemplate;
+  @Autowired AccessTokenIssuer tokenIssuer;
+  private String support;
 
   @BeforeEach
   void cleanDatabase() {
     jdbcTemplate.update("delete from order_lines");
     jdbcTemplate.update("delete from orders");
+    jdbcTemplate.update("delete from refresh_token");
+    jdbcTemplate.update("delete from user_account");
     jdbcTemplate.update("delete from customers");
+    support = OrderBearer.issue(jdbcTemplate, tokenIssuer, null, "SUPPORT");
   }
 
   @Test
@@ -52,7 +58,8 @@ class OrderListingIT {
     insertOrder(PAID, "PAID", 3, 2);
 
     mockMvc
-        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
+        .perform(
+            get("/api/orders").header("Authorization", "Bearer " + support).param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(PAID.toString()))
         .andExpect(jsonPath("$[0].customerName").value("Ada Lovelace"))
@@ -67,7 +74,8 @@ class OrderListingIT {
     insertOrder(PENDING, "PENDING", 2);
 
     mockMvc
-        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
+        .perform(
+            get("/api/orders").header("Authorization", "Bearer " + support).param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(PAID.toString()))
         .andExpect(jsonPath("$[1]").doesNotExist());
@@ -77,7 +85,8 @@ class OrderListingIT {
   @DisplayName("Sin pedidos PAID")
   void should_return_empty_list_when_no_paid_orders_exist() throws Exception {
     mockMvc
-        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
+        .perform(
+            get("/api/orders").header("Authorization", "Bearer " + support).param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$").isEmpty());
   }
@@ -86,7 +95,8 @@ class OrderListingIT {
   @DisplayName("Status inválido")
   void should_reject_unknown_status_when_status_is_unknown() throws Exception {
     mockMvc
-        .perform(get("/api/orders").with(jwt()).param("status", "FOO"))
+        .perform(
+            get("/api/orders").header("Authorization", "Bearer " + support).param("status", "FOO"))
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.type").value("https://api.master-acdc.dev/problems/invalid-order-status"));
@@ -96,7 +106,8 @@ class OrderListingIT {
   @DisplayName("Status en minúsculas")
   void should_reject_lowercase_status_when_status_is_lowercase() throws Exception {
     mockMvc
-        .perform(get("/api/orders").with(jwt()).param("status", "paid"))
+        .perform(
+            get("/api/orders").header("Authorization", "Bearer " + support).param("status", "paid"))
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.type").value("https://api.master-acdc.dev/problems/invalid-order-status"));
@@ -106,7 +117,7 @@ class OrderListingIT {
   @DisplayName("Sin parámetro status")
   void should_reject_missing_status_when_parameter_is_absent() throws Exception {
     mockMvc
-        .perform(get("/api/orders").with(jwt()))
+        .perform(get("/api/orders").header("Authorization", "Bearer " + support))
         .andExpect(status().isBadRequest())
         .andExpect(
             jsonPath("$.type").value("https://api.master-acdc.dev/problems/missing-order-status"));
@@ -118,7 +129,8 @@ class OrderListingIT {
     insertOrder(ORPHAN, "PAID", 3);
 
     mockMvc
-        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
+        .perform(
+            get("/api/orders").header("Authorization", "Bearer " + support).param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(ORPHAN.toString()))
         .andExpect(jsonPath("$[0].customerName").value(nullValue()));
@@ -126,6 +138,97 @@ class OrderListingIT {
 
   private void insertCustomer() {
     jdbcTemplate.update("insert into customers (id, name) values (?, ?)", CUSTOMER, "Ada Lovelace");
+  }
+
+  @Test
+  @DisplayName("Lectura global de pedidos por estado")
+  void should_filter_own_orders_and_allow_global_reading_when_roles_differ() throws Exception {
+    insertCustomer();
+    insertOrder(PAID, "PAID", 3, 2);
+    insertOrder(PENDING, "PAID", 1);
+    jdbcTemplate.update("update orders set customer_id=? where id=?", UUID.randomUUID(), PENDING);
+    String customer = OrderBearer.issue(jdbcTemplate, tokenIssuer, CUSTOMER, "CUSTOMER");
+    mockMvc
+        .perform(
+            get("/api/orders")
+                .header("Authorization", "Bearer " + customer)
+                .param("status", "PAID"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].id").value(PAID.toString()))
+        .andExpect(jsonPath("$[0].lineCount").value(2))
+        .andExpect(jsonPath("$[0].totalUnits").value(5));
+    mockMvc
+        .perform(
+            get("/api/orders").header("Authorization", "Bearer " + support).param("status", "PAID"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2));
+  }
+
+  @Test
+  @DisplayName("Cliente sin pedidos visibles")
+  void should_return_empty_when_only_foreign_orders_exist() throws Exception {
+    insertOrder(PAID, "PAID", 3);
+    String customer = OrderBearer.issue(jdbcTemplate, tokenIssuer, UUID.randomUUID(), "CUSTOMER");
+    mockMvc
+        .perform(
+            get("/api/orders")
+                .header("Authorization", "Bearer " + customer)
+                .param("status", "PAID"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isEmpty());
+  }
+
+  @Test
+  @DisplayName("Cliente ausente no abre el alcance")
+  void should_return_empty_when_customer_account_is_unlinked() throws Exception {
+    insertOrder(PAID, "PAID", 3);
+    String customer = OrderBearer.issue(jdbcTemplate, tokenIssuer, null, "CUSTOMER");
+    mockMvc
+        .perform(
+            get("/api/orders")
+                .header("Authorization", "Bearer " + customer)
+                .param("status", "PAID"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isEmpty());
+  }
+
+  @Test
+  @DisplayName("Cambio de asociación se observa con el mismo token")
+  void should_observe_new_owner_scope_when_account_changes_between_requests() throws Exception {
+    insertCustomer();
+    insertOrder(PAID, "PAID", 3);
+    insertOrder(PENDING, "PAID", 2);
+    UUID other = UUID.randomUUID();
+    jdbcTemplate.update("insert into customers(id,name) values (?, 'Other')", other);
+    jdbcTemplate.update("update orders set customer_id=? where id=?", other, PENDING);
+    String token = OrderBearer.issue(jdbcTemplate, tokenIssuer, CUSTOMER, "CUSTOMER");
+    mockMvc
+        .perform(
+            get("/api/orders").header("Authorization", "Bearer " + token).param("status", "PAID"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].id").value(PAID.toString()));
+    jdbcTemplate.update(
+        "update user_account set customer_id=? where customer_id=?", other, CUSTOMER);
+    mockMvc
+        .perform(
+            get("/api/orders").header("Authorization", "Bearer " + token).param("status", "PAID"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].id").value(PENDING.toString()));
+  }
+
+  @Test
+  void should_deny_before_parameter_validation_when_role_has_no_read_permission() throws Exception {
+    String token = OrderBearer.issue(jdbcTemplate, tokenIssuer, null, "CATALOG_MANAGER");
+    for (String value : new String[] {"PAID", "bad-status", ""}) {
+      mockMvc
+          .perform(
+              get("/api/orders").header("Authorization", "Bearer " + token).param("status", value))
+          .andExpect(status().isForbidden())
+          .andExpect(jsonPath("$.type").value("https://api.master-acdc.dev/problems/forbidden"));
+    }
   }
 
   private void insertOrder(UUID orderId, String status, int... quantities) {

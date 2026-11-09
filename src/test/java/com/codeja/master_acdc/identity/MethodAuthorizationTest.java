@@ -46,10 +46,16 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
   @MockitoSpyBean private com.codeja.master_acdc.ordering.api.CurrentOrderActor orderActor;
   @MockitoSpyBean private com.codeja.master_acdc.ordering.domain.port.OrderRepository orders;
 
+  @Autowired
+  private com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase listOrders;
+
+  @MockitoSpyBean private com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery summaries;
+
   @BeforeEach
   void clear_repository_observations() {
     clearInvocations(products, editing, stock);
     clearInvocations(orderActor, orders);
+    clearInvocations(summaries);
   }
 
   @ParameterizedTest
@@ -128,5 +134,40 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
                     com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Global.INSTANCE))
         .isInstanceOf(AccessDeniedException.class);
     verifyNoInteractions(orderActor, orders);
+  }
+
+  @Test
+  @WithMockUser(authorities = "product:write")
+  void should_deny_listing_before_identity_lookup_when_permission_is_absent() {
+    assertThatThrownBy(() -> listOrders.list(globalPaid()))
+        .isInstanceOf(AccessDeniedException.class);
+    verifyNoInteractions(orderActor, summaries);
+  }
+
+  @Test
+  @WithMockUser(authorities = "order:read-own")
+  void should_ignore_supplied_global_scope_when_listing_bean_is_called_by_customer() {
+    UUID customer = UUID.randomUUID();
+    var own =
+        new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
+            com.codeja.master_acdc.ordering.domain.model.OrderStatus.PAID,
+            new com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Own(customer));
+    org.mockito.Mockito.doReturn(
+            java.util.Optional.of(
+                new com.codeja.master_acdc.ordering.api.CurrentOrderActor.Actor(
+                    UUID.randomUUID(), customer)))
+        .when(orderActor)
+        .current();
+    org.mockito.Mockito.doReturn(java.util.List.of()).when(summaries).findByStatus(own);
+    assertThat(AopUtils.isAopProxy(listOrders)).isTrue();
+    assertThat(listOrders.list(globalPaid())).isEmpty();
+    verify(orderActor).current();
+    verify(summaries).findByStatus(own);
+  }
+
+  private com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria globalPaid() {
+    return new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
+        com.codeja.master_acdc.ordering.domain.model.OrderStatus.PAID,
+        com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Global.INSTANCE);
   }
 }

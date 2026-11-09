@@ -48,6 +48,37 @@ abstract class AuthHttpSupport extends IdentityIntegrationSupport {
     return browser(id, login(email, PASSWORD).andExpect(status().isOk()).andReturn());
   }
 
+  protected void assertOwnOrderListing(Browser browser) throws Exception {
+    UUID customer =
+        jdbc.queryForObject(
+            "select customer_id from user_account where id=?", UUID.class, browser.user());
+    UUID own = UUID.randomUUID();
+    UUID foreign = UUID.randomUUID();
+    jdbc.update(
+        "insert into orders(id,customer_id,status) values (?,?,'PAID'), (?,?,'PAID')",
+        own,
+        customer,
+        foreign,
+        UUID.randomUUID());
+    try {
+      mvc.perform(
+              org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/orders")
+                  .secure(true)
+                  .param("status", "PAID")
+                  .header("Authorization", "Bearer " + browser.access()))
+          .andExpect(status().isOk())
+          .andExpect(
+              org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath(
+                      "$.length()")
+                  .value(1))
+          .andExpect(
+              org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$[0].id")
+                  .value(own.toString()));
+    } finally {
+      jdbc.update("delete from orders where id in (?,?)", own, foreign);
+    }
+  }
+
   protected Browser browser(UUID user, MvcResult result) throws Exception {
     return new Browser(
         user,

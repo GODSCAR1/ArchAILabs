@@ -2,6 +2,8 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
+import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import java.util.List;
 import java.util.UUID;
@@ -47,7 +49,7 @@ class OrderSummaryQueryAdapterIT {
     insertCustomer();
     insertOrder(PAID, "PAID", 3, 2);
 
-    var summaries = adapter.findByStatus(OrderStatus.PAID);
+    var summaries = adapter.findByStatus(globalPaid());
 
     assertThat(summaries)
         .singleElement()
@@ -66,7 +68,7 @@ class OrderSummaryQueryAdapterIT {
     insertOrder(PAID, "PAID", 3);
     insertOrder(PENDING, "PENDING", 2);
 
-    assertThat(adapter.findByStatus(OrderStatus.PAID))
+    assertThat(adapter.findByStatus(globalPaid()))
         .extracting(summary -> summary.id())
         .containsExactly(PAID);
   }
@@ -74,7 +76,7 @@ class OrderSummaryQueryAdapterIT {
   @Test
   @DisplayName("Sin pedidos PAID")
   void should_return_empty_list_when_no_order_has_requested_status() {
-    assertThat(adapter.findByStatus(OrderStatus.PAID)).isEmpty();
+    assertThat(adapter.findByStatus(globalPaid())).isEmpty();
   }
 
   @Test
@@ -82,7 +84,7 @@ class OrderSummaryQueryAdapterIT {
   void should_return_null_customer_name_when_customer_does_not_exist() {
     insertOrder(PAID, "PAID", 3);
 
-    assertThat(adapter.findByStatus(OrderStatus.PAID))
+    assertThat(adapter.findByStatus(globalPaid()))
         .singleElement()
         .satisfies(
             summary -> {
@@ -95,7 +97,7 @@ class OrderSummaryQueryAdapterIT {
     insertCustomer();
     insertOrder(PAID, "PAID");
 
-    assertThat(adapter.findByStatus(OrderStatus.PAID))
+    assertThat(adapter.findByStatus(globalPaid()))
         .singleElement()
         .satisfies(
             summary -> {
@@ -106,6 +108,33 @@ class OrderSummaryQueryAdapterIT {
 
   private void insertCustomer() {
     jdbcTemplate.update("insert into customers (id, name) values (?, ?)", CUSTOMER, "Ada Lovelace");
+  }
+
+  @Test
+  void should_filter_in_database_when_own_or_empty_scope_is_requested() {
+    insertOrder(PAID, "PAID", 3);
+    insertOrder(PENDING, "PAID", 2);
+    UUID other = UUID.randomUUID();
+    jdbcTemplate.update("update orders set customer_id=? where id=?", other, PENDING);
+    assertThat(
+            adapter.findByStatus(
+                new OrderListingCriteria(OrderStatus.PAID, new OrderReadScope.Own(CUSTOMER))))
+        .extracting(summary -> summary.id())
+        .containsExactly(PAID);
+    assertThat(
+            adapter.findByStatus(
+                new OrderListingCriteria(
+                    OrderStatus.PAID, new OrderReadScope.Own(UUID.randomUUID()))))
+        .isEmpty();
+    assertThat(
+            adapter.findByStatus(
+                new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.None.INSTANCE)))
+        .isEmpty();
+    assertThat(adapter.findByStatus(globalPaid())).hasSize(2);
+  }
+
+  private OrderListingCriteria globalPaid() {
+    return new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE);
   }
 
   private void insertOrder(UUID orderId, String status, int... quantities) {

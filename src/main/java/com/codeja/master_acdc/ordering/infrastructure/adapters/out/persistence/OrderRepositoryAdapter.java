@@ -24,16 +24,8 @@ public class OrderRepositoryAdapter implements OrderRepository {
   public Optional<Order> findVisibleById(UUID orderId, OrderReadScope scope) {
     Specification<OrderJpaEntity> id =
         (root, query, builder) -> builder.equal(root.get(OrderJpaEntity_.id), orderId);
-    Specification<OrderJpaEntity> visible =
-        (root, query, builder) ->
-            switch (scope) {
-              case OrderReadScope.Own own ->
-                  builder.equal(root.get(OrderJpaEntity_.customerId), own.customerId());
-              case OrderReadScope.Global ignored -> builder.conjunction();
-              case OrderReadScope.None ignored -> builder.disjunction();
-            };
     return orderJpaRepository
-        .findOne(Specification.allOf(id, visible))
+        .findOne(Specification.allOf(id, OrderSpecifications.visibleTo(scope)))
         .map(OrderPersistenceMapper::toDomain);
   }
 

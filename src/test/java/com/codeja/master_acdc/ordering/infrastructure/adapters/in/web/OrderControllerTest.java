@@ -267,11 +267,22 @@ class OrderControllerTest {
   @Test
   @DisplayName("Pedidos PAID listados con nombre y métricas")
   void should_return_paid_summaries_when_status_is_paid() throws Exception {
-    given(listOrdersByStatusUseCase.list(OrderStatus.PAID))
+    given(
+            listOrdersByStatusUseCase.list(
+                new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
+                    OrderStatus.PAID,
+                    com.codeja.master_acdc.ordering.domain.model.OrderReadScope.None.INSTANCE)))
         .willReturn(List.of(new OrderSummary(UUID.randomUUID(), "Ada", 2, 5)));
 
     mockMvc
-        .perform(get("/api/orders").with(jwt()).param("status", "PAID"))
+        .perform(
+            get("/api/orders")
+                .with(
+                    jwt()
+                        .authorities(
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                "order:read-own")))
+                .param("status", "PAID"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].customerName").value("Ada"))
         .andExpect(jsonPath("$[0].lineCount").value(2))
@@ -282,7 +293,14 @@ class OrderControllerTest {
   @DisplayName("Status en minúsculas")
   void should_reject_lowercase_status_when_status_name_is_not_exact() throws Exception {
     mockMvc
-        .perform(get("/api/orders").with(jwt()).param("status", "paid"))
+        .perform(
+            get("/api/orders")
+                .with(
+                    jwt()
+                        .authorities(
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                "order:read-own")))
+                .param("status", "paid"))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-order-status"));
   }
@@ -291,7 +309,13 @@ class OrderControllerTest {
   @DisplayName("Sin parámetro status")
   void should_reject_missing_status_when_status_parameter_is_absent() throws Exception {
     mockMvc
-        .perform(get("/api/orders").with(jwt()))
+        .perform(
+            get("/api/orders")
+                .with(
+                    jwt()
+                        .authorities(
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                "order:read-own"))))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "missing-order-status"));
   }

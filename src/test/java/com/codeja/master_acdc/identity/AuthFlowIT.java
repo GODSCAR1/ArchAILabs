@@ -20,13 +20,7 @@ class AuthFlowIT extends AuthHttpConcurrencyScenarios {
   @Test
   @DisplayName("Registro seguido de login y llamada autenticada")
   void should_call_orders_when_registered_user_presents_real_bearer() throws Exception {
-    var browser = session();
-    mvc.perform(
-            get("/api/orders")
-                .secure(true)
-                .param("status", "PAID")
-                .header("Authorization", "Bearer " + browser.access()))
-        .andExpect(status().isOk());
+    assertOwnOrderListing(session());
   }
 
   @Test

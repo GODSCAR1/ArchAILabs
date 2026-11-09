@@ -264,10 +264,10 @@ POST /api/orders/<id>/cancellation
 Authorization: Bearer <token-customer-propietario>
 ```
 
-Por confirmación explícita de la persona durante apply, las partes de listado de
-3.2 y 3.7 quedan pendientes junto a 3.4/3.8 y esas dos tareas no se marcan todavía.
-El listado mantiene su comportamiento previo hasta que se adapte el guardián 1.4.
-No se han cambiado la firma de findByStatus ni el test guardián.
+En la entrega parcial anterior, por confirmación explícita de la persona, las partes
+de listado de 3.2 y 3.7 quedaron pendientes junto a 3.4/3.8, conservando la firma
+anterior hasta la adaptación humana del guardián 1.4. El cierre posterior se registra
+al final de esta sección.
 
 ### Ajuste humano de trazabilidad de specs
 
@@ -300,7 +300,7 @@ Evidencia íntegra en `C:/Users/oscar/AppData/Local/Temp/opencode/`:
 `rbac-section3-spec-trace-fast.log`, `rbac-section3-final-verify.log`,
 `rbac-section3-final-failures.txt` y `rbac-section3-failures.diff`.
 
-### Propuesta exacta pendiente de 1.4 (no implementada)
+### Firma implementada tras la revisión humana 1.4
 
 Nuevo record en `com.codeja.master_acdc.ordering.domain.model`:
 
@@ -320,9 +320,9 @@ En el puerto `ordering.domain.port.OrderSummaryQuery` y el adaptador
 List<OrderSummary> findByStatus(OrderListingCriteria criteria);
 ```
 
-Se sustituye la firma anterior; no se añade sobrecarga de compatibilidad. En el
-guardián `OrderSummaryQueryAdapterQueryCountTest`, solo cambia la invocación y
-se añaden los imports del criterio y alcance:
+Se sustituye la firma anterior, sin sobrecarga de compatibilidad. La persona adaptó
+el guardián `OrderSummaryQueryAdapterQueryCountTest` con los imports del criterio y
+alcance y esta invocación:
 
 ```java
 var summaries = adapter.findByStatus(
@@ -330,10 +330,44 @@ var summaries = adapter.findByStatus(
 ```
 
 Permanecen ORDER_COUNT=120, fixtures, flush/clear/Statistics.clear, tamaño de
-resultado y umbral ≤2 sentencias. La futura proyección filtrará estado/alcance
-en BD; el guardián mide solo el adaptador, mientras 3.8 medirá también el lookup
-de identidad en HTTP. Crear el record y cambiar la firma serán parte de 3.4;
-no se espera que un guardián adaptado a tipos aún inexistentes compile hasta ese paso.
+resultado y umbral ≤2 sentencias. La proyección filtra estado/alcance en BD mediante
+Specification tipada sobre el metamodelo, combinada con allOf, y Criteria API para
+la agregación. Conserva los LEFT JOIN, count de productId no nulo, suma con coalesce
+y cliente sin nombre; no materializa entidades ni filtra resultados en memoria.
+
+### Cierre de 3.4 y 3.8 y de las partes diferidas de 3.2/3.7
+
+El guardián humano pasa sin cambios adicionales. Su hash Git antes y después del
+trabajo del agente es `16cd624ea31c41433254fa477ba3f5e11161f2cf`.
+`AuthorizedListOrdersByStatusUseCase` exige permiso de lectura antes de resolver la
+cuenta una sola vez por PK. Sustituye cualquier alcance recibido por el derivado de
+la cuenta y authorities. El controlador comprueba permiso antes de mapear status,
+conservando 400 para status ausente, inválido o en minúsculas tras autorizar.
+Una cuenta sin cliente y sin lectura global recibe []; una cuenta inexistente 403.
+
+`OrderListingIT` usa bearer real y verifica propios/globales, [] propio/sin cliente,
+cambio de asociación con el mismo token, métricas y los contratos de status.
+`AuthFlowIT` comprueba que el token real del login solo lista pedidos propios; sus
+fixtures se retiran en finally para conservar la assertion heredada de estado de
+negocio sin cambios. `MethodAuthorizationTest` verifica el proxy del listado,
+denegación antes del lookup y que un caller CUSTOMER no impone alcance global.
+`OrderSummaryProfilingIT` mide ahora el puerto de proyección con alcance global,
+separado del coste HTTP de identidad.
+
+`OrderAuthorizationQueryCountTest` pertenece al fast loop: 120 pedidos, 60 propios y
+60 ajenos (ambos grupos >50), flush/clear/Statistics.clear y bearer real. CUSTOMER
+lista 60 y SUPPORT 120 con ≤2 sentencias incluyendo PK de cuenta + proyección y
+sin cargar entidades. También comprueba cero consultas sin permiso y solo una PK
+cuando el cliente no está asociado. El presupuesto es constante, sin mocks de BD.
+
+`bash ./mvnw -q verify` pasa con 517 tests, sin fallos, errores ni omitidos. Se cierran
+1.4, 3.4, 3.8, 3.2 y 3.7; progreso total 16/27. La intermitencia histórica de
+`RefreshTokenLockTimeoutIT` sigue abierta, aunque esta ejecución pasa. PIT no se ha
+medido y el umbral indicado del 75% permanece intacto.
+
+Evidencia íntegra en `C:/Users/oscar/AppData/Local/Temp/opencode/`:
+`rbac-listing-guardian.log`, `rbac-listing-targeted.log`,
+`rbac-listing-final-verify.log` y `rbac-listing-final-failures.txt`.
 
 ## 6. Revocación inmediata para cuentas bloqueadas
 

@@ -4,11 +4,8 @@ import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
-import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderStatusException;
-import com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
-import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,9 +36,11 @@ public class OrderController {
   }
 
   @GetMapping("/api/orders")
+  @org.springframework.security.access.prepost.PreAuthorize(
+      "hasAnyAuthority('order:read-own','order:read-any')")
   public List<OrderSummaryResponse> list(
       @RequestParam(value = "status", required = false) String status) {
-    return listOrdersByStatusUseCase.list(parseStatus(status)).stream()
+    return listOrdersByStatusUseCase.list(OrderWebMapper.listingCriteria(status)).stream()
         .map(OrderWebMapper::summary)
         .toList();
   }
@@ -62,16 +61,5 @@ public class OrderController {
   public ResponseEntity<OrderResponse> cancel(@PathVariable("id") String orderId) {
     Order order = cancelOrderUseCase.cancel(OrderWebMapper.orderId(orderId), null);
     return ResponseEntity.ok(OrderWebMapper.response(order));
-  }
-
-  private static OrderStatus parseStatus(String status) {
-    if (status == null || status.isBlank()) {
-      throw new MissingOrderStatusException();
-    }
-    try {
-      return OrderStatus.valueOf(status);
-    } catch (IllegalArgumentException exception) {
-      throw new InvalidOrderStatusException(status);
-    }
   }
 }

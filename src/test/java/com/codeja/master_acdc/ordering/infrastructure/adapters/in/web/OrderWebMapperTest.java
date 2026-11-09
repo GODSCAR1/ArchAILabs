@@ -1,6 +1,7 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
@@ -12,6 +13,25 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 class OrderWebMapperTest {
+  @Test
+  void should_require_exact_status_when_mapping_listing_criteria() {
+    assertThat(OrderWebMapper.listingCriteria("PAID"))
+        .isEqualTo(
+            new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
+                OrderStatus.PAID,
+                com.codeja.master_acdc.ordering.domain.model.OrderReadScope.None.INSTANCE));
+    for (String value : new String[] {null, "", " "}) {
+      assertThatThrownBy(() -> OrderWebMapper.listingCriteria(value))
+          .isInstanceOf(
+              com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException.class);
+    }
+    for (String value : new String[] {"paid", "OTHER"}) {
+      assertThatThrownBy(() -> OrderWebMapper.listingCriteria(value))
+          .isInstanceOf(
+              com.codeja.master_acdc.ordering.domain.exception.InvalidOrderStatusException.class);
+    }
+  }
+
   @Test
   void should_preserve_raw_lines_when_mapping_request_before_authorization() {
     UUID product = UUID.randomUUID();
