@@ -23,6 +23,12 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class SessionConfiguration {
   @Bean
+  public SessionRevocationTransactions sessionRevocationTransactions(
+      IdentityTransactions transactions) {
+    return new SessionRevocationTransactions(transactions);
+  }
+
+  @Bean
   public IdentityTransactions identityTransactions(
       PlatformTransactionManager manager, JdbcTemplate jdbc) {
     return new IdentityTransactions(manager, jdbc);
@@ -78,7 +84,7 @@ public class SessionConfiguration {
   @Bean
   @org.springframework.context.annotation.Primary
   public ChangePasswordUseCase changePasswordUseCase(
-      ChangePasswordService service, IdentityTransactions transactions) {
+      ChangePasswordService service, SessionRevocationTransactions transactions) {
     return new TransactionalPasswordChange(service, transactions);
   }
 }

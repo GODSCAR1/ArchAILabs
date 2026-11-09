@@ -24,6 +24,141 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
   @MockitoSpyBean RedisSessionVersions barrier;
   @Autowired StringRedisTemplate redis;
   @Autowired com.codeja.master_acdc.identity.domain.port.SessionVersions versions;
+  @Autowired com.codeja.master_acdc.identity.application.port.BlockUserUseCase blockUser;
+  @Autowired com.codeja.master_acdc.identity.application.port.UnblockUserUseCase unblockUser;
+
+  @Test
+  void should_increment_on_each_block_and_preserve_families_when_unblocking() {
+    var user = registered();
+    login(user);
+    login(user);
+    block(user.id());
+    block(user.id());
+    assertThat(accounts.findByEmail(user.email()).orElseThrow().profile().enabled()).isFalse();
+    assertThat(accounts.findByEmail(user.email()).orElseThrow().profile().sessionVersion())
+        .isEqualTo(2);
+    assertThat(barrier.find(user.id())).contains(new SessionVersion(2));
+    var revoked = rows(user.id());
+    assertThat(revoked).hasSize(2).allSatisfy(row -> assertThat(row.get("revoked_at")).isNotNull());
+    unblock(user.id());
+    unblock(user.id());
+    assertThat(accounts.findByEmail(user.email()).orElseThrow().profile().enabled()).isTrue();
+    assertThat(accounts.findByEmail(user.email()).orElseThrow().profile().sessionVersion())
+        .isEqualTo(2);
+    assertThat(rows(user.id())).isEqualTo(revoked);
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"before", "lost", "commit"})
+  void should_roll_back_block_when_publication_or_commit_is_unavailable(String failure) {
+    var user = registered();
+    login(user);
+    var before = rows(user.id());
+    doAnswer(
+            invocation -> {
+              if (!failure.equals("before")) {
+                invocation.callRealMethod();
+              }
+              if (failure.equals("commit")) {
+                TransactionSynchronizationManager.registerSynchronization(
+                    new TransactionSynchronization() {
+                      @Override
+                      public void beforeCommit(boolean readOnly) {
+                        throw new DataAccessResourceFailureException(
+                            "Injected commit availability failure");
+                      }
+                    });
+                return null;
+              }
+              throw new IdentityException("session-version-unavailable");
+            })
+        .when(barrier)
+        .publish(eq(user.id()), any());
+    assertThatThrownBy(() -> block(user.id())).hasMessage("session-version-unavailable");
+    assertUnchanged(user, before);
+    if (failure.equals("before")) {
+      assertThat(barrier.find(user.id())).isEmpty();
+    } else {
+      assertThat(barrier.find(user.id())).contains(new SessionVersion(1));
+    }
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"login", "refresh", "miss"})
+  void should_serialize_session_operations_when_block_holds_account(String operation)
+      throws Exception {
+    var user = registered();
+    var session = login(user);
+    var locked = new java.util.concurrent.CountDownLatch(1);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+      var writer =
+          executor.submit(
+              () ->
+                  transactions.execute(
+                      () -> {
+                        accounts.findForUpdate(user.id()).orElseThrow();
+                        locked.countDown();
+                        await(release);
+                        block(user.id());
+                        return null;
+                      }));
+      await(locked);
+      var reader = executor.submit(() -> sessionOperation(operation, user, session));
+      try {
+        awaitAccountWaiter();
+      } finally {
+        release.countDown();
+      }
+      writer.get(10, java.util.concurrent.TimeUnit.SECONDS);
+      assertThat(reader.get(10, java.util.concurrent.TimeUnit.SECONDS))
+          .isEqualTo(operation.equals("miss") ? "1" : "rejected");
+      assertThat(rows(user.id()))
+          .hasSize(1)
+          .allSatisfy(row -> assertThat(row.get("revoked_at")).isNotNull());
+    }
+  }
+
+  private String sessionOperation(
+      String operation,
+      UserAccount user,
+      com.codeja.master_acdc.identity.domain.model.LoginResult session) {
+    try {
+      return switch (operation) {
+        case "miss" -> Long.toString(versions.current(user.id()).value());
+        case "refresh" ->
+            refresh.refresh(session.refreshToken()).accepted() ? "accepted" : "rejected";
+        case "login" -> {
+          login(user);
+          yield "accepted";
+        }
+        default -> throw new IllegalArgumentException(operation);
+      };
+    } catch (IdentityException exception) {
+      assertThat(exception.code()).isEqualTo("invalid-credentials");
+      return "rejected";
+    }
+  }
+
+  private void block(java.util.UUID id) {
+    com.codeja.master_acdc.AuthorizedCalls.withAuthorities(
+        () -> {
+          blockUser.block(id);
+          return null;
+        },
+        "ROLE_ADMIN",
+        "user:manage");
+  }
+
+  private void unblock(java.util.UUID id) {
+    com.codeja.master_acdc.AuthorizedCalls.withAuthorities(
+        () -> {
+          unblockUser.unblock(id);
+          return null;
+        },
+        "ROLE_ADMIN",
+        "user:manage");
+  }
 
   @Test
   @DisplayName("Carga concurrente no sobrescribe la revocación")

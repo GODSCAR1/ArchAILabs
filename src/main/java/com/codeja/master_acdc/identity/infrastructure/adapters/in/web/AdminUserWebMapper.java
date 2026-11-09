@@ -8,6 +8,18 @@ import org.springframework.util.MultiValueMap;
 public final class AdminUserWebMapper {
   private AdminUserWebMapper() {}
 
+  public static java.util.UUID targetId(String id) {
+    try {
+      var parsed = java.util.UUID.fromString(id);
+      if (!parsed.toString().equals(id)) {
+        throw new IdentityException("user-not-found");
+      }
+      return parsed;
+    } catch (IllegalArgumentException exception) {
+      throw new IdentityException("user-not-found");
+    }
+  }
+
   public static UserPageRequest request(MultiValueMap<String, String> params) {
     if (params.containsKey("sort")) {
       throw new IdentityException("invalid-user-page");

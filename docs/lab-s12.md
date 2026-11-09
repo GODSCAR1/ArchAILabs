@@ -92,7 +92,7 @@ Salida completa conservada por el entorno de herramientas:
 | CUSTOMER | `order:create`, `order:read-own`, `order:cancel-own` |
 | CATALOG_MANAGER | `product:write`, `stock:reserve` |
 | SUPPORT | `order:read-any`, `order:refund` |
-| ADMIN | `product:write`, `stock:reserve`, `order:read-any`, `order:refund`, `user:read` |
+| ADMIN | `product:write`, `stock:reserve`, `order:read-any`, `order:refund`, `user:read`, `user:manage` |
 
 `Role` expone conjuntos inmutables. Los roles combinados suman permisos; ADMIN no
 hereda CUSTOMER. El conversor del resource server deriva `ROLE_<nombre>` y permisos
@@ -680,5 +680,111 @@ de deuda autorizado, no por una refactorización de inventario. Se completan 7.1
 dominio ni Spring**. PIT no medido; umbral de referencia 75 % sin cambios.
 
 ## 8. Protege el loop
+
+### Gestión administrativa de sesiones (sección 4, add-session-version-revocation)
+
+Base completa previa a estas secciones: `bash ./mvnw -q verify` correcto, lista de fallos `[]`.
+ADMIN incorpora exclusivamente `user:manage`. Los decoradores de block/unblock y las entradas HTTP
+exigen conjuntamente ROLE_ADMIN y user:manage, antes de parsear el UUID o buscar el objetivo.
+
+```http
+POST /api/admin/users/<uuid>/block
+Authorization: Bearer <access-admin>
+
+POST /api/admin/users/<uuid>/unblock
+Authorization: Bearer <access-admin>
+```
+
+Ambos responden 204 sin cuerpo. Block toma el lock de cuenta, guarda enabled=false y versión n+1,
+revoca todas las familias y publica la barrera antes del commit. Usa la misma frontera
+`SessionRevocationTransactions` y traducción de fallos de disponibilidad que contraseña. Repetir
+block incrementa de nuevo. Unblock solo guarda enabled=true y conserva versión y familias,
+incluso repetido. No restaura access ni refresh anteriores: hay que iniciar sesión nueva.
+La semántica permite autobloqueo; no hay excepción que conserve su bearer después del 204.
+
+Los errores autorizados son 404 user-not-found para UUID inválido/ausente, 503 authentication-busy
+para lock ocupado y 503 session-version-unavailable para publicación/confirmación indisponible;
+ambos 503 llevan Retry-After 1. Un fallo al autenticar el actor sigue siendo 401.
+`MethodAuthorizationTest` prueba rol sin permiso y permiso sin rol por separado, sin delegación.
+`AdminUserManagementIT` prueba rechazos, lock PostgreSQL real, publicación fallida y rollback
+posterior a una barrera real. Los snapshots conservan cuentas, familias, pedidos, líneas y stock.
+`SessionVersionRevocationIT` prueba también block repetido y carreras con login, refresh y miss,
+sin cambiar locks ni umbrales. `AuthFlowIT` hereda cuatro escenarios administrativos: cierra ambos
+dispositivos, conserva familias ajenas y demuestra que unblock solo permite nuevas sesiones.
+La matriz pasa 90 invocaciones: 80 celdas (16 endpoints × 5 roles) y 10 complementarias.
+Los dos objetivos administrativos son distintos del actor; cada uno tiene dos familias de prueba.
+Los éxitos 204 no se parsean como JSON; los snapshots incluyen todas las columnas de cuenta y familia.
+La arquitectura pasa con decoradores proxificables y expresión exacta ADMIN + user:manage, capas puras,
+puertos como interfaces y sin dependencias inversas. El store congelado conserva sus 15 violaciones.
+
+### Coste de autenticación: conteos (sección 5.1)
+
+`SessionVersionQueryCountTest` mide comandos reales mediante CommandListener de Lettuce, filtrados
+por el prefijo de identidad. Con 120 pedidos y clave caliente, ocho peticiones hacen exactamente ocho
+GET y cero escrituras, sin SELECT de session_version ni entidades cargadas; cada listado mantiene ≤2
+sentencias de negocio. Antes de medir se calienta autenticación y se ejecuta flush/clear/Statistics.clear.
+El miss se mide fuera del presupuesto caliente: dos GET y un SET NX, y una carga lógica del origen
+que ejecuta los dos SELECT existentes (SELECT con lock + EntityManager.refresh para las carreras de
+login). No se elimina ese refresh. Los ocho hits siguientes tienen cero SQL y ocho GET.
+Los conteos existentes de pedidos y usuarios administrativos pasan sin modificar sus umbrales.
+
+### Latencia medida (sección 5.2)
+
+Ejecución aislada real de `SessionVersionLatencyIT`: 2026-11-09T16:43:52Z. Windows 11 amd64,
+Java 25.0.4.1+1-LTS, 16 procesadores lógicos visibles y heap máximo 8.539.602.944 bytes;
+Docker Desktop/Engine 29.4.0, imágenes redis:7 y postgres:17-alpine, RSA 2048, Redis 200 ms.
+Un hilo, misma cuenta/token/conexión por modo; cinco rondas. Calentamiento excluido: hit 200,
+miss 10, timeout 3 pares. Muestras por ronda: 100/10/4. Se alterna el orden baseline/completo.
+El baseline aislado verifica RS256/kid, issuer, audience y tiempos, sin consultar versión; no es
+un bean ni un decoder alternativo de producción. El completo es el decoder obligatorio real.
+Miss borra la clave fuera del cronómetro; timeout retiene comandos con CLIENT PAUSE en Redis
+real y recupera por una conexión independiente. El completo debe rechazar todas las muestras
+de timeout. La medida es de validación, no incluye el negocio HTTP ni preparación/borrado.
+
+| Modo | Pares medidos | Baseline p50/p95 ms | Completo p50/p95 ms | Delta pareado p50/p95 ms |
+|---|---:|---:|---:|---:|
+| Hit | 500 | 0,123 / 0,242 | 0,923 / 1,306 | 0,780 / 1,133 |
+| Miss | 50 | 0,169 / 0,289 | 9,000 / 10,198 | 8,823 / 9,993 |
+| Timeout | 20 | 0,213 / 0,377 | 201,207 / 202,746 | 201,025 / 202,424 |
+
+Se usa System.nanoTime y percentiles nearest-rank sobre nanosegundos; el delta es completo menos
+baseline de cada par, no la resta de percentiles. El test unitario comprueba rango y conversión a
+ms. Cada ejecución genera sus 570 muestras en `target/session-version-latency.csv` (modo, ronda,
+índice, baseline_ns, full_ns, delta_ns) y su entorno/tabla en `target/session-version-latency.md`;
+la suite completa los regenera. No hay umbral arbitrario de latencia en CI ni promesa universal.
+
+### Cierre integrado de secciones 4–6
+
+`bash ./mvnw spotless:apply`, validación estricta OpenSpec y `bash ./verify-quality.sh --fast`
+pasan. La ejecución final de `bash ./mvnw -q verify` acredita 277 pruebas Failsafe, 0 fallos,
+0 errores y 0 omitidas, sin timeout ni flakes. Surefire pasa, incluida la matriz (90 invocaciones),
+los conteos de sesión/pedidos/usuarios y arquitectura. AuthFlowIT pasa 41 escenarios;
+SessionVersionRevocationIT pasa 12 y el guardián StockReservationConcurrencyTest sus 2 escenarios.
+Los guardianes y las zonas protegidas tienen diff vacío; el store de deuda congelado no cambia.
+No se han medido PIT ni modificado su umbral del 75 %. Las opciones JAVA_TOOL_OPTIONS solo reducen
+el logging de arranque; no cambian selección, aserciones o presupuestos.
+
+Medición regenerada por esa suite, 2026-11-09T16:53:15Z, mismo entorno/metodología anterior:
+
+| Modo | Pares medidos | Baseline p50/p95 ms | Completo p50/p95 ms | Delta pareado p50/p95 ms |
+|---|---:|---:|---:|---:|
+| Hit | 500 | 0,113 / 0,190 | 0,784 / 1,041 | 0,662 / 0,920 |
+| Miss | 50 | 0,124 / 0,246 | 6,819 / 7,581 | 6,648 / 7,467 |
+| Timeout | 20 | 0,229 / 0,347 | 201,439 / 202,230 | 201,317 / 201,985 |
+
+Los artefactos actuales target/session-version-latency.csv y .md corresponden a esta segunda
+medición. La variación respecto a la aislada anterior es observable, no se ajustan las cifras.
+El grafo de código se actualiza a 3647 nodos y 8465 aristas; conserva avisos de parser SQL ausente,
+settings.json/skills-lock.json sin nodos y etiquetas por actualizar. No acredita extracción SQL
+ni actualización semántica de esta documentación.
+
+Lista base y final de fallos, incluido el diff:
+
+```json
+{"base": [], "final": [], "nuevos": [], "resueltos": [], "persistentes": []}
+```
+
+Se completan 4.1–4.6, 5.1–5.2 y 6.1–6.2: 24/24 tareas. La protección posterior del paso 8 y
+sincronización/archivo de specs permanecen a cargo de la persona tras revisar la entrega.
 
 ## 9. Demuéstralo con agentes

@@ -21,6 +21,28 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 class AuthorizationArchitectureTest {
+  @ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"Block", "Unblock"})
+  void should_require_role_and_permission_when_account_management_is_inspected(String action) {
+    String base = "com.codeja.master_acdc.identity";
+    var decorator =
+        PRODUCTION
+            .get(base + ".infrastructure.adapters.in.web.Authorized" + action + "UserUseCase")
+            .reflect();
+    var contract = PRODUCTION.get(base + ".application.port." + action + "UserUseCase").reflect();
+    assertThat(contract.isAssignableFrom(decorator)).isTrue();
+    assertThat(Modifier.isFinal(decorator.getModifiers())).isFalse();
+    Arrays.stream(decorator.getDeclaredMethods())
+        .filter(method -> !method.isSynthetic())
+        .forEach(
+            method -> {
+              assertThat(Modifier.isPublic(method.getModifiers())).isTrue();
+              assertThat(Modifier.isFinal(method.getModifiers())).isFalse();
+              assertThat(method.getAnnotation(PreAuthorize.class).value())
+                  .isEqualTo("hasRole('ADMIN') and hasAuthority('user:manage')");
+            });
+  }
+
   private static final JavaClasses PRODUCTION =
       new ClassFileImporter()
           .withImportOption(new ImportOption.DoNotIncludeTests())

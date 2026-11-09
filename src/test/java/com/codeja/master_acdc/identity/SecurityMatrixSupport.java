@@ -39,6 +39,9 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
   UUID product;
   String newSku;
   String manager;
+  UUID blockTarget;
+  UUID unblockTarget;
+  @Autowired org.springframework.data.redis.core.StringRedisTemplate redis;
 
   @BeforeEach
   void seed_independent_resources() throws Exception {
@@ -60,6 +63,7 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
     foreign = seedOrder(foreignCustomer, "PENDING");
     paid = seedOrder(customer, "PAID");
     foreignPaid = seedOrder(foreignCustomer, "PAID");
+    seedManagementTargets();
   }
 
   private UUID seedOrder(UUID owner, String state) {
@@ -92,11 +96,57 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
         jdbc.queryForList("select * from orders order by id"),
         jdbc.queryForList("select * from order_lines order by order_id,product_id"),
         jdbc.queryForList("select * from stock order by product_id"),
-        mongo.findAll(CatalogProduct.class));
+        mongo.findAll(CatalogProduct.class),
+        new IdentitySnapshot(
+            jdbc.queryForList(
+                "select id,email,password_hash,roles::text as"
+                    + " roles,enabled,session_version,customer_id from user_account order by id"),
+            jdbc.queryForList("select * from refresh_token order by id")));
+  }
+
+  private void seedManagementTargets() {
+    blockTarget = UUID.randomUUID();
+    unblockTarget = UUID.randomUUID();
+    jdbc.update(
+        "insert into user_account(id,email,password_hash,roles,enabled,session_version) values"
+            + " (?,?,'unused','{CUSTOMER}',true,5),(?,?,'unused','{CUSTOMER}',false,5)",
+        blockTarget,
+        blockTarget + "@example.com",
+        unblockTarget,
+        unblockTarget + "@example.com");
+    var families =
+        java.util.stream.Stream.of(blockTarget, unblockTarget)
+            .flatMap(
+                id ->
+                    java.util.stream.IntStream.range(0, 2)
+                        .mapToObj(
+                            index ->
+                                new Object[] {
+                                  UUID.randomUUID(),
+                                  UUID.randomUUID(),
+                                  id,
+                                  UUID.randomUUID().toString().replace("-", "").repeat(2)
+                                }))
+            .toList();
+    jdbc.batchUpdate(
+        "insert into"
+            + " refresh_token(id,family_id,user_id,token_hash,created_at,expires_at,family_expires_at)"
+            + " values (?,?,?,?,now(),now()+interval '7 days',now()+interval '30 days')",
+        families);
   }
 
   @AfterEach
   void clean_independent_resources() {
+    jdbc.update("delete from refresh_token where user_id in (?,?)", blockTarget, unblockTarget);
+    jdbc.update("delete from user_account where id in (?,?)", blockTarget, unblockTarget);
+    redis.delete(
+        List.of(
+            com.codeja.master_acdc.identity.infrastructure.adapters.out.redis.RedisSessionVersions
+                    .PREFIX
+                + blockTarget,
+            com.codeja.master_acdc.identity.infrastructure.adapters.out.redis.RedisSessionVersions
+                    .PREFIX
+                + unblockTarget));
     jdbc.update(
         "delete from order_lines where order_id in (select id from orders where customer_id in"
             + " (?,?))",
@@ -140,12 +190,30 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
       List<Map<String, Object>> orders,
       List<Map<String, Object>> lines,
       List<Map<String, Object>> stock,
-      List<CatalogProduct> products) {
+      List<CatalogProduct> products,
+      IdentitySnapshot identity) {
+    Snapshot copy() {
+      return new Snapshot(
+          new java.util.ArrayList<>(orders),
+          new java.util.ArrayList<>(lines),
+          new java.util.ArrayList<>(stock),
+          new java.util.ArrayList<>(products),
+          new IdentitySnapshot(
+              new java.util.ArrayList<>(identity.accounts()),
+              new java.util.ArrayList<>(identity.families())));
+    }
+
     void assertSame(Snapshot other) {
       assertThat(other.orders).containsExactlyElementsOf(orders);
       assertThat(other.lines).containsExactlyElementsOf(lines);
       assertThat(other.stock).containsExactlyElementsOf(stock);
       assertThat(other.products).containsExactlyInAnyOrderElementsOf(products);
+      assertThat(other.identity.accounts())
+          .containsExactlyInAnyOrderElementsOf(identity.accounts());
+      assertThat(other.identity.families())
+          .containsExactlyInAnyOrderElementsOf(identity.families());
     }
   }
+
+  record IdentitySnapshot(List<Map<String, Object>> accounts, List<Map<String, Object>> families) {}
 }

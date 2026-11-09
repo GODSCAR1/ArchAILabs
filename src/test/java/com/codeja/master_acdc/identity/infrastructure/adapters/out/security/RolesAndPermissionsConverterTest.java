@@ -53,7 +53,8 @@ class RolesAndPermissionsConverterTest {
                 "stock:reserve",
                 "order:read-any",
                 "order:refund",
-                "user:read")));
+                "user:read",
+                "user:manage")));
   }
 
   private static Stream<Arguments> combinedRoles() {
@@ -77,7 +78,8 @@ class RolesAndPermissionsConverterTest {
                 "stock:reserve",
                 "order:read-any",
                 "order:refund",
-                "user:read")));
+                "user:read",
+                "user:manage")));
   }
 
   private static Stream<Arguments> invalidRoles() {

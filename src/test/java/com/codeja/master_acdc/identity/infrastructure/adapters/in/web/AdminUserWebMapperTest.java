@@ -17,6 +17,15 @@ import org.springframework.util.LinkedMultiValueMap;
 
 class AdminUserWebMapperTest {
   @Test
+  void should_accept_only_canonical_uuid_when_mapping_management_target() {
+    UUID id = UUID.randomUUID();
+    assertThat(AdminUserWebMapper.targetId(id.toString())).isEqualTo(id);
+    for (String invalid : List.of("not-uuid", "1-1-1-1-1", "")) {
+      assertThatThrownBy(() -> AdminUserWebMapper.targetId(invalid)).hasMessage("user-not-found");
+    }
+  }
+
+  @Test
   void should_use_defaults_when_no_pagination_is_supplied() {
     assertThat(AdminUserWebMapper.request(new LinkedMultiValueMap<>()))
         .isEqualTo(new UserPageRequest(0, 20));

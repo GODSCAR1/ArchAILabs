@@ -13,7 +13,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
 
-class AuthFlowIT extends AuthSessionVersionScenarios {
+class AuthFlowIT extends AuthUserManagementScenarios {
   @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
   private java.time.Clock identityClock;
 

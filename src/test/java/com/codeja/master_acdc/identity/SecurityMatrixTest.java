@@ -45,6 +45,8 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
     CANCEL_FOREIGN("POST /api/orders/{ajeno}/cancellation", 401, 404, 403, 403, 403),
     REFUND("POST /api/orders/{id}/refund", 401, 403, 403, 200, 200),
     USERS("GET /api/admin/users", 401, 403, 403, 403, 200),
+    BLOCK("POST /api/admin/users/{id}/block", 401, 403, 403, 403, 204),
+    UNBLOCK("POST /api/admin/users/{id}/unblock", 401, 403, 403, 403, 204),
     HEALTH("GET /actuator/health", 200, 200, 200, 200, 200),
     METRICS("GET /actuator/metrics", 401, 401, 401, 401, 401);
 
@@ -114,6 +116,8 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
       case CANCEL_OWN -> post("/api/orders/{id}/cancellation", own);
       case CANCEL_FOREIGN -> post("/api/orders/{id}/cancellation", foreign);
       case REFUND -> post("/api/orders/{id}/refund", paid);
+      case BLOCK -> post("/api/admin/users/{id}/block", blockTarget);
+      case UNBLOCK -> post("/api/admin/users/{id}/unblock", unblockTarget);
       default -> readRequest(endpoint);
     };
   }
@@ -133,19 +137,52 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
 
   private void assertSuccess(Endpoint endpoint, String role, Snapshot before, MvcResult result)
       throws Exception {
+    var expected = before.copy();
+    if (endpoint == Endpoint.BLOCK || endpoint == Endpoint.UNBLOCK) {
+      assertThat(result.getResponse().getContentAsString()).isEmpty();
+      managementEffect(endpoint, expected);
+      expected.assertSame(snapshot());
+      return;
+    }
     var body = json.readTree(result.getResponse().getContentAsString());
-    var expected =
-        new Snapshot(
-            new ArrayList<>(before.orders()),
-            new ArrayList<>(before.lines()),
-            new ArrayList<>(before.stock()),
-            new ArrayList<>(before.products()));
     applyEffect(endpoint, role, expected, body);
     var after = snapshot();
     assertThat(after.orders()).containsExactlyInAnyOrderElementsOf(expected.orders());
     assertThat(after.lines()).containsExactlyInAnyOrderElementsOf(expected.lines());
     assertThat(after.stock()).containsExactlyInAnyOrderElementsOf(expected.stock());
     assertThat(after.products()).containsExactlyInAnyOrderElementsOf(expected.products());
+    assertThat(after.identity().accounts())
+        .containsExactlyInAnyOrderElementsOf(expected.identity().accounts());
+    assertThat(after.identity().families())
+        .containsExactlyInAnyOrderElementsOf(expected.identity().families());
+  }
+
+  private void managementEffect(Endpoint endpoint, Snapshot expected) {
+    UUID target = endpoint == Endpoint.BLOCK ? blockTarget : unblockTarget;
+    change(expected.identity().accounts(), "id", target, "enabled", endpoint == Endpoint.UNBLOCK);
+    if (endpoint == Endpoint.BLOCK) {
+      change(expected.identity().accounts(), "id", target, "session_version", 6L);
+      var after = snapshot().identity().families();
+      var targetFamilies =
+          expected.identity().families().stream()
+              .filter(row -> target.equals(row.get("user_id")))
+              .toList();
+      assertThat(targetFamilies).hasSize(2);
+      for (var family : targetFamilies) {
+        var actual =
+            after.stream()
+                .filter(row -> row.get("id").equals(family.get("id")))
+                .findFirst()
+                .orElseThrow();
+        assertThat(actual.get("revoked_at")).isNotNull();
+        change(
+            expected.identity().families(),
+            "id",
+            (UUID) family.get("id"),
+            "revoked_at",
+            actual.get("revoked_at"));
+      }
+    }
   }
 
   private void applyEffect(
@@ -300,7 +337,12 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
             .andReturn();
     var expected = new ArrayList<>(afterOrder.stock());
     change(expected, "product_id", product, "available", 6);
-    new Snapshot(afterOrder.orders(), afterOrder.lines(), expected, afterOrder.products())
+    new Snapshot(
+            afterOrder.orders(),
+            afterOrder.lines(),
+            expected,
+            afterOrder.products(),
+            afterOrder.identity())
         .assertSame(snapshot());
     assertThat(json.readTree(reserved.getResponse().getContentAsString()).get("available").asInt())
         .isEqualTo(6);

@@ -50,6 +50,11 @@ class RoleTest {
         Arguments.of(
             Role.ADMIN,
             Set.of(
-                "product:write", "stock:reserve", "order:read-any", "order:refund", "user:read")));
+                "product:write",
+                "stock:reserve",
+                "order:read-any",
+                "order:refund",
+                "user:read",
+                "user:manage")));
   }
 }

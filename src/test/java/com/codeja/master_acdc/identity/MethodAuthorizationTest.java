@@ -31,6 +31,42 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class MethodAuthorizationTest extends IdentityIntegrationSupport {
+  @Autowired private com.codeja.master_acdc.identity.application.port.BlockUserUseCase blockUser;
+
+  @Autowired
+  private com.codeja.master_acdc.identity.application.port.UnblockUserUseCase unblockUser;
+
+  @MockitoSpyBean private com.codeja.master_acdc.identity.domain.port.UserAccounts accounts;
+
+  @ParameterizedTest
+  @ValueSource(strings = {"ROLE_ADMIN", "user:manage"})
+  @DisplayName("Gestión de cuenta exige doble autorización")
+  void should_deny_without_delegation_when_either_admin_requirement_is_missing(String authority)
+      throws Exception {
+    clearInvocations(accounts);
+    com.codeja.master_acdc.AuthorizedCalls.withAuthorities(
+        () -> {
+          assertThatThrownBy(() -> blockUser.block(null)).isInstanceOf(AccessDeniedException.class);
+          assertThatThrownBy(() -> unblockUser.unblock(null))
+              .isInstanceOf(AccessDeniedException.class);
+          return null;
+        },
+        authority);
+    for (String action : java.util.List.of("block", "unblock")) {
+      mvc.perform(
+              org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(
+                      "/api/admin/users/not-uuid/" + action)
+                  .with(
+                      org.springframework.security.test.web.servlet.request
+                          .SecurityMockMvcRequestPostProcessors.user("actor")
+                          .authorities(
+                              new org.springframework.security.core.authority
+                                  .SimpleGrantedAuthority(authority))))
+          .andExpect(status().isForbidden());
+    }
+    verifyNoInteractions(accounts);
+  }
+
   @Autowired private com.codeja.master_acdc.identity.application.port.ListUsersUseCase listUsers;
   @Autowired private org.springframework.test.web.servlet.MockMvc mvc;
   @MockitoSpyBean private com.codeja.master_acdc.identity.domain.port.UserSummaryQuery users;
