@@ -445,6 +445,38 @@ semántica de documentación.
 
 ## 6. Revocación inmediata para cuentas bloqueadas
 
+### Revisión y precondiciones de add-session-version-revocation (2026-11-09)
+
+La persona confirma aprobados propuesta, deltas, protocolo y excepción de cache; la excepción ya
+consta en AGENTS.md y el contexto de `openspec/config.yaml` ya describe autenticación bearer.
+Se registra la fila de identidad en `docs/caching.md` antes del código (tareas 1.1 y 1.4).
+
+El control usará `shop:identity:session-version:v1:<UUID>`, sin L1/TTL/@Cacheable: Redis caído,
+valor corrupto o reconstrucción fallida implican 401 y WARN saneado. Contraseña/block publicarán
+una barrera monótona antes del commit; fallo de publicación o confirmación de almacenamiento
+indisponible implica 503 `session-version-unavailable`, `Retry-After: 1`. No se baja la barrera
+tras rollback. Este coste de disponibilidad puede rechazar incluso tokens de un login nuevo si
+BD conserva n y Redis n+1: requiere reintento autorizado o intervención operativa, sin reconciliación
+automática a la baja. Un comando fallido antes de publicar no acredita revocación.
+Los 200 ms son por operación Redis; el lock de reconstrucción conserva su límite de 2 s.
+
+Pendientes humanos: 1.2 (adaptación/revisión de guardianes) y 1.3 (retención sin eviction, primario y
+recuperación vacía coordinada, cerrando conexiones previas sin servir snapshots/réplicas antiguas).
+`StockReservationConcurrencyTest` todavía firma una cuenta no persistida y solo declara PostgreSQL.
+Antes de activar el decoder, la persona debe persistir la cuenta CATALOG_MANAGER, emitir con su
+versión persistida, añadir Redis real y precalentar la clave de esa cuenta fuera de la medición y
+del lanzamiento de los 50 hilos. Limpiar solo sus fixtures/claves. Conservar 50 reservas, 30 éxitos,
+20 insuficiencias, cero 503 en venta flash, stock final y contrato de timeout 1500–3500 ms con
+503 stock-busy/Retry-After 1. Ejecutarlo antes y después de activar el decoder.
+Los guardianes de design §5 que usan `jwt()` o llamadas directas requieren revisión humana del
+arranque; esos mecanismos no acreditan validación de sv.
+
+Base de esta sesión antes de editar: `bash ./verify-quality.sh --fast` correcto, incluida la suite
+del guardián de reservas. Salida íntegra:
+`C:/Users/oscar/.local/share/opencode/tool-output/tool_1bf429bcf0016aBHlarBn3VQd6`.
+Lista de fallos fast base guardada: `[]`. Hallazgos abiertos declarados: `[]`.
+No se infiere de este fast una ejecución de IT ni una medición PIT; umbral vigente 75 % intacto.
+
 ## 7. Matriz de tests
 
 ### Matriz RBAC y escenarios complementarios (sección 6)

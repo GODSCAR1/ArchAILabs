@@ -3,7 +3,7 @@ package com.codeja.master_acdc.inventory.infrastructure.adapters.in.web;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.codeja.master_acdc.identity.domain.model.UserAccount;
+import com.codeja.master_acdc.OrderBearer;
 import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.io.IOException;
 import java.net.URI;
@@ -15,7 +15,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -33,9 +32,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -48,6 +49,11 @@ class StockReservationConcurrencyTest {
 
   @Container @ServiceConnection
   static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+
+  // Lab S12: la versión de sesión de cada bearer se comprueba en Redis (fail closed).
+  @Container @ServiceConnection
+  static final GenericContainer<?> REDIS =
+      new GenericContainer<>(DockerImageName.parse("redis:7")).withExposedPorts(6379);
 
   @LocalServerPort int port;
   @Autowired JdbcTemplate jdbcTemplate;
@@ -63,15 +69,11 @@ class StockReservationConcurrencyTest {
   void setUp() {
     jdbcTemplate.update("delete from stock");
     jdbcTemplate.update("insert into stock (product_id, available) values (?, ?)", PRODUCT_ID, 30);
-    bearer =
-        accessTokenIssuer
-            .issue(
-                new UserAccount(
-                    UUID.randomUUID(),
-                    "stock-guardian@example.com",
-                    "{noop}unused",
-                    new UserAccount.Profile(Set.of("CATALOG_MANAGER"), true, 0, null)))
-            .value();
+    // Lab S12 (versión de sesión): cuenta CATALOG_MANAGER persistida para que el validador de sv
+    // pueda resolver su versión, y clave de Redis precalentada con una petición autenticada (403
+    // sin efectos) para que las 50 reservas no compitan por reconstruirla.
+    bearer = OrderBearer.issue(jdbcTemplate, accessTokenIssuer, null, "CATALOG_MANAGER");
+    warmSessionVersion();
   }
 
   @Test
@@ -182,5 +184,25 @@ class StockReservationConcurrencyTest {
   private int available() {
     return jdbcTemplate.queryForObject(
         "select available from stock where product_id = ?", Integer.class, PRODUCT_ID);
+  }
+
+  private void warmSessionVersion() {
+    try {
+      HttpRequest request =
+          HttpRequest.newBuilder()
+              .uri(URI.create("http://localhost:" + port + "/api/orders?status=PAID"))
+              .timeout(Duration.ofSeconds(10))
+              .header("Authorization", "Bearer " + bearer)
+              .GET()
+              .build();
+      HttpResponse<String> response =
+          HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+      assertThat(response.statusCode()).as("precalentado autenticado").isEqualTo(403);
+    } catch (IOException exception) {
+      throw new IllegalStateException("cannot warm session version", exception);
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      throw new IllegalStateException("cannot warm session version", exception);
+    }
   }
 }

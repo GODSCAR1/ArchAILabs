@@ -2,10 +2,10 @@
 
 ## 1. Revisión y precondiciones humanas
 
-- [ ] 1.1 **Persona**: revisar y aprobar propuesta/deltas/protocolo; resolver explícitamente la excepción de cache de identidad (fail-closed, valor de versión, sin TTL/L1/@Cacheable y barrera precommit) en las reglas aplicables. Verificación: decisión registrada y revisión de `docs/caching.md`/AGENTS sin cambios automáticos a zonas protegidas; tests de contrato previstos `SessionVersionValidatorTest` y `SessionVersionRevocationIT`.
+- [x] 1.1 **Persona**: revisar y aprobar propuesta/deltas/protocolo; resolver explícitamente la excepción de cache de identidad (fail-closed, valor de versión, sin TTL/L1/@Cacheable y barrera precommit) en las reglas aplicables. Verificación: decisión registrada y revisión de `docs/caching.md`/AGENTS sin cambios automáticos a zonas protegidas; tests de contrato previstos `SessionVersionValidatorTest` y `SessionVersionRevocationIT`.
 - [ ] 1.2 **Persona**: adaptar `StockReservationConcurrencyTest` para cuenta persistida, Redis real y clave caliente; revisar los otros guardianes inventariados en design §5. No borrar, renombrar o debilitar ninguno. Verificación: guardián conserva 50 reservas, 30/20, stock y timeout; ejecutar antes de activar el nuevo decoder y repetir tras activarlo; registrar diff humano.
 - [ ] 1.3 **Persona**: confirmar Redis primario con retención sin eviction y recuperación vacía coordinada, sin snapshots/replicas antiguas ni comandos anteriores en vuelo; autorizar separadamente cualquier cambio protegido imprescindible. Verificación: evidencia de configuración operativa y protocolo de reinicio revisado; `SessionVersionRedisIT` cubrirá reconstrucción tras reinicio vacío. No confundir esta tarea con la protección posterior del paso 8.
-- [ ] 1.4 Registrar la fila de identidad de design §2 en `docs/caching.md` ANTES del código, incluyendo timeout y tratamiento de fallos; precisar en `docs/lab-s12.md` la excepción aprobada y el coste de disponibilidad. Verificación: revisión documental contra los escenarios de caída/escritura y futuros `SessionVersionValidatorTest`/`SessionVersionRevocationIT`.
+- [x] 1.4 Registrar la fila de identidad de design §2 en `docs/caching.md` ANTES del código, incluyendo timeout y tratamiento de fallos; precisar en `docs/lab-s12.md` la excepción aprobada y el coste de disponibilidad. Verificación: revisión documental contra los escenarios de caída/escritura y futuros `SessionVersionValidatorTest`/`SessionVersionRevocationIT`.
 
 ## 2. Almacén de versiones y protocolo transaccional
 

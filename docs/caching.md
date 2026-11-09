@@ -19,6 +19,7 @@ Fuente única de verdad de las caches. **Toda cache nueva añade aquí su fila a
 |---|---|---|---|---|---|
 | `products` | `sku` (explícita, `#sku`) | 15 s ±10% / `catalog.cache.local.maximum-size` (default 10.000; `0` desactiva retención L1) | 10 min ±10% | Cache-aside | 1) Edición de producto: evento `ProductChanged(sku)` tras el commit (`AFTER_COMMIT`). 2) `CatalogStockProjectionJob`: los SKU cuyo `availableStock` cambió en la pasada. Cada invalidación: evict L2 + L1 local + mensaje a las demás L1. |
 | `categories` | `"tree"` | 5 min, `refreshAfterWrite` | 1 h | Read-through | **Reservada:** el repo no tiene lectura del árbol de categorías; no se implementa en este lab. |
+| identity session version (control de seguridad) | `shop:identity:session-version:v1:<UUID>` | ninguna | Redis sin expiración | Un GET por autenticación con clave presente; miss con lock de cuenta, relectura Redis y SETNX desde PostgreSQL | Cambio de contraseña y block publican una barrera monótona antes del commit; miss publica la versión persistente bajo el mismo lock, sin sobrescribir barreras. |
 
 - Valor cacheado: el record inmutable `ProductDetail` (listas y mapas con `copyOf`), nunca un documento
   de Mongo (`CatalogProduct`) ni un objeto mutable.
@@ -40,6 +41,9 @@ Fuente única de verdad de las caches. **Toda cache nueva añade aquí su fila a
 
 ## Reglas para cualquier cache
 
+Estas reglas corresponden a caches de datos. La excepción de identidad aprobada y recogida en
+AGENTS.md se detalla a continuación.
+
 1. Clave explícita (`key = "#..."`), nunca la generada por defecto.
 2. Solo records inmutables como valor.
 3. TTL con jitter en L1 y L2.
@@ -49,3 +53,29 @@ Fuente única de verdad de las caches. **Toda cache nueva añade aquí su fila a
 6. Redis caído = miss (se registra), nunca un 5xx.
 7. Cambiar la forma de un valor cacheado → subir la versión del prefijo (`shop:cache:v1:` → `v2`).
 8. Toda cache en esta tabla, con tests de hit e invalidación.
+
+## Excepción aprobada: versión de sesión de identidad
+
+Es un control de seguridad separado de las caches del ADR 0010. Su valor wire es un entero decimal
+canónico no negativo representable como `long`, representado en dominio por un record inmutable de
+versión; no contiene cuenta, roles ni secretos. No usa `ProductDetail`, L1, TTL, jitter,
+`@Cacheable`, el manejador de errores de catálogo ni invalidación `AFTER_COMMIT`. El prefijo queda
+fuera de los barridos de `shop:cache:v1:`.
+
+- Timeout de conexión/comando Redis: **200 ms por operación**, con fallo rápido incluso si
+  `catalog.cache.enabled=false`. El miss mantiene el lock de cuenta acotado a 2 s; 200 ms no es un
+  límite total de reconstrucción.
+- Hit: un GET y comparación exacta. Miss: transacción y lock de cuenta, segunda lectura Redis y
+  SETNX de la versión persistida si sigue ausente. Si otro escritor pobló, usar ese valor sin
+  sobrescribirlo. Cuenta ausente, fallo de origen/lock, GET/SETNX fallido o valor corrupto rechazan
+  la autenticación con **401**, sin fallback, y WARN saneado sin tokens, UUID, claves ni datos personales.
+- Contraseña y block: guardar versión incrementada y revocar familias en la misma transacción;
+  publicar una barrera atómica que solo avance antes del commit. Un fallo de publicación o una
+  confirmación de almacenamiento indisponible produce **503 `session-version-unavailable`** con
+  `Retry-After: 1`; nunca compensar Redis a la baja, aunque PostgreSQL revierta.
+- Retención sin eviction y lectura del primario. Recuperación vacía coordinada: detener tráfico,
+  cerrar conexiones/comandos anteriores, vaciar el namespace y reabrir para reconstruir desde BD;
+  no servir snapshots ni réplicas antiguas. La confirmación operativa corresponde a la persona.
+
+Contrato documental previo al código; la evidencia funcional corresponderá a
+`SessionVersionValidatorTest`, `SessionVersionRedisIT` y `SessionVersionRevocationIT`.
