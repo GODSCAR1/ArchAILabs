@@ -887,3 +887,43 @@ red si la guía fallara.
   (`anyRequest().permitAll()`, `/**`); un `permitAll` sobre una ruta concreta pasa el filtro estático y
   depende de la capa de método y de la matriz. Queda como mejora: listar en `verify-quality.sh` las rutas
   públicas permitidas y fallar ante cualquier otro `permitAll`.
+
+### Desviación
+
+El enunciado pide repetir las pruebas 1 y 3 en Claude Code. No se repitieron (mismo criterio que en
+S10 y S11): las cuatro se hicieron en OpenCode. El hook de Claude Code (`.claude/hooks/protect-verify.sh`)
+sí se probó directamente en el paso 8: editar `Role`, editar `SecurityMatrixTest` y un `sed -i` sobre
+`HttpSecurityConfiguration` quedan bloqueados (exit 2); editar `LoginService` se permite.
+
+## Resumen final del lab S12
+
+| Paso | Estado | Dónde |
+|---|---|---|
+| 1. Modelo y migraciones | Hecho | V8 (`user_account`, `refresh_token`), `{bcrypt}` delegado |
+| 2. Claves de firma | Hecho | PEM externo `SHOP_JWT_PRIVATE_KEY`, `kid` RFC 7638, JWKS, par efímero en tests, `*.pem` ignorado |
+| 3. Endpoints de autenticación | Hecho | register/login/refresh/logout/password; rotación y reutilización con commit de la revocación |
+| 4. Cadena de seguridad | Hecho | 3 cadenas (Actuator Basic/OPS, JWKS, API stateless), CSRF solo en refresh/logout, ProblemDetail |
+| 5. Permisos y propiedad | Hecho | `Role`, conversor, decoradores `@PreAuthorize`, propiedad en la consulta (404), sin `X-Customer-Id` |
+| 6. Revocación inmediata | Hecho | claim `sv`, barrera Redis antes del commit, fail closed, block/unblock con `user:manage` |
+| 7. Matriz de tests | Hecho | `SecurityMatrixTest` 90 invocaciones con tokens reales; `AuthFlowIT` 41 escenarios |
+| 8. Protege el loop | Hecho | ADR 0011, AGENTS.md, Verify estático + AuthFlowIT + matriz completa, zona protegida ampliada |
+| 9. Agentes | Hecho (4/4 en OpenCode) | `docs/evidencias/s12-prueba-1..4` |
+
+Tres changes OpenSpec, archivados: `add-authentication`, `add-rbac-and-object-authorization` y
+`add-session-version-revocation`.
+
+Desviaciones respecto al enunciado: SKU `A01` en lugar de `A1` (no cumple el formato de `Sku`); la
+matriz añade filas (reservas, edición, cancelación propia/ajena, block/unblock) a las del enunciado;
+pruebas 1 y 3 no repetidas en Claude Code.
+
+Deuda y pendientes abiertos:
+- Contrato `inventory.api` con tipos de dominio y Spring: 15 violaciones congeladas con
+  `FreezingArchRule` (no pueden crecer).
+- `RefreshTokenLockTimeoutIT` intermitente (~1078 ms frente a `lock_timeout` de 2 s): causa sin
+  demostrar, umbrales intactos.
+- `verify-quality.sh` solo detecta `permitAll` globales; listar las rutas públicas permitidas.
+- PIT y Gitleaks no están aún en el loop (llegan en secciones posteriores del máster).
+
+Mejoras del loop surgidas en el lab: `spec-trace.sh` omite escenarios de requirements `REMOVED` por
+un change activo; store de ArchUnit con `allowStoreCreation=false` y LF; excepción explícita de cache
+para la versión de sesión en AGENTS.md y `docs/caching.md`.
