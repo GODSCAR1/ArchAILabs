@@ -368,6 +368,27 @@ class OrderCancellationIT {
     return mockMvc.perform(request);
   }
 
+  @Test
+  @DisplayName("Pedido reembolsado no cancelable")
+  @Sql(statements = {CLEANUP})
+  void should_preserve_order_and_stock_when_cancelling_refunded_order() throws Exception {
+    UUID id = UUID.randomUUID();
+    jdbcTemplate.update("insert into stock(product_id,available) values (?,7)", UUID.fromString(A));
+    jdbcTemplate.update(
+        "insert into orders(id,customer_id,status) values (?,?,'REFUNDED')",
+        id,
+        UUID.fromString(CUSTOMER));
+    jdbcTemplate.update(
+        "insert into order_lines(order_id,product_id,quantity) values (?,?,3)",
+        id,
+        UUID.fromString(A));
+    cancel(id.toString(), CUSTOMER)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-cancellable"));
+    assertThat(statusOf(id.toString())).isEqualTo("REFUNDED");
+    assertThat(availableOf(A)).isEqualTo(7);
+  }
+
   private String statusOf(String orderId) {
     return jdbcTemplate.queryForObject(
         "select status from orders where id = ?", String.class, UUID.fromString(orderId));

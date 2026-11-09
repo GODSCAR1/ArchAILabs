@@ -7,11 +7,41 @@ import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductExceptio
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotRefundableException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class OrderTest {
+
+  @ParameterizedTest
+  @EnumSource(
+      value = OrderStatus.class,
+      names = {"PAID", "SHIPPED"})
+  void should_refund_preserving_order_data_when_status_is_refundable(OrderStatus status) {
+    Order order = new Order(UUID.randomUUID(), CUSTOMER, status, List.of(new OrderLine(A, 3)));
+    assertThat(order.refund())
+        .isEqualTo(new Order(order.id(), CUSTOMER, OrderStatus.REFUNDED, order.lines()));
+    assertThat(order.status()).isEqualTo(status);
+  }
+
+  @ParameterizedTest
+  @EnumSource(
+      value = OrderStatus.class,
+      names = {"PENDING", "CANCELLED", "REFUNDED"})
+  void should_reject_refund_when_status_is_not_refundable(OrderStatus status) {
+    Order order = new Order(UUID.randomUUID(), CUSTOMER, status, List.of(new OrderLine(A, 3)));
+    assertThatThrownBy(order::refund).isInstanceOf(OrderNotRefundableException.class);
+  }
+
+  @Test
+  void should_reject_cancellation_when_status_is_refunded() {
+    Order order =
+        new Order(UUID.randomUUID(), CUSTOMER, OrderStatus.REFUNDED, List.of(new OrderLine(A, 3)));
+    assertThatThrownBy(order::cancel).isInstanceOf(OrderNotCancellableException.class);
+  }
 
   private static final UUID CUSTOMER = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
   private static final UUID A = UUID.fromString("11111111-1111-1111-1111-111111111111");

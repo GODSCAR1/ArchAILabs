@@ -42,4 +42,9 @@ public class OrderRepositoryAdapter implements OrderRepository {
     orderJpaRepository.flush();
     return updated > 0;
   }
+
+  @Override
+  public boolean refundIfRefundable(UUID orderId) {
+    return orderJpaRepository.refundIfRefundable(orderId) == 1;
+  }
 }

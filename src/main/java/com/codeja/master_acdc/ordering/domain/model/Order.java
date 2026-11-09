@@ -4,6 +4,7 @@ import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductExceptio
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotRefundableException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -38,5 +39,12 @@ public record Order(UUID id, UUID customerId, OrderStatus status, List<OrderLine
       throw new OrderNotCancellableException(id, status);
     }
     return new Order(id, customerId, OrderStatus.CANCELLED, lines);
+  }
+
+  public Order refund() {
+    if (status != OrderStatus.PAID && status != OrderStatus.SHIPPED) {
+      throw new OrderNotRefundableException(id);
+    }
+    return new Order(id, customerId, OrderStatus.REFUNDED, lines);
   }
 }

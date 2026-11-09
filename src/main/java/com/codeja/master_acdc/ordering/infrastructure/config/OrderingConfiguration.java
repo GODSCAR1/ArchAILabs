@@ -6,10 +6,12 @@ import com.codeja.master_acdc.ordering.application.CancelOrderService;
 import com.codeja.master_acdc.ordering.application.CreateOrderService;
 import com.codeja.master_acdc.ordering.application.GetOrderService;
 import com.codeja.master_acdc.ordering.application.ListOrdersByStatusService;
+import com.codeja.master_acdc.ordering.application.RefundOrderService;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
+import com.codeja.master_acdc.ordering.application.port.RefundOrderUseCase;
 import com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
@@ -18,6 +20,7 @@ import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.Authorized
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedCreateOrderUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedGetOrderUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedListOrdersByStatusUseCase;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedRefundOrderUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderActorResolver;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.SpringOrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.OrderCancelledListener;
@@ -33,6 +36,15 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
 public class OrderingConfiguration {
+  @Bean
+  public RefundOrderUseCase refundOrderUseCase(
+      OrderRepository repository, PlatformTransactionManager manager, OrderActorResolver actor) {
+    var service = new RefundOrderService(repository);
+    var transactions = new TransactionTemplate(manager);
+    RefundOrderUseCase transactional = id -> transactions.execute(status -> service.refund(id));
+    return new AuthorizedRefundOrderUseCase(transactional, actor);
+  }
+
   @Bean
   public OrderActorResolver orderActorResolver(CurrentOrderActor actor) {
     return new OrderActorResolver(actor);

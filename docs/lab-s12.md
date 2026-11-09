@@ -369,6 +369,58 @@ Evidencia íntegra en `C:/Users/oscar/AppData/Local/Temp/opencode/`:
 `rbac-listing-guardian.log`, `rbac-listing-targeted.log`,
 `rbac-listing-final-verify.log` y `rbac-listing-final-failures.txt`.
 
+### Reembolso atómico (sección 4)
+
+`POST /api/orders/{id}/refund` exige `order:refund` antes del lookup de cuenta y
+pedido. SUPPORT y ADMIN pueden reembolsar sin cliente asociado. Solo PAID/SHIPPED
+pasan a REFUNDED; el resto produce 409 `order-not-refundable`, y un id inexistente
+o inválido produce 404 `order-not-found`. La respuesta usa `OrderWebMapper` sin
+customerId. No se añade API de pago/envío ni pasarela monetaria.
+
+`RefundOrderService` lee y ejecuta UPDATE condicional por id y estado dentro de
+`TransactionTemplate`: cero filas tras lectura válida es 409. No depende de
+inventario ni publica eventos de cancelación. REFUNDED tampoco es cancelable.
+
+`OrderTest`, `RefundOrderServiceTest`, `OrderRefundIT` y `OrderCancellationIT`
+cubren estados y ausencia de cambios en stock. `OrderRefundConcurrencyIT`
+sincroniza dos lecturas PAID reales antes de los UPDATE y comprueba dos
+`txid_current()` distintos en transacciones PostgreSQL activas: reembolso/reembolso
+produce un 200 y un 409; cancelación/reembolso deja el estado del ganador y libera
+stock únicamente si gana cancelación. El espía solo sincroniza lecturas reales;
+no sustituye consultas ni actualizaciones. Verificación focalizada en verde.
+
+### Consulta administrativa (sección 5)
+
+`GET /api/admin/users` usa page=0/size=20 por defecto, page no negativa, size de
+1 a 100 y orden fijo id ASC. Parámetros no numéricos, repetidos, fuera de límites
+o cualquier `sort` producen 400 `invalid-user-page`. La respuesta contiene
+content/page/size/totalElements/totalPages; cada cuenta solo id/email/roles/enabled.
+
+`UserSummaryQueryAdapter` cuenta y lee una proyección explícita de esos cuatro
+campos con `PageRequest`, sin cargar entidades ni password_hash, session_version,
+customer_id o refresh. Una página fuera del total conserva totalElements y evita
+la lectura de contenido, incluso con page=Integer.MAX_VALUE.
+
+`AdminUsersQueryCountTest` pertenece al fast loop: 120 cuentas, flush/clear,
+Statistics.clear y captura de SQL con StatementInspector. Comprueba ≤2 sentencias,
+cero entidades cargadas y SELECT limitado a id/email/roles/enabled, orden por id,
+última página parcial y páginas vacías. `AdminUsersIT` cubre los cinco escenarios
+del delta, seis páginas consecutivas sin repeticiones y campos JSON exactos.
+Los mappers y ListUsersService tienen tests unitarios.
+
+La cadena exige ROLE_ADMIN y el decorador exige user:read; la entrada web comprueba
+también el permiso antes de parsear paginación. `MethodAuthorizationTest` demuestra
+403 tanto para ADMIN sin user:read como para user:read sin ROLE_ADMIN, sin delegar
+a la consulta; el primero también invoca el bean proxificado directamente.
+
+Verificación final de las secciones 4–5 (2026-11-09): Spotless, validación estricta
+del change, `bash ./verify-quality.sh --fast` y `bash ./mvnw -q verify` en verde.
+La base y la lista final de fallos son `[]`; el diff queda registrado en
+`docs/s12-sections-4-5-failures.md`. Se completan seis tareas, progreso 22/27.
+PIT no medido; umbral indicado 75 % intacto. `graphify update .` actualiza código
+(3235 nodos/7340 aristas), con avisos de parser SQL ausente y etiquetas pendientes;
+no actualiza semánticamente esta documentación.
+
 ## 6. Revocación inmediata para cuentas bloqueadas
 
 ## 7. Matriz de tests

@@ -46,4 +46,8 @@ public final class OrderActorResolver {
   private CurrentOrderActor.Actor account() {
     return currentActor.current().orElseThrow(() -> new AccessDeniedException("forbidden"));
   }
+
+  public void requireAccount() {
+    account();
+  }
 }

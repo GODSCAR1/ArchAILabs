@@ -9,6 +9,7 @@ import com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException
 import com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotRefundableException;
 import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
 import java.net.URI;
 import org.springframework.http.HttpStatus;
@@ -76,5 +77,10 @@ public class OrderExceptionHandler {
     ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, detail);
     problemDetail.setType(URI.create(TYPE_BASE + slug));
     return problemDetail;
+  }
+
+  @ExceptionHandler(OrderNotRefundableException.class)
+  ProblemDetail handleOrderNotRefundable(OrderNotRefundableException exception) {
+    return problem(HttpStatus.CONFLICT, "order-not-refundable", exception.getMessage());
   }
 }

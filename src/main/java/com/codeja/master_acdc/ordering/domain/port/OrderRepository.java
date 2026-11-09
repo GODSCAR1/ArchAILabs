@@ -20,4 +20,6 @@ public interface OrderRepository {
    * Devuelve true si la actualización afectó a una fila (el cancelador de la carrera).
    */
   boolean cancelIfCancelable(UUID orderId, UUID customerId);
+
+  boolean refundIfRefundable(UUID orderId);
 }

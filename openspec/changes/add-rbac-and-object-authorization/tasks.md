@@ -29,15 +29,15 @@ Plan pendiente de revisión. Cada escenario usa `@DisplayName("<nombre exacto de
 
 ## 4. Reembolso atómico
 
-- [ ] 4.1 Añadir REFUNDED, regla de dominio, RefundOrderUseCase/Service y puerto/update condicional dentro de TransactionTemplate. Verificación: OrderTest y RefundOrderServiceTest cubren PAID/SHIPPED y todos los rechazos, sin llamada a stock ni evento de cancelación; todo método público nuevo tiene test.
-- [ ] 4.2 Exponer POST refund con decorador order:refund, mapper y ProblemDetail order-not-refundable. Verificación: OrderRefundIT traza «Reembolso desde PAID o SHIPPED», «Reembolso rechazado por estado», «Reembolso de pedido inexistente» y ausencia de cambios de stock; OrderCancellationIT cubre «Pedido reembolsado no cancelable».
-- [ ] 4.3 Probar dos reembolsos y carrera cancelación/reembolso con transacciones independientes PostgreSQL. Verificación: OrderRefundConcurrencyIT traza «Reembolsos concurrentes no repiten transición» y «Cancelación y reembolso concurrentes», un único 200, 409 correcto y stock conforme al ganador. Documentar estados y ausencia de API de pago/envío en docs/lab-s12.md.
+- [x] 4.1 Añadir REFUNDED, regla de dominio, RefundOrderUseCase/Service y puerto/update condicional dentro de TransactionTemplate. Verificación: OrderTest y RefundOrderServiceTest cubren PAID/SHIPPED y todos los rechazos, sin llamada a stock ni evento de cancelación; todo método público nuevo tiene test.
+- [x] 4.2 Exponer POST refund con decorador order:refund, mapper y ProblemDetail order-not-refundable. Verificación: OrderRefundIT traza «Reembolso desde PAID o SHIPPED», «Reembolso rechazado por estado», «Reembolso de pedido inexistente» y ausencia de cambios de stock; OrderCancellationIT cubre «Pedido reembolsado no cancelable».
+- [x] 4.3 Probar dos reembolsos y carrera cancelación/reembolso con transacciones independientes PostgreSQL. Verificación: OrderRefundConcurrencyIT traza «Reembolsos concurrentes no repiten transición» y «Cancelación y reembolso concurrentes», un único 200, 409 correcto y stock conforme al ganador. Documentar estados y ausencia de API de pago/envío en docs/lab-s12.md.
 
 ## 5. Consulta administrativa
 
-- [ ] 5.1 Implementar ListUsersUseCase/Service, puerto/proyección paginada mínima y mappers dedicados. Verificación: ListUsersServiceTest, UserSummaryPersistenceMapperTest y AdminUserWebMapperTest comprueban campos permitidos y límites page/size, sin entidades/hash/refresh.
-- [ ] 5.2 Añadir endpoint y decorador user:read con matcher hasRole ADMIN ya instalado. Verificación: AdminUsersIT traza los cinco escenarios de user-administration, sin secretos en JSON; MethodAuthorizationTest prueba ADMIN sin permiso y permiso sin rol para demostrar ambos controles.
-- [ ] 5.3 Añadir AdminUsersQueryCountTest fast con 120 cuentas, flush/clear/Statistics.clear y presupuesto ≤2. Verificación: paginación estable por id, totalElements real, última página/vacía, sin N+1; documentar contrato de paginación en docs/lab-s12.md.
+- [x] 5.1 Implementar ListUsersUseCase/Service, puerto/proyección paginada mínima y mappers dedicados. Verificación: ListUsersServiceTest, UserSummaryPersistenceMapperTest y AdminUserWebMapperTest comprueban campos permitidos y límites page/size, sin entidades/hash/refresh.
+- [x] 5.2 Añadir endpoint y decorador user:read con matcher hasRole ADMIN ya instalado. Verificación: AdminUsersIT traza los cinco escenarios de user-administration, sin secretos en JSON; MethodAuthorizationTest prueba ADMIN sin permiso y permiso sin rol para demostrar ambos controles.
+- [x] 5.3 Añadir AdminUsersQueryCountTest fast con 120 cuentas, flush/clear/Statistics.clear y presupuesto ≤2. Verificación: paginación estable por id, totalElements real, última página/vacía, sin N+1; documentar contrato de paginación en docs/lab-s12.md.
 
 ## 6. Matriz y reglas de arquitectura
 

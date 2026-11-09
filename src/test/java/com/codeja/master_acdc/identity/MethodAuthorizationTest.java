@@ -5,6 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeja.master_acdc.catalog.application.port.CreateProductUseCase;
 import com.codeja.master_acdc.catalog.application.port.EditProductUseCase;
@@ -28,6 +31,10 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class MethodAuthorizationTest extends IdentityIntegrationSupport {
+  @Autowired private com.codeja.master_acdc.identity.application.port.ListUsersUseCase listUsers;
+  @Autowired private org.springframework.test.web.servlet.MockMvc mvc;
+  @MockitoSpyBean private com.codeja.master_acdc.identity.domain.port.UserSummaryQuery users;
+  @Autowired private com.codeja.master_acdc.ordering.application.port.RefundOrderUseCase refund;
   @Autowired private CreateProductUseCase create;
   @Autowired private EditProductUseCase edit;
   @Autowired private ReserveProductStockUseCase reserve;
@@ -56,6 +63,7 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
     clearInvocations(products, editing, stock);
     clearInvocations(orderActor, orders);
     clearInvocations(summaries);
+    clearInvocations(users);
   }
 
   @ParameterizedTest
@@ -169,5 +177,38 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
     return new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
         com.codeja.master_acdc.ordering.domain.model.OrderStatus.PAID,
         com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Global.INSTANCE);
+  }
+
+  @Test
+  @WithMockUser(roles = "ADMIN")
+  void should_deny_before_query_when_admin_lacks_user_read() throws Exception {
+    assertThat(AopUtils.isAopProxy(listUsers)).isTrue();
+    assertThatThrownBy(
+            () ->
+                listUsers.list(
+                    new com.codeja.master_acdc.identity.domain.model.UserPageRequest(0, 20)))
+        .isInstanceOf(AccessDeniedException.class);
+    mvc.perform(get("/api/admin/users"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").value("https://api.master-acdc.dev/problems/forbidden"));
+    mvc.perform(get("/api/admin/users").param("size", "invalid")).andExpect(status().isForbidden());
+    verifyNoInteractions(users);
+  }
+
+  @Test
+  @WithMockUser(authorities = "user:read")
+  void should_deny_at_http_chain_when_user_read_lacks_admin_role() throws Exception {
+    mvc.perform(get("/api/admin/users"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.type").value("https://api.master-acdc.dev/problems/forbidden"));
+    verifyNoInteractions(users);
+  }
+
+  @Test
+  @WithMockUser(authorities = "order:read-any")
+  void should_deny_refund_before_identity_lookup_when_refund_permission_is_absent() {
+    assertThat(AopUtils.isAopProxy(refund)).isTrue();
+    assertThatThrownBy(() -> refund.refund(null)).isInstanceOf(AccessDeniedException.class);
+    verifyNoInteractions(orderActor, orders);
   }
 }

@@ -8,7 +8,12 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(
-    assignableTypes = {AuthController.class, LoginController.class, SessionController.class})
+    assignableTypes = {
+      AuthController.class,
+      LoginController.class,
+      SessionController.class,
+      AdminUsersController.class
+    })
 public class IdentityExceptionHandler {
   @ExceptionHandler(IdentityException.class)
   public ProblemDetail handle(IdentityException exception, HttpServletResponse response) {

@@ -26,4 +26,10 @@ public interface OrderJpaRepository
           + "where o.id = :orderId and o.customerId = :customerId "
           + "and o.status in ('PENDING', 'PAID')")
   int cancelIfCancelable(@Param("orderId") UUID orderId, @Param("customerId") UUID customerId);
+
+  @Modifying(flushAutomatically = true)
+  @Query(
+      "update OrderJpaEntity o set o.status = 'REFUNDED' "
+          + "where o.id = :orderId and o.status in ('PAID', 'SHIPPED')")
+  int refundIfRefundable(@Param("orderId") UUID orderId);
 }

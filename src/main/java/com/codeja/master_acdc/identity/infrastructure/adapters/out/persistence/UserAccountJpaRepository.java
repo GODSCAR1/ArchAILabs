@@ -2,8 +2,10 @@ package com.codeja.master_acdc.identity.infrastructure.adapters.out.persistence;
 
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +13,12 @@ import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
 public interface UserAccountJpaRepository extends JpaRepository<UserAccountJpaEntity, UUID> {
+  @Query(
+      "select new"
+          + " com.codeja.master_acdc.identity.infrastructure.adapters.out.persistence.UserSummaryRow(u.id,"
+          + " u.email, u.roles, u.enabled) from UserAccountJpaEntity u")
+  List<UserSummaryRow> findSummaries(Pageable page);
+
   Optional<UserAccountJpaEntity> findByEmail(String email);
 
   @Query(
