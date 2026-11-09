@@ -104,11 +104,39 @@ Lee los dos antes de tocar una cache.
 - Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código ni archivos versionados. (pendiente: Gitleaks en S12)
 - NUNCA SQL concatenado; siempre parámetros. (pendiente: Semgrep en S12)
 
+### Autenticación y autorización — ADR `docs/adr/0011-autenticacion-refresh-y-version-de-sesion.md`
+Lee el ADR antes de tocar seguridad. `HttpSecurityConfiguration`, `JwtTokenAdapter`, `JwtDecoderFactory`, `SessionVersionValidator`, `Role` y la matriz (`SecurityMatrixTest`/`SecurityMatrixSupport`) son zona protegida: si crees que hay que cambiarlos, explica por qué y detente.
+- La API es stateless: bearer JWT RS256 de 15 min; NUNCA sesión HTTP, `permitAll()` amplio ni `anyRequest().permitAll()`. Las rutas públicas se abren por método y ruta exacta. (verificador: `SecurityMatrixTest`)
+- NUNCA desactives CSRF en `/api/auth/refresh` ni `/api/auth/logout`: usan cookie. Si el frontend da 403, le falta la cabecera `X-XSRF-TOKEN` con el valor de la cookie `XSRF-TOKEN`. (verificador: `AuthFlowIT`)
+- Claims EXACTOS del access token: `iss, sub, aud, iat, exp, jti, roles, sv`. NUNCA añadas email, permisos, customerId ni nada "para ahorrar una consulta". (verificador: `AuthFlowIT`, claims exactos)
+- Autorización por PERMISOS: `@PreAuthorize("hasAuthority('<permiso>')")` en un DECORADOR de `infrastructure` NO final (CGLIB) sobre el caso de uso; domain y application sin Spring. `hasRole('X')` busca `ROLE_X`. (verificador: `AuthorizationArchitectureTest`, `MethodAuthorizationTest`)
+- Propiedad del objeto: el cliente sale del `sub` vía la cuenta y se filtra EN LA CONSULTA (también en el UPDATE); un objeto ajeno responde 404, nunca 403 ni 200. NUNCA un parámetro, cabecera o campo `customerId` en la API pública. `order:read-any` amplía solo lecturas. (verificador: `AuthorizationArchitectureTest`, `SecurityMatrixTest`)
+- Todo endpoint nuevo añade sus filas a la matriz (anónimo y los cinco roles), incluida la de objeto ajeno; la matriz la cambia una persona. Errores 401/403 como ProblemDetail conservando `WWW-Authenticate`.
+- Versión de sesión: fail closed (Redis caído = 401), sin cache local ni TTL; incrementar versión, revocar familias y publicar la barrera ANTES del commit, en la misma transacción. (verificador: `SessionVersionRevocationIT`)
+
+| Rol | Permisos |
+|---|---|
+| CUSTOMER | order:create, order:read-own, order:cancel-own |
+| CATALOG_MANAGER | product:write, stock:reserve |
+| SUPPORT | order:read-any, order:refund |
+| ADMIN | product:write, stock:reserve, order:read-any, order:refund, user:read, user:manage |
+
+Spring Security 7 — APIs eliminadas (no las uses aunque aparezcan en ejemplos antiguos):
+
+| Eliminado | Usa |
+|---|---|
+| `WebSecurityConfigurerAdapter` | beans `SecurityFilterChain` |
+| `authorizeRequests()`, `antMatchers()`, `mvcMatchers()` | `authorizeHttpRequests()` + `requestMatchers()` |
+| encadenar con `.and()` | DSL con lambdas (`csrf(c -> ...)`) |
+| `AntPathRequestMatcher` / `MvcRequestMatcher` | `PathPatternRequestMatcher` |
+| `@EnableGlobalMethodSecurity` | `@EnableMethodSecurity` |
+| `NoOpPasswordEncoder`/`{noop}` en producción | `PasswordEncoderFactories.createDelegatingPasswordEncoder()` |
+
 ## Verify (no negociable)
 - Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
-- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`. Si hace falta, detente y pide permiso a una persona.
+- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`. Si hace falta, detente y pide permiso a una persona.
 
 ## graphify
 - Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.

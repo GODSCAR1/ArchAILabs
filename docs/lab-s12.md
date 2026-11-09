@@ -681,6 +681,24 @@ dominio ni Spring**. PIT no medido; umbral de referencia 75 % sin cambios.
 
 ## 8. Protege el loop
 
+### Protecciones añadidas por la persona (paso 8)
+
+| Capa | Qué se añadió |
+|---|---|
+| Guide | `docs/adr/0011-autenticacion-refresh-y-version-de-sesion.md`; en `AGENTS.md`, sección "Autenticación y autorización": reglas de las lecciones 1-3 con su verificador, tabla rol → permisos y tabla de APIs eliminadas de Spring Security 7 |
+| Verify (tests) | `verify-quality.sh --fast` ejecuta además `AuthFlowIT` (Testcontainers) y comprueba que `SecurityMatrixTest` corrió entera (≥ 90 casos); `--full` los incluye vía `verify` |
+| Verify (estático) | `verify-quality.sh` falla si faltan los archivos de seguridad, si aparece una apertura amplia (`anyRequest().permitAll()`, `/**` público) o una API eliminada de Spring Security 7, o si la API de pedidos vuelve a recibir `customerId`/`X-Customer-Id` |
+| Verify (ArchUnit) | `AuthorizationArchitectureTest`: controladores de pedidos sin `customerId` y comandos HTTP con `@PreAuthorize` en decoradores proxificables (ya existía; ahora es guardián) |
+| Verify (zona protegida) | `HttpSecurityConfiguration`, `JwtTokenAdapter`, `JwtDecoderFactory`, `SessionVersionValidator` y `Role` en `protect-verify.sh` (edición y shell) y en el plugin de OpenCode; `SecurityMatrixTest`, `SecurityMatrixSupport` y `AuthorizationArchitectureTest` en `scripts/protected-tests.txt` |
+
+`SecurityMatrixSupport` también es guardián: la matriz puede debilitarse cambiando su soporte (datos
+sembrados, bearer) sin tocar la tabla de códigos.
+
+Ajustes previos del loop durante el lab: `scripts/spec-trace.sh` omite los escenarios de requirements
+que un change activo declara en `## REMOVED Requirements`; `archunit.properties` con
+`allowStoreCreation=false` y store versionado con fin de línea LF.
+
+
 ### Gestión administrativa de sesiones (sección 4, add-session-version-revocation)
 
 Base completa previa a estas secciones: `bash ./mvnw -q verify` correcto, lista de fallos `[]`.

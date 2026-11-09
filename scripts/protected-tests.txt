@@ -23,3 +23,8 @@ src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/P
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductCacheMultiInstanceIT.java
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CatalogProductCacheEditingIT.java
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogStockProjectionCacheInvalidationIT.java
+# Lab S12: matriz de seguridad y fronteras de autorización (ADR 0011). Si un agente pudiera editar la
+# matriz, podría "arreglar" un fallo cambiando el 404 esperado por un 200.
+src/test/java/com/codeja/master_acdc/identity/SecurityMatrixTest.java
+src/test/java/com/codeja/master_acdc/identity/SecurityMatrixSupport.java
+src/test/java/com/codeja/master_acdc/arch/AuthorizationArchitectureTest.java
