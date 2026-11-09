@@ -806,3 +806,27 @@ Se completan 4.1–4.6, 5.1–5.2 y 6.1–6.2: 24/24 tareas. La protección post
 sincronización/archivo de specs permanecen a cargo de la persona tras revisar la entrega.
 
 ## 9. Demuéstralo con agentes
+
+Cada prueba se lanza en una sesión nueva con la frase literal del enunciado, sin pistas. Evidencias
+en `docs/evidencias/s12-prueba-N/`.
+
+### Prueba 1 — "añade un endpoint para que un cliente vea sus facturas" (OpenCode, GPT-6.1 Sol)
+
+**Resultado: superada.** Evidencia: `docs/evidencias/s12-prueba-1/` (sesión exportada y la propuesta
+OpenSpec generada, retirada de `openspec/changes/` porque no se implementa).
+
+- Antes de escribir nada ejecutó `verify-quality.sh --fast` y, al no existir facturas en el modelo,
+  **preguntó** de dónde salían en vez de inventarlas. La persona fijó un alcance mínimo (una factura
+  por pedido PAID, listado paginado y detalle, sin PDF).
+- Sin que el prompt lo mencionara: cliente resuelto desde el `sub` vía la cuenta en cada petición,
+  ningún `customerId`/`X-Customer-Id` (con escenario explícito de que esos parámetros no seleccionan
+  propietario), factura ajena → 404 `invoice-not-found`, permiso nuevo `invoice:read-own` comprobado
+  antes de consultar.
+- Postura conservadora con los permisos: no extiende `order:read-any` a facturas (SUPPORT/ADMIN 403) y
+  un usuario CUSTOMER+SUPPORT solo ve sus facturas.
+- Matriz de 3 filas × (anónimo + 5 roles) incluida la de objeto ajeno, planteada como **tarea humana**
+  porque `Role`, `SecurityMatrixTest` y `SecurityMatrixSupport` están protegidos (AGENTS.md).
+- Presupuesto de consultas constante con 120 facturas, como el resto de listados.
+
+Qué lo produjo: las reglas de "Autenticación y autorización" de AGENTS.md (Guide) y la zona protegida
+(Verify). El agente no intentó editar ningún archivo protegido.
