@@ -41,14 +41,14 @@ Plan pendiente de revisión. Cada escenario usa `@DisplayName("<nombre exacto de
 
 ## 6. Matriz y reglas de arquitectura
 
-- [ ] 6.1 Implementar SecurityMatrixTest parametrizado, 14 rutas × 5 roles, con @DisplayName("Matriz de acceso con recursos válidos") y nombres de invocación endpoint × rol. Verificación: 70 combinaciones con AccessTokenIssuer real, cuentas persistidas, fixtures propias por fila, propio/ajeno, A01 válido, versiones y stocks correctos; asserts de status/type/estado antes-después. Documentar desviación de A1.
-- [ ] 6.2 Añadir escenarios complementarios de authorization: roles desconocidos/mixtos, ADMIN sin create/cancel y denegación antes de consultas. Verificación: SecurityMatrixTest y MethodAuthorizationTest trazan los escenarios restantes del delta, incluido «Lectura global no concede cancelación»; los espías de delegación no sustituyen tests de queries reales.
-- [ ] 6.3 Añadir ModuleDependenciesTest y AuthorizationArchitectureTest sin editar guardianes: ausencia de ciclos, pureza de capas, comandos HTTP decorados y ausencia de entrada customerId. Verificación: nuevos ArchUnit más IdentityArchitectureTest y todos los guardianes de arquitectura intactos; documentar dirección de módulos y alcance de la regla en docs/lab-s12.md.
+- [x] 6.1 Implementar SecurityMatrixTest parametrizado, 14 rutas × 5 roles, con @DisplayName("Matriz de acceso con recursos válidos") y nombres de invocación endpoint × rol. Verificación: 70 combinaciones con AccessTokenIssuer real, cuentas persistidas, fixtures propias por fila, propio/ajeno, A01 válido, versiones y stocks correctos; asserts de status/type/estado antes-después. Documentar desviación de A1.
+- [x] 6.2 Añadir escenarios complementarios de authorization: roles desconocidos/mixtos, ADMIN sin create/cancel y denegación antes de consultas. Verificación: SecurityMatrixTest y MethodAuthorizationTest trazan los escenarios restantes del delta, incluido «Lectura global no concede cancelación»; los espías de delegación no sustituyen tests de queries reales.
+- [x] 6.3 Añadir ModuleDependenciesTest y AuthorizationArchitectureTest sin editar guardianes: ausencia de ciclos, pureza de capas, comandos HTTP decorados y ausencia de entrada customerId. Verificación: nuevos ArchUnit más IdentityArchitectureTest y todos los guardianes de arquitectura intactos; documentar dirección de módulos y alcance de la regla en docs/lab-s12.md.
 
 ## 7. Verificación integrada y entrega
 
-- [ ] 7.1 Ejecutar `bash ./mvnw spotless:apply`, `graphify update .`, `openspec validate add-rbac-and-object-authorization --strict --no-interactive` y `bash ./verify-quality.sh --fast`; pegar salida completa. Verificación: tests fast/matriz/conteos/ArchUnit en verde y ningún hallazgo nuevo, guardianes solo con cambios humanos revisados.
-- [ ] 7.2 Ejecutar `bash ./mvnw -q verify` para IT y contrastar trazabilidad de todos los escenarios y contratos conservados; documentar evidencia en docs/lab-s12.md. Verificación: AuthFlowIT, suites de pedidos/admin, carreras y guardianes de catálogo/cache en verde; no declarar PIT medido por fast ni cambiar el umbral 75% o configuración protegida.
+- [x] 7.1 Ejecutar `bash ./mvnw spotless:apply`, `graphify update .`, `openspec validate add-rbac-and-object-authorization --strict --no-interactive` y `bash ./verify-quality.sh --fast`; pegar salida completa. Verificación: tests fast/matriz/conteos/ArchUnit en verde y ningún hallazgo nuevo, guardianes solo con cambios humanos revisados.
+- [x] 7.2 Ejecutar `bash ./mvnw -q verify` para IT y contrastar trazabilidad de todos los escenarios y contratos conservados; documentar evidencia en docs/lab-s12.md. Verificación: AuthFlowIT, suites de pedidos/admin, carreras y guardianes de catálogo/cache en verde; no declarar PIT medido por fast ni cambiar el umbral 75% o configuración protegida.
 
 ## Workflow follow-up
 

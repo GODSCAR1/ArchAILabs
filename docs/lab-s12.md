@@ -415,15 +415,179 @@ a la consulta; el primero también invoca el bean proxificado directamente.
 
 Verificación final de las secciones 4–5 (2026-11-09): Spotless, validación estricta
 del change, `bash ./verify-quality.sh --fast` y `bash ./mvnw -q verify` en verde.
-La base y la lista final de fallos son `[]`; el diff queda registrado en
-`docs/s12-sections-4-5-failures.md`. Se completan seis tareas, progreso 22/27.
+La base y la lista final de fallos son `[]`; la evidencia se consolida a
+continuación. Se completan seis tareas, progreso 22/27.
 PIT no medido; umbral indicado 75 % intacto. `graphify update .` actualiza código
 (3235 nodos/7340 aristas), con avisos de parser SQL ausente y etiquetas pendientes;
 no actualiza semánticamente esta documentación.
 
+### Lista de fallos consolidada: secciones 4–5
+
+Base previa a editar (2026-11-09, rama lab/s12): ningún hallazgo abierto declarado;
+`bash ./verify-quality.sh --fast` y `bash ./mvnw -q verify` correctos. El segundo se
+repitió con timeout de 600 s tras agotar los 200 s del primer intento. Lista base: `[]`.
+
+Resultado final: `bash ./mvnw spotless:apply`, validación estricta del change,
+`bash ./verify-quality.sh --fast` y `bash ./mvnw -q verify` correctos, incluidas las
+carreras PostgreSQL y suites administrativas. En las dos verificaciones finales
+se usó `JAVA_TOOL_OPTIONS="-Dlogging.level.root=OFF -Dspring.main.banner-mode=off"`
+para reducir salida de arranque, sin cambiar tests ni assertions. Lista final: `[]`.
+
+```json
+{"base": [], "final": [], "nuevos": [], "resueltos": [], "persistentes": []}
+```
+
+Tareas 4.1–4.3 y 5.1–5.3 completas (22/27 en esa entrega). PIT no medido; umbral de
+referencia 75 %, sin cambios de configuración. `graphify update .` actualizó código
+(3235 nodos, 7340 aristas), con avisos de parser SQL ausente, dos configuraciones
+sin nodos y etiquetas por refrescar; no acredita extracción SQL ni actualización
+semántica de documentación.
+
 ## 6. Revocación inmediata para cuentas bloqueadas
 
 ## 7. Matriz de tests
+
+### Matriz RBAC y escenarios complementarios (sección 6)
+
+`SecurityMatrixTest` ejecuta 70 celdas (14 endpoints × Anónimo, CUSTOMER,
+CATALOG_MANAGER, SUPPORT y ADMIN), con nombre `endpoint × rol`. Las columnas
+autenticadas usan `AccessTokenIssuer` real y cuentas persistidas; Anónimo no envía
+Authorization. Cada invocación prepara cuentas/clientes nuevos, pedidos propios y
+ajenos PENDING/PAID, stock 10 y A01 con versión vigente, y limpia sus datos/cache.
+A01 sustituye al A1 del enunciado porque el SKU exige al menos tres caracteres;
+POST usa un SKU válido único.
+
+Cada rechazo comprueba status/type y snapshots completos de pedidos, líneas,
+stock y catálogo. Cada éxito compara el estado completo con su efecto esperado:
+creación/reserva de dos unidades, cancelación con liberación única, reembolso sin
+stock, creación/edición de un producto o lectura sin mutaciones. El listado verifica
+alcance y métricas; los pedidos no exponen customerId y usuarios solo los cuatro
+campos permitidos.
+
+Otras 10 invocaciones prueban roles desconocidos/mixtos, unión CUSTOMER y
+CATALOG_MANAGER, ADMIN sin create/cancel y SUPPORT sin cancelación. Los rechazos
+de ADMIN, lectura CATALOG_MANAGER y cancelación SUPPORT comprueban cero sentencias
+Hibernate con PostgreSQL real antes de comparar snapshots; los espías de
+`MethodAuthorizationTest` complementan esa evidencia al invocar proxies reales.
+Ejecución focalizada: 80 invocaciones sin fallos.
+
+### Arquitectura y pausa de la entrega (2026-11-09)
+
+`ModuleDependenciesTest` comprueba slices de primer nivel sin exclusiones: sin
+ciclos, identity.infrastructure → ordering.api, sin dependencia inversa hacia
+identity ni inventory → ordering. Los patrones están anclados al módulo raíz
+para no confundir adaptadores llamados `out.inventory`/`out.ordering` con módulos.
+`AuthorizationArchitectureTest` comprueba capas puras, puertos como interfaces,
+los seis comandos HTTP de negocio con permiso exacto y clase/método proxificables,
+controladores/DTO de pedidos sin entrada customerId y mappers finales estáticos en
+infraestructura. La regla de comandos excluye según diseño autenticación y
+reserva/liberación internas del checkout. Los guardianes existentes no se editan.
+
+La comprobación de APIs sin frameworks detecta `inventory.api.InventoryFacade`
+con `TransactionTemplate` (cinco dependencias). La frontera exclusiva a
+inventory.api detecta diez dependencias de los adaptadores de ordering sobre
+`inventory.domain.model.StockLine`/`ReservationResult`. Son dependencias existentes
+que las reglas nuevas hacen visibles; no se corrigen ni se aceptan excepciones sin
+decisión humana sobre alcance/diseño. 6.3 permanece pendiente.
+
+Spotless y validación estricta OpenSpec pasan. `bash ./verify-quality.sh --fast`
+ejecuta 440 tests: 2 fallos, 0 errores y 0 omitidos; matriz, conteos y guardianes
+existentes pasan. Lista final de fallos de esta entrega:
+
+```text
+AuthorizationArchitectureTest.should_restrict_application_to_own_domain_when_modules_are_imported
+ModuleDependenciesTest.ordering_uses_only_public_inventory_api
+```
+
+Frente a la base declarada `[]`, ambos son fallos nuevos de comprobaciones nuevas;
+no se declara el loop verde ni las tareas 7.1/7.2 completas. El verify de IT queda
+pendiente al detener apply por el bloqueo de diseño. PIT no medido; umbral 75 %
+intacto. Se redujo logging de arranque mediante JAVA_TOOL_OPTIONS como en 4–5,
+sin cambiar selección ni assertions. El grafo se actualiza (3293 nodos/7518 aristas),
+con avisos de parser SQL ausente, dos configuraciones sin nodos y etiquetas por
+refrescar; no acredita actualización semántica de documentación.
+
+### Resolución autorizada del bloqueo de frontera
+
+La persona autorizó conservar la implementación de inventario y congelar solo
+sus violaciones existentes de frontera con `FreezingArchRule.freeze(...)`:
+
+| Regla congelada | Archivo del store | Violaciones |
+|---|---|---|
+| API sin frameworks | `afb4dece-f8ec-4e43-81ad-15024543825f` | 5: constructor/campo/ejecución de TransactionTemplate y setRollbackOnly de TransactionStatus en InventoryFacade |
+| ordering consume exclusivamente inventory.api | `afccd981-a9a2-46dd-8dab-c6dfc5be13e9` | 10: OrderCancelledListener/StockReserverAdapter y su inicializador sintético usan StockLine/ReservationResult de inventory.domain |
+
+Se revisaron todos los archivos de `src/test/resources/archunit_store`: dos entradas
+en `stored.rules`, cinco líneas en el primer archivo y diez en el segundo, sin
+otras violaciones. `src/test/resources/archunit.properties` fija
+`freeze.store.default.path=src/test/resources/archunit_store` y
+`freeze.store.default.allowStoreCreation=false` tras su creación inicial y revisión,
+por cambio explícito de la persona. `.gitattributes` conserva la regla añadida
+por ella `src/test/resources/archunit_store/** text eol=lf`. El store forma parte del cambio
+en Git; los incrementos de violaciones de estas reglas siguen fallando.
+
+Ciclos, fronteras identity/ordering, decoradores @PreAuthorize, ausencia de
+customerId, pureza de domain/application, puertos y mappers siguen sin congelar.
+Las pruebas focalizadas de arquitectura, incluidos los guardianes existentes y
+IdentityArchitectureTest, pasan. No se modificaron los guardianes.
+
+Follow-up: **contrato inventory.api sin tipos de dominio ni Spring**. Separar
+tipos públicos del modelo interno y llevar transacciones/ensamblaje a
+infraestructura en una refactorización independiente revisada, preservando la
+atomicidad y los contratos de reserva/liberación; entonces retirar las dos
+congelaciones y sus entradas. Esta deuda aceptada no equivale a pureza verificada
+de inventory.api. La decisión también queda recogida en el design del change.
+
+### Verificación 7.1 tras la congelación autorizada
+
+`bash ./mvnw spotless:apply`, `graphify update .`,
+`openspec validate add-rbac-and-object-authorization --strict --no-interactive`
+y `bash ./verify-quality.sh --fast` pasan (2026-11-09). La ejecución usa el store
+existente con allowStoreCreation=false, conserva la regla LF humana y no añade
+violaciones al baseline congelado. Fast mantiene trazabilidad completa de escenarios,
+estilo, matriz, conteos y arquitectura en verde. Lista de fallos: `[]`.
+Graphify: 3296 nodos/7521 aristas; conserva avisos de parser SQL ausente,
+dos configuraciones sin nodos y etiquetas pendientes; no acredita extracción SQL
+ni actualización semántica de documentación. PIT no medido; umbral 75 % intacto.
+
+### Cierre 7.2: integración y lista final de fallos
+
+`bash ./mvnw -q verify` pasa el 2026-11-09 tras el fast loop, con las mismas
+opciones de logging de 7.1. Failsafe confirma 235 pruebas, 0 fallos, 0 errores,
+0 omitidas y sin timeout en `target/failsafe-reports/failsafe-summary.xml`.
+Surefire pasa, incluida SecurityMatrixTest: 80 invocaciones (70 celdas y 10
+complementarias), 0 fallos, 0 errores y 0 omitidas. No se suman informes históricos
+de target para construir el recuento de esta ejecución.
+
+| Evidencia de esta ejecución | Resultado |
+|---|---|
+| AuthFlowIT | 28 pruebas; incluye los siete claims exactos y listado propio |
+| OrderPlacementIT / OrderCancellationIT | 15 / 13; identidad, validaciones, atomicidad, alcance y liberación única |
+| OrderListingIT / OrderDetailIT | 12 / 6; propios/globales, cliente ausente, métricas y 404 indistinguible |
+| OrderRefundIT / OrderRefundConcurrencyIT | 9 / 2; estados, stock intacto y las dos carreras reales PostgreSQL |
+| AdminUsersIT | 12; campos permitidos y paginación estable/acotada |
+| CatalogProductEditingMongoIT / CatalogProductCacheEditingIT | 7 / 3; guardianes de versión e invalidación en verde |
+| ProductCacheMultiInstanceIT / CatalogStockProjectionCacheInvalidationIT | 3 / 1; guardianes de cache en verde |
+| RefreshTokenLockTimeoutIT | 2; pasa sin tocar los umbrales ni instrumentar |
+| OrderAuthorizationQueryCountTest / AdminUsersQueryCountTest | 4 / 5; presupuestos HTTP, 120 filas y denegación previa a queries |
+
+Spec-trace de 7.1 acredita todos los escenarios vigentes (omite solo los siete
+retirados por los deltas REMOVED); las suites anteriores conservan sus contratos.
+Las únicas reglas congeladas siguen conteniendo las mismas 15 violaciones
+autorizadas, sin ampliación del store; el resto de arquitectura pasa sin congelar.
+El diff de tests existentes solo modifica los dos nuevos tests de arquitectura,
+sin editar guardianes. Se conservan allowStoreCreation=false y la regla LF humana.
+
+Lista de fallos final:
+
+```json
+[]
+```
+
+Los dos fallos detectados en la pausa anterior quedan cubiertos por el baseline
+de deuda autorizado, no por una refactorización de inventario. Se completan 7.1 y
+7.2: progreso 27/27. Persiste el follow-up **contrato inventory.api sin tipos de
+dominio ni Spring**. PIT no medido; umbral de referencia 75 % sin cambios.
 
 ## 8. Protege el loop
 

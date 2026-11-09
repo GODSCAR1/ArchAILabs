@@ -53,6 +53,27 @@ Para un usuario multirrol con order:cancel-own y order:read-any, la cancelación
 - domain sin Spring/JPA/Jackson; application solo su dominio/capa de aplicación. APIs de módulos sin frameworks. Puertos de salida en domain/port; ensamblaje/transacciones en infrastructure/config.
 - AuthorizationArchitectureTest: decoradores de los comandos HTTP enumerados tienen @PreAuthorize y son proxificables; controladores de pedidos no reciben customerId ni X-Customer-Id. Mappers finales estáticos en infraestructura. Añadir pruebas sin editar guardianes existentes.
 
+#### Excepción de frontera aprobada durante apply (2026-11-09)
+
+La persona autoriza congelar únicamente las violaciones existentes de frontera
+de inventario con `FreezingArchRule.freeze(...)`: APIs sin frameworks en
+AuthorizationArchitectureTest (InventoryFacade → TransactionTemplate/TransactionStatus,
+cinco violaciones) y acceso exclusivo a inventory.api en ModuleDependenciesTest
+(adaptadores de ordering → StockLine/ReservationResult de inventory.domain, diez
+violaciones). El store `src/test/resources/archunit_store` se incorpora al repositorio;
+`src/test/resources/archunit.properties` fija su ruta. Tras crear y revisar el store,
+la persona fija `freeze.store.default.allowStoreCreation=false` para impedir su
+recreación silenciosa y exige LF en `.gitattributes` para sus archivos.
+No se congela la pureza de domain/application, los puertos, los mappers, los ciclos,
+identity → ordering.api, la dependencia inversa, los decoradores ni la ausencia de
+customerId. Nuevas violaciones de las reglas congeladas siguen fallando.
+
+Follow-up: **contrato inventory.api sin tipos de dominio ni Spring**. Requiere
+una refactorización independiente revisada: separar contrato y tipos públicos del
+modelo interno y mover ensamblaje/transacciones a infraestructura, conservando
+atomicidad de reserva/liberación y contratos guardianes. Tras resolver la deuda,
+retirar la congelación y sus entradas; este change no ejecuta esa refactorización.
+
 ### 3. Pedidos, consultas y mapeo
 
 Eliminar cabecera, parseCustomerId y excepciones missing/invalid-customer-id de la frontera HTTP. Retirar customerId de OrderResponse; conservar el dato en dominio/persistencia. Extraer conversiones heredadas a OrderWebMapper y OrderPersistenceMapper, más mapper de resúmenes; DTOs y entidades no convierten. Los parámetros de entrada no permiten seleccionar propietario; la cabecera antigua se ignora como cabecera no soportada y nunca otorga autoridad. Cuerpos solo contienen líneas; cualquier campo adicional customerId no participa en mapeo.

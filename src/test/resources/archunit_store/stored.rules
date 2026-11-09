@@ -1,0 +1,4 @@
+#
+#Mon Nov 09 01:55:04 GMT-05:00 2026
+no\ classes\ that\ reside\ in\ a\ package\ '..api..'\ should\ depend\ on\ classes\ that\ reside\ in\ any\ package\ ['org.springframework..',\ 'jakarta.persistence..',\ 'tools.jackson..',\ 'com.fasterxml.jackson..']=afb4dece-f8ec-4e43-81ad-15024543825f
+no\ classes\ that\ reside\ in\ a\ package\ 'com.codeja.master_acdc.ordering..'\ should\ depend\ on\ classes\ that\ reside\ in\ any\ package\ ['com.codeja.master_acdc.inventory.domain..',\ 'com.codeja.master_acdc.inventory.application..',\ 'com.codeja.master_acdc.inventory.infrastructure..']=afccd981-a9a2-46dd-8dab-c6dfc5be13e9
