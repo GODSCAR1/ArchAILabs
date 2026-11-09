@@ -1,0 +1,8 @@
+# Sonda directa del hook tool.execute.before de .opencode/plugins/verify-quality.ts — 2026-11-09 17:40 UTC
+BLOQUEADO | edit HttpSecurityConfiguration -> AC/DC: src/main/java/com/codeja/master_acdc/identity/infrastructure/config/HttpSecurityConfiguration.java está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+BLOQUEADO | write HttpSecurityConfiguration -> AC/DC: src/main/java/com/codeja/master_acdc/identity/infrastructure/config/HttpSecurityConfiguration.java está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+BLOQUEADO | bash sed -i csrf disable -> AC/DC: la configuración de seguridad, el servicio de tokens y Role son zona protegida (ADR 0011). No se editan ni se sortean desde la shell: explica el cambio a la persona y detente.
+BLOQUEADO | edit Role -> AC/DC: src/main/java/com/codeja/master_acdc/identity/domain/model/Role.java está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+BLOQUEADO | edit SecurityMatrixTest -> AC/DC: src/test/java/com/codeja/master_acdc/identity/SecurityMatrixTest.java es un test guardián (scripts/protected-tests.txt): protege el buscador o la concurrencia. No se borra, no se mueve, no se renombra ni se debilita. Si crees que sobra o es lento, explica por qué a la persona y detente.
+PERMITIDO | bash cat HttpSecurityConfiguration (lectura)
+PERMITIDO | edit LoginService (no protegido)
