@@ -4,12 +4,11 @@ import com.codeja.master_acdc.identity.domain.port.PasswordResetSecrets;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.HexFormat;
-import java.util.Random;
 
-public final class WeakRandomPasswordResetSecretGenerator implements PasswordResetSecrets {
-  // S13-02: siembra intencionada; el change de remediación sustituirá el generador compartido.
-  private final Random random = new Random();
+public final class SecurePasswordResetSecretGenerator implements PasswordResetSecrets {
+  private final SecureRandom random = new SecureRandom();
 
   @Override
   public String generate() {

@@ -87,6 +87,21 @@ de filtros tipados, lista blanca y ausencia de SQL concatenado; el diseño de si
 - Verde: `bash ./mvnw -q -Dtest=OrderSummaryQueryAdapterQueryCountTest,OrderSummaryPersistenceMapperTest -Dit.test=OrderListingSortIT,OrderSummaryQueryAdapterIT verify` pasó, incluidos cliente huérfano, cero líneas y el guardián de 120 pedidos/≤2 consultas.
 - Regla `shop-order-sort-injection`: `semgrep --test semgrep-rules/` pasó 1/1; el escaneo dirigido del adaptador corregido ejecutó una regla sobre un archivo con 0 hallazgos. La regla sigue el flujo intraprocedural desde `sort()` hasta `createNativeQuery`, no entre archivos.
 
+### S13-02 — tokens de recuperación predecibles
+
+El generador compartido utilizaba `java.util.Random` (CWE-338): quien observaba su token podía
+reconstruir el estado LCG de 48 bits y predecir el siguiente token de otra cuenta. En el rojo
+`821e625`, el oráculo se autoverificó con semilla conocida y tanto `PasswordResetPredictionTest`
+como `PasswordResetFlowIT` fallaron porque la predicción coincidía. Las dos solicitudes HTTP
+respondieron 202 sin revelar el token.
+
+`SecurePasswordResetSecretGenerator` usa `SecureRandom` para generar 32 bytes y conserva la
+codificación hexadecimal y el hash SHA-256. La regresión LCG comprueba este ataque concreto: no
+es una prueba estadística de seguridad criptográfica.
+
+- Verde: `bash ./mvnw -q -Dtest=PasswordResetPredictionTest,SecurePasswordResetSecretGeneratorTest -Dit.test=PasswordResetFlowIT verify` pasó los tests unitarios y HTTP, incluidos formato, hash y revocación.
+- Regla `shop-no-weak-password-reset-random`: `semgrep --test semgrep-rules/` pasó 2/2 reglas; el escaneo de `src/main/java` con `--no-git-ignore` examinó 379 archivos y obtuvo 0 hallazgos. Detecta `Random`, `ThreadLocalRandom`, `Math.random` y `RandomGenerator` en implementaciones de `PasswordResetSecrets` o contextos nombrados como secretos, incluidos códigos de verificación; acepta `SecureRandom`, jitter de TTL y simulaciones ajenas.
+
 ## 5. Reglas del proyecto
 
 _Pendiente._

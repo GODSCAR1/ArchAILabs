@@ -13,7 +13,7 @@ import com.codeja.master_acdc.identity.domain.port.UserAccounts;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.notification.InMemoryPasswordResetNotifier;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.persistence.PasswordResetTokenJpaRepository;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.persistence.PasswordResetTokenRepositoryAdapter;
-import com.codeja.master_acdc.identity.infrastructure.adapters.out.security.WeakRandomPasswordResetSecretGenerator;
+import com.codeja.master_acdc.identity.infrastructure.adapters.out.security.SecurePasswordResetSecretGenerator;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,7 +22,7 @@ import org.springframework.context.annotation.Configuration;
 public class PasswordResetConfiguration {
   @Bean
   public PasswordResetSecrets passwordResetSecrets() {
-    return new WeakRandomPasswordResetSecretGenerator();
+    return new SecurePasswordResetSecretGenerator();
   }
 
   @Bean
