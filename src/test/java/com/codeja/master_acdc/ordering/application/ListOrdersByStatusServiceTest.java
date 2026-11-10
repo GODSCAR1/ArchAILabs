@@ -22,7 +22,8 @@ class ListOrdersByStatusServiceTest {
     OrderSummaryQuery query = Mockito.mock(OrderSummaryQuery.class);
     OrderSummary summary = new OrderSummary(UUID.randomUUID(), "Ada", 2, 5);
     var criteria =
-        new OrderListingCriteria(OrderStatus.PAID, new OrderReadScope.Own(UUID.randomUUID()));
+        new OrderListingCriteria(
+            OrderStatus.PAID, new OrderReadScope.Own(UUID.randomUUID()), "totalUnits DESC");
     given(query.findByStatus(criteria)).willReturn(List.of(summary));
 
     List<OrderSummary> result = new ListOrdersByStatusService(query).list(criteria);
@@ -36,7 +37,9 @@ class ListOrdersByStatusServiceTest {
     var query = Mockito.mock(OrderSummaryQuery.class);
     assertThat(
             new ListOrdersByStatusService(query)
-                .list(new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.None.INSTANCE)))
+                .list(
+                    new OrderListingCriteria(
+                        OrderStatus.PAID, OrderReadScope.None.INSTANCE, "id ASC")))
         .isEmpty();
     verifyNoInteractions(query);
   }

@@ -44,6 +44,19 @@ class OrderSummaryQueryAdapterIT {
   }
 
   @Test
+  @DisplayName("Listado ordenado por unidades descendentes")
+  void should_order_summaries_when_sort_requests_descending_units() {
+    insertOrder(PAID, "PAID", 2);
+    insertOrder(PENDING, "PAID", 3);
+    assertThat(
+            adapter.findByStatus(
+                new OrderListingCriteria(
+                    OrderStatus.PAID, OrderReadScope.Global.INSTANCE, "totalUnits DESC")))
+        .extracting(summary -> summary.id())
+        .containsExactly(PENDING, PAID);
+  }
+
+  @Test
   @DisplayName("Pedidos PAID listados con nombre y métricas")
   void should_map_customer_name_and_line_metrics_when_paid_orders_exist() {
     insertCustomer();
@@ -118,23 +131,24 @@ class OrderSummaryQueryAdapterIT {
     jdbcTemplate.update("update orders set customer_id=? where id=?", other, PENDING);
     assertThat(
             adapter.findByStatus(
-                new OrderListingCriteria(OrderStatus.PAID, new OrderReadScope.Own(CUSTOMER))))
+                new OrderListingCriteria(
+                    OrderStatus.PAID, new OrderReadScope.Own(CUSTOMER), "id ASC")))
         .extracting(summary -> summary.id())
         .containsExactly(PAID);
     assertThat(
             adapter.findByStatus(
                 new OrderListingCriteria(
-                    OrderStatus.PAID, new OrderReadScope.Own(UUID.randomUUID()))))
+                    OrderStatus.PAID, new OrderReadScope.Own(UUID.randomUUID()), "id ASC")))
         .isEmpty();
     assertThat(
             adapter.findByStatus(
-                new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.None.INSTANCE)))
+                new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.None.INSTANCE, "id ASC")))
         .isEmpty();
     assertThat(adapter.findByStatus(globalPaid())).hasSize(2);
   }
 
   private OrderListingCriteria globalPaid() {
-    return new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE);
+    return new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE, "id ASC");
   }
 
   private void insertOrder(UUID orderId, String status, int... quantities) {

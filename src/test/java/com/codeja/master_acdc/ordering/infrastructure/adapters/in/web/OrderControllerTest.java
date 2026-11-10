@@ -267,13 +267,35 @@ class OrderControllerTest {
   }
 
   @Test
+  @DisplayName("Listado sin sort usa el orden predeterminado")
+  void should_use_default_sort_when_sort_is_absent() throws Exception {
+    mockMvc
+        .perform(
+            get("/api/orders")
+                .with(
+                    jwt()
+                        .authorities(
+                            new org.springframework.security.core.authority.SimpleGrantedAuthority(
+                                "order:read-own")))
+                .param("status", "PAID"))
+        .andExpect(status().isOk());
+    org.mockito.Mockito.verify(listOrdersByStatusUseCase)
+        .list(
+            new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
+                OrderStatus.PAID,
+                com.codeja.master_acdc.ordering.domain.model.OrderReadScope.None.INSTANCE,
+                "id ASC"));
+  }
+
+  @Test
   @DisplayName("Pedidos PAID listados con nombre y métricas")
   void should_return_paid_summaries_when_status_is_paid() throws Exception {
     given(
             listOrdersByStatusUseCase.list(
                 new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
                     OrderStatus.PAID,
-                    com.codeja.master_acdc.ordering.domain.model.OrderReadScope.None.INSTANCE)))
+                    com.codeja.master_acdc.ordering.domain.model.OrderReadScope.None.INSTANCE,
+                    "id ASC")))
         .willReturn(List.of(new OrderSummary(UUID.randomUUID(), "Ada", 2, 5)));
 
     mockMvc

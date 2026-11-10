@@ -127,7 +127,9 @@ public class HttpSecurityConfiguration {
                         "/api/auth/register",
                         "/api/auth/login",
                         "/api/auth/refresh",
-                        "/api/auth/logout")
+                        "/api/auth/logout",
+                        "/api/auth/password-reset/request",
+                        "/api/auth/password-reset/confirm")
                     .permitAll()
                     .requestMatchers("/api/admin/**")
                     .hasRole("ADMIN")

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProduct;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +33,9 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
   @org.springframework.beans.factory.annotation.Autowired
   private jakarta.persistence.EntityManagerFactory factory;
 
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.codeja.master_acdc.identity.domain.port.Passwords passwords;
+
   enum Endpoint {
     PRODUCT("GET /api/products/A01", 200, 200, 200, 200, 200),
     CREATE_PRODUCT("POST /api/products", 401, 403, 201, 403, 201),
@@ -47,6 +51,9 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
     USERS("GET /api/admin/users", 401, 403, 403, 403, 200),
     BLOCK("POST /api/admin/users/{id}/block", 401, 403, 403, 403, 204),
     UNBLOCK("POST /api/admin/users/{id}/unblock", 401, 403, 403, 403, 204),
+    RESET_REQUEST("POST /api/auth/password-reset/request", 202, 202, 202, 202, 202),
+    RESET_CONFIRM("POST /api/auth/password-reset/confirm", 204, 204, 204, 204, 204),
+    EXPORT("GET /api/admin/exports?name=pedidos.csv", 401, 403, 403, 403, 200),
     HEALTH("GET /actuator/health", 200, 200, 200, 200, 200),
     METRICS("GET /actuator/metrics", 401, 401, 401, 401, 401);
 
@@ -64,14 +71,24 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
     }
   }
 
+  private static final java.util.Set<Endpoint> S13 =
+      java.util.EnumSet.of(Endpoint.RESET_REQUEST, Endpoint.RESET_CONFIRM, Endpoint.EXPORT);
+
   static Stream<Arguments> matrix() {
+    return cells(Stream.of(Endpoint.values()).filter(endpoint -> !S13.contains(endpoint)));
+  }
+
+  static Stream<Arguments> recoveryAndExportMatrix() {
+    return cells(S13.stream());
+  }
+
+  private static Stream<Arguments> cells(Stream<Endpoint> endpoints) {
     var roles = List.of("Anónimo", "CUSTOMER", "CATALOG_MANAGER", "SUPPORT", "ADMIN");
-    return Stream.of(Endpoint.values())
-        .flatMap(
-            endpoint ->
-                java.util.stream.IntStream.range(0, roles.size())
-                    .mapToObj(
-                        index -> Arguments.of(endpoint, roles.get(index), endpoint.codes[index])));
+    return endpoints.flatMap(
+        endpoint ->
+            java.util.stream.IntStream.range(0, roles.size())
+                .mapToObj(
+                    index -> Arguments.of(endpoint, roles.get(index), endpoint.codes[index])));
   }
 
   @ParameterizedTest(name = "{0} × {1}")
@@ -79,7 +96,21 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
   @DisplayName("Matriz de acceso con recursos válidos")
   void should_enforce_matrix_when_endpoint_is_called_with_role(
       Endpoint endpoint, String role, int code) throws Exception {
-    var request = request(endpoint).secure(true);
+    exercise(endpoint, role, code);
+  }
+
+  @ParameterizedTest(name = "{0} × {1}")
+  @MethodSource("recoveryAndExportMatrix")
+  @DisplayName("Matriz de recuperación y descarga administrativa")
+  void should_enforce_matrix_when_recovery_or_export_is_called_with_role(
+      Endpoint endpoint, String role, int code) throws Exception {
+    exercise(endpoint, role, code);
+  }
+
+  private void exercise(Endpoint endpoint, String role, int code) throws Exception {
+    var request =
+        (S13.contains(endpoint) ? recoveryOrExportRequest(endpoint) : request(endpoint))
+            .secure(true);
     if (!role.equals("Anónimo")) {
       request.header("Authorization", bearer(role));
     }
@@ -93,7 +124,7 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
     }
   }
 
-  private MockHttpServletRequestBuilder request(Endpoint endpoint) {
+  private MockHttpServletRequestBuilder request(Endpoint endpoint) throws Exception {
     return switch (endpoint) {
       case CREATE_PRODUCT -> createProduct(newSku);
       case EDIT_PRODUCT ->
@@ -122,6 +153,16 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
     };
   }
 
+  private MockHttpServletRequestBuilder recoveryOrExportRequest(Endpoint endpoint)
+      throws Exception {
+    return switch (endpoint) {
+      case RESET_REQUEST -> resetRequest();
+      case RESET_CONFIRM -> resetConfirm(issueResetToken());
+      case EXPORT -> get("/api/admin/exports").param("name", "pedidos.csv");
+      default -> throw new IllegalArgumentException("Not a lab S13 endpoint: " + endpoint);
+    };
+  }
+
   private MockHttpServletRequestBuilder readRequest(Endpoint endpoint) {
     return switch (endpoint) {
       case PRODUCT -> get("/api/products/A01");
@@ -141,6 +182,13 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
     if (endpoint == Endpoint.BLOCK || endpoint == Endpoint.UNBLOCK) {
       assertThat(result.getResponse().getContentAsString()).isEmpty();
       managementEffect(endpoint, expected);
+      expected.assertSame(snapshot());
+      return;
+    }
+    if (endpoint == Endpoint.RESET_REQUEST
+        || endpoint == Endpoint.RESET_CONFIRM
+        || endpoint == Endpoint.EXPORT) {
+      nonJsonEffect(endpoint, expected, result);
       expected.assertSame(snapshot());
       return;
     }
@@ -182,6 +230,40 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
             "revoked_at",
             actual.get("revoked_at"));
       }
+    }
+  }
+
+  private void nonJsonEffect(Endpoint endpoint, Snapshot expected, MvcResult result)
+      throws Exception {
+    long tokens =
+        jdbc.queryForObject(
+            "select count(*) from password_reset_token where user_id=?",
+            Long.class,
+            recoveryTarget);
+    switch (endpoint) {
+      case RESET_REQUEST -> {
+        assertThat(result.getResponse().getContentAsString()).isEmpty();
+        assertThat(notifier.lastMessageFor(recoveryEmail)).isPresent();
+        assertThat(tokens).isOne();
+      }
+      case RESET_CONFIRM -> {
+        assertThat(result.getResponse().getContentAsString()).isEmpty();
+        String hash =
+            jdbc.queryForObject(
+                "select password_hash from user_account where id=?", String.class, recoveryTarget);
+        assertThat(passwords.matches(RECOVERED_PASSWORD, hash)).isTrue();
+        change(expected.identity().accounts(), "id", recoveryTarget, "password_hash", hash);
+        change(expected.identity().accounts(), "id", recoveryTarget, "session_version", 6L);
+        assertThat(tokens).isZero();
+      }
+      case EXPORT -> {
+        assertThat(result.getResponse().getContentType())
+            .isEqualTo(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM_VALUE);
+        assertThat(result.getResponse().getContentAsByteArray()).isEqualTo(EXPORT_BYTES);
+        assertThat(Files.readAllBytes(exportDirectory.resolve("pedidos.csv")))
+            .isEqualTo(EXPORT_BYTES);
+      }
+      default -> throw new IllegalArgumentException("Not a non-JSON endpoint: " + endpoint);
     }
   }
 

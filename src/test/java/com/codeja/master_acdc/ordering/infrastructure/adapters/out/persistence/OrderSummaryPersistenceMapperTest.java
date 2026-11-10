@@ -9,6 +9,13 @@ import org.junit.jupiter.api.Test;
 
 class OrderSummaryPersistenceMapperTest {
   @Test
+  void should_map_native_aggregates_when_reading_summary_row() {
+    UUID id = UUID.randomUUID();
+    assertThat(OrderSummaryPersistenceMapper.fromNativeRow(new Object[] {id, null, 2L, 5L}))
+        .isEqualTo(new OrderSummary(id, null, 2, 5));
+  }
+
+  @Test
   void should_preserve_null_name_and_zero_metrics_when_mapping_summary() {
     UUID id = UUID.randomUUID();
     assertThat(OrderSummaryPersistenceMapper.toDomain(new OrderSummaryRow(id, null, 0L, 0L)))

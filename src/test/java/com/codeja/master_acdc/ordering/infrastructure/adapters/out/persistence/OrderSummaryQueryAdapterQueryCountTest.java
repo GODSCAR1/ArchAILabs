@@ -61,7 +61,7 @@ class OrderSummaryQueryAdapterQueryCountTest {
     // Lab S12 (RBAC): el listado exige alcance explícito; global = lectura con order:read-any.
     var summaries =
         adapter.findByStatus(
-            new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE));
+            new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE, "id ASC"));
 
     assertThat(summaries).hasSize(ORDER_COUNT);
     assertThat(statistics.getPrepareStatementCount())
