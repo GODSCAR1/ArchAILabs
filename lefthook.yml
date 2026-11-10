@@ -13,3 +13,7 @@ pre-commit:
     specs:
       glob: "openspec/**"
       run: openspec validate --all --strict --no-interactive
+    secrets:
+      # Capa 2 (lab S13): Gitleaks sobre lo que se va a commitear. No se salta con --no-verify (hook del agente).
+      run: gitleaks git --pre-commit --staged --config .gitleaks.toml --redact --no-banner --log-level warn
+      fail_text: "Gitleaks: secreto en el commit. Sácalo a una variable de entorno o genéralo en el test; si ya se publicó, rótalo."

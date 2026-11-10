@@ -1,0 +1,4 @@
+# Supresiones (nosemgrep, gitleaks:allow) aprobadas por una persona. Una ruta por línea.
+# verify-quality.sh falla si aparece una supresión en cualquier otro archivo (lab S13).
+# S-10: metrics del Actuator protegido por la cadena actuatorSecurity (docs/lab-s13.md, triaje).
+src/main/resources/application.properties

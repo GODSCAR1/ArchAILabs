@@ -77,6 +77,53 @@ while IFS= read -r guard; do
   fi
 done < scripts/protected-tests.txt
 (( GUARDS_MISSING == 0 )) || exit 1
+echo "▶ Capa 2: SAST y secretos (lab S13, docs/lab-s13.md)"
+# Segunda capa: no depende de que los hooks del agente hayan funcionado.
+if [[ "${GITHUB_ACTIONS:-}" == "true" && "${ACDC_LAYER2_IN_OWN_JOB:-}" == "true" ]]; then
+  echo "  (CI: la capa 2 se ejecuta en el job security-layer-2 con versiones fijadas y SARIF)"
+else
+  for tool in semgrep gitleaks; do
+    command -v "$tool" >/dev/null \
+      || { echo "AC/DC: falta $tool (Semgrep 1.182, Gitleaks 8.30). La capa 2 es obligatoria: instálalo, no la omitas." >&2; exit 1; }
+  done
+  for rule in shop-order-sort-injection shop-no-weak-password-reset-random shop-export-path-traversal \
+              shop-sql-concatenation shop-sql-injection-taint shop-no-customer-id-param shop-no-log-tokens; do
+    [[ -f "semgrep-rules/$rule.yaml" && -f "semgrep-rules/$rule.java" ]] \
+      || { echo "AC/DC: falta la regla $rule o su fixture en semgrep-rules/. Restáurala; solo una persona la retira." >&2; exit 1; }
+  done
+  # Supresiones: solo en los archivos aprobados por una persona (scripts/security-suppressions.txt).
+  SUPPRESSED=$(git ls-files -co --exclude-standard -z \
+    | grep -zvE '\.md$|^(semgrep-rules|\.claude|\.opencode|scripts)/|^verify-quality\.sh$' \
+    | xargs -0 grep -lE 'nosemgrep|gitleaks:allow' 2>/dev/null | sort -u || true)
+  ALLOWED=$(tr -d '\r' < scripts/security-suppressions.txt | grep -vE '^[[:space:]]*(#|$)' | sort -u)
+  EXTRA=$(comm -23 <(echo "$SUPPRESSED") <(echo "$ALLOWED") | sed '/^$/d')
+  [[ -z "$EXTRA" ]] \
+    || { echo "AC/DC: supresión de Semgrep/Gitleaks no aprobada (nosemgrep, gitleaks:allow). Corrige el código; las supresiones solo las añade una persona en el PR, con motivo:" >&2; echo "$EXTRA" >&2; exit 1; }
+# Ajustes de Semgrep propios de esta ejecución, en ruta nativa (Semgrep es Python de Windows en Git Bash).
+  sg_settings() { local f; f="$(mktemp -d)/settings.yml"; command -v cygpath >/dev/null && f=$(cygpath -w "$f"); echo "$f"; }
+  SG=(env SEMGREP_SETTINGS_FILE="$(sg_settings)" SEMGREP_ENABLE_VERSION_CHECK=0 semgrep)
+  "${SG[@]}" scan --config semgrep-rules/ --metrics=off --disable-version-check --quiet --error src/main/java \
+    || { echo "AC/DC: Semgrep (reglas del proyecto) encontró hallazgos en src/main/java. Corrige la causa; no añadas supresiones." >&2; exit 1; }
+  gitleaks git . --config .gitleaks.toml --redact --no-banner --log-level warn \
+    || { echo "AC/DC: Gitleaks encontró un secreto en el historial. Rótalo en el proveedor y añade el fingerprint a gitleaks-baseline.json (una persona)." >&2; exit 1; }
+  gitleaks dir src --config .gitleaks.toml --redact --no-banner --log-level warn \
+    || { echo "AC/DC: Gitleaks encontró un secreto en src/. Sustitúyelo por una variable de entorno o un valor generado en el test." >&2; exit 1; }
+  if [[ "${1:---fast}" == "--full" ]]; then
+    # Tests de las reglas, de uno en uno: en paralelo chocan con ~/.semgrep/settings.yml en Windows.
+    for r in semgrep-rules/*.yaml; do
+      "${SG[@]}" --test --config "$r" "${r%.yaml}.java" >/dev/null \
+        || { echo "AC/DC: el test de la regla $r falla (semgrep --test). Las reglas solo las cambia una persona." >&2; exit 1; }
+    done
+    mkdir -p target
+    "${SG[@]}" scan --config semgrep-rules/ --config p/java --config p/owasp-top-ten --metrics=off \
+      --disable-version-check --quiet --sarif --output target/semgrep.sarif . || true
+    gitleaks git . --config .gitleaks.toml --redact --no-banner --log-level error \
+      --report-format sarif --report-path target/gitleaks.sarif || true
+    bash scripts/open-findings.sh target/semgrep.sarif target/gitleaks.sarif
+    grep -qx 'Ninguno\.' .acdc/open-findings.md \
+      || { echo "AC/DC: hay hallazgos abiertos de la capa 2 (.acdc/open-findings.md). Clasifícalos y corrígelos:" >&2; cat .acdc/open-findings.md >&2; exit 1; }
+  fi
+fi
 echo "▶ Capa 1: formato y estilo"
 ./mvnw -q spotless:check
 ./mvnw -q checkstyle:check
@@ -93,6 +140,6 @@ MATRIX_REPORT=target/surefire-reports/TEST-com.codeja.master_acdc.identity.Secur
 MATRIX_RUN=$(grep -o 'tests="[0-9]*"' "$MATRIX_REPORT" 2>/dev/null | head -1 | tr -dc '0-9')
 (( ${MATRIX_RUN:-0} >= 90 )) \
   || { echo "AC/DC: SecurityMatrixTest no se ejecutó completo (${MATRIX_RUN:-0} casos, mínimo 90). No la excluyas ni la recortes." >&2; exit 1; }
-# S12: + gitleaks + semgrep
+# S13: + gitleaks + semgrep (capa 2)
 # S14: + PIT (--full)
 # S17: + ArchUnit

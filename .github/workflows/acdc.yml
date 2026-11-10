@@ -59,3 +59,74 @@ jobs:
       - run: npm install -g @fission-ai/openspec@${{ env.OPENSPEC_VERSION }}
       - run: chmod +x mvnw      # el bit de ejecución no viaja desde Windows
       - run: bash ./verify-quality.sh --full   # unitarios + IT con Testcontainers (Docker del runner)
+        env:
+          ACDC_LAYER2_IN_OWN_JOB: "true"        # la capa 2 corre en security-layer-2 (versiones fijadas + SARIF)
+
+  security-layer-2:
+    # Capa 2 (lab S13): SAST + secretos con versiones fijadas y SARIF. Marcar como required status check en main.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # subida del SARIF a Code Scanning
+    env:
+      SEMGREP_VERSION: "1.182.0"
+      GITLEAKS_VERSION: "8.30.0"
+      GITLEAKS_SHA256: "79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e"
+      SEMGREP_ENABLE_VERSION_CHECK: "0"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0          # Gitleaks recorre toda la historia; con el clon superficial no ve nada
+      - name: Instalar Semgrep y Gitleaks (versiones fijadas)
+        run: |
+          pipx install "semgrep==${SEMGREP_VERSION}"
+          curl -sSfL -o gitleaks.tgz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tgz" | sha256sum -c -
+          tar -xzf gitleaks.tgz gitleaks && sudo install gitleaks /usr/local/bin/ && rm gitleaks gitleaks.tgz
+          semgrep --version && gitleaks version
+      - name: Tests de las reglas propias
+        run: semgrep --test semgrep-rules/
+      - name: SAST (reglas propias + p/java + p/owasp-top-ten)
+        run: |
+          semgrep scan --config semgrep-rules/ --config p/java --config p/owasp-top-ten --metrics=off \
+            --disable-version-check --error --sarif --output semgrep.sarif . \
+            || echo "SAST_FAILED=1" >> "$GITHUB_ENV"
+      - name: Secretos (historia completa)
+        run: |
+          gitleaks git . --config .gitleaks.toml --redact --no-banner \
+            --report-format sarif --report-path gitleaks.sarif \
+            || echo "SECRETS_FAILED=1" >> "$GITHUB_ENV"
+      - name: Hallazgos abiertos (.acdc/open-findings.md)
+        if: always()
+        run: |
+          bash scripts/open-findings.sh semgrep.sarif gitleaks.sarif
+          cat .acdc/open-findings.md >> "$GITHUB_STEP_SUMMARY"
+      - name: SARIF de Semgrep a Code Scanning
+        if: always() && hashFiles('semgrep.sarif') != ''
+        continue-on-error: true   # requiere repo público o GitHub Advanced Security
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+      - name: SARIF de Gitleaks a Code Scanning
+        if: always() && hashFiles('gitleaks.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: gitleaks.sarif
+          category: gitleaks
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: security-layer-2
+          path: |
+            semgrep.sarif
+            gitleaks.sarif
+            .acdc/open-findings.md
+      - name: Veredicto de la capa 2
+        run: |
+          if [[ -n "${SAST_FAILED:-}${SECRETS_FAILED:-}" ]]; then
+            echo "Capa 2: hallazgos de Semgrep o Gitleaks (ver resumen del job y .acdc/open-findings.md)." >&2
+            exit 1
+          fi

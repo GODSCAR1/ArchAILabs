@@ -20,6 +20,16 @@
             "timeout": 60
           }
         ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/security-scan.sh",
+            "timeout": 60
+          }
+        ]
       }
     ],
     "Stop": [
@@ -53,6 +63,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit|Read|Grep|Glob|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-security.sh",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -66,6 +86,12 @@
           }
         ]
       }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)"
     ]
   }
 }

@@ -100,9 +100,16 @@ Lee los dos antes de tocar una cache.
 - Redis caído = miss; NUNCA un 5xx por la cache. Estas reglas son para caches de DATOS (catálogo). EXCEPCIÓN única: la versión de sesión de identity (`shop:identity:session-version:v1:`) es un control de seguridad, no una cache: sin L1 ni TTL, Redis caído = 401 (fail closed) y la barrera se publica ANTES del commit (lab S12, change add-session-version-revocation). No extiendas esta excepción a otras claves. Si cambia la forma de un valor cacheado, sube la versión del prefijo `shop:cache:vN:`.
 
 ## Seguridad
-- NUNCA loguear Request/Response completos ni datos personales (email, documento, teléfono, tarjeta). (pendiente: Semgrep en S12)
-- Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código ni archivos versionados. (pendiente: Gitleaks en S12)
-- NUNCA SQL concatenado; siempre parámetros. (pendiente: Semgrep en S12)
+- NUNCA loguear Request/Response completos, datos personales (email, documento, teléfono, tarjeta) ni variables `token`, `accessToken`, `refreshToken` o `password`. (verificador: Semgrep `shop-no-log-tokens`)
+- Secretos SOLO por variables de entorno (`${VARIABLE}`); NUNCA en código, tests ni archivos versionados. En tests, genera el valor o léelo de una variable de entorno. NUNCA leas `.env`: pide a la persona el nombre de la variable. (verificador: Gitleaks en el hook, el pre-commit y CI)
+- NUNCA SQL ni JPQL concatenado (tampoco `String.format`); siempre parámetros enlazados o Criteria. La ordenación dinámica, solo con lista blanca de campos. (verificador: Semgrep `shop-sql-concatenation`, `shop-sql-injection-taint`, `shop-order-sort-injection`)
+- Tokens, códigos de verificación, OTP, sales y nonces SOLO con `SecureRandom`; NUNCA `Random`, `ThreadLocalRandom` ni `Math.random`. (verificador: Semgrep `shop-no-weak-password-reset-random`)
+- Rutas de fichero desde la entrada: base absoluta normalizada, `resolve(...).normalize()` y `startsWith(base)` antes de leer; mejor, identificadores en lugar de nombres. (verificador: Semgrep `shop-export-path-traversal`)
+
+### Capa 2: SAST y secretos (lab S13, `docs/lab-s13.md`)
+- Cada edición pasa por Semgrep (solo `semgrep-rules/`) y Gitleaks: si el hook informa de un hallazgo, corrige la causa en el código.
+- PROHIBIDO añadir `nosemgrep` o `gitleaks:allow`, y editar `semgrep-rules/`, `.semgrepignore`, `.gitleaks.toml`, `gitleaks-baseline.json` o `.acdc/open-findings.md`. Si crees que un hallazgo es un falso positivo, explícalo para la descripción del PR y detente: la supresión la decide una persona.
+- PROHIBIDO `git commit --no-verify`/`-n`, `LEFTHOOK=0` o `core.hooksPath` para saltar el pre-commit.
 
 ### Autenticación y autorización — ADR `docs/adr/0011-autenticacion-refresh-y-version-de-sesion.md`
 Lee el ADR antes de tocar seguridad. `HttpSecurityConfiguration`, `JwtTokenAdapter`, `JwtDecoderFactory`, `SessionVersionValidator`, `Role` y la matriz (`SecurityMatrixTest`/`SecurityMatrixSupport`) son zona protegida: si crees que hay que cambiarlos, explica por qué y detente.
@@ -136,7 +143,7 @@ Spring Security 7 — APIs eliminadas (no las uses aunque aparezcan en ejemplos 
 - Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
-- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`. Si hace falta, detente y pide permiso a una persona.
+- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `semgrep-rules/`, `.semgrepignore`, `.gitleaks.toml`, `gitleaks-baseline.json`, `.acdc/open-findings.md`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`. Si hace falta, detente y pide permiso a una persona.
 
 ## graphify
 - Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.
