@@ -70,7 +70,22 @@ Notas de la remediación del 1.1:
 
 ## 4. Remediaciones
 
-_Pendiente._
+### S13-01 — inyección SQL en la ordenación
+
+El listado concatenaba `sort` en `ORDER BY` de una consulta nativa (CWE-89). Un lector autorizado
+podía alterar la consulta y potencialmente acceder o afectar datos con los permisos de la conexión SQL.
+En el rojo `1c80b4f`, `OrderListingSortIT` envió `totalUnits; drop table orders--`: el fragmento
+llegó a PostgreSQL y la aserción del 400 falló con una excepción SQL; la transacción de solo lectura
+impidió el `DROP`. Esto no demuestra que se eliminara la tabla.
+
+Se valida `campo [ASC|DESC]` contra `id`, `customerName`, `lineCount` y `totalUnits`; lo inválido
+devuelve 400 `invalid-order-sort`. La proyección Criteria usa metamodelo y filtros de estado/alcance,
+ordena mediante expresiones tipadas y desempata por id. Se retira la excepción temporal a las reglas
+de filtros tipados, lista blanca y ausencia de SQL concatenado; el diseño de siembra es histórico.
+
+- Rojo: `bash ./mvnw -q -Dit.test=OrderListingSortIT verify` falló por no devolver el 400 seguro.
+- Verde: `bash ./mvnw -q -Dtest=OrderSummaryQueryAdapterQueryCountTest,OrderSummaryPersistenceMapperTest -Dit.test=OrderListingSortIT,OrderSummaryQueryAdapterIT verify` pasó, incluidos cliente huérfano, cero líneas y el guardián de 120 pedidos/≤2 consultas.
+- Regla `shop-order-sort-injection`: `semgrep --test semgrep-rules/` pasó 1/1; el escaneo dirigido del adaptador corregido ejecutó una regla sobre un archivo con 0 hallazgos. La regla sigue el flujo intraprocedural desde `sort()` hasta `createNativeQuery`, no entre archivos.
 
 ## 5. Reglas del proyecto
 

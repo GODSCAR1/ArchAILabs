@@ -26,10 +26,79 @@ import org.springframework.transaction.annotation.Transactional;
 class OrderListingSortIT extends IdentityIntegrationSupport {
   private static final UUID FIRST = UUID.fromString("00000000-0000-0000-0000-000000000001");
   private static final UUID SECOND = UUID.fromString("00000000-0000-0000-0000-000000000002");
+  private static final UUID THIRD = UUID.fromString("00000000-0000-0000-0000-000000000003");
   @Autowired private JdbcTemplate jdbc;
   @Autowired private MockMvc mvc;
   @Autowired private AccessTokenIssuer issuer;
   private String token;
+
+  @Test
+  @DisplayName("Ordenación permitida conserva unidades descendentes")
+  void should_break_ties_by_id_when_sorting_units_descending() throws Exception {
+    insert_tied_order();
+    assert_order("totalUnits DESC", SECOND, THIRD, FIRST);
+  }
+
+  @Test
+  @DisplayName("Campos permitidos y orden predeterminado")
+  void should_order_stably_when_each_permitted_field_is_requested() throws Exception {
+    insert_tied_order();
+    for (String sort :
+        new String[] {
+          "id",
+          "id ASC",
+          "customerName",
+          "customerName ASC",
+          "customerName DESC",
+          "lineCount",
+          "lineCount ASC",
+          "lineCount DESC",
+          "totalUnits",
+          "totalUnits ASC"
+        }) {
+      assert_order(sort, FIRST, SECOND, THIRD);
+    }
+    assert_order("id DESC", THIRD, SECOND, FIRST);
+    assert_order("totalUnits DESC", SECOND, THIRD, FIRST);
+  }
+
+  private void insert_tied_order() {
+    var customer =
+        jdbc.queryForObject("select customer_id from orders where id=?", UUID.class, FIRST);
+    jdbc.update("insert into orders(id,customer_id,status) values (?, ?, 'PAID')", THIRD, customer);
+    jdbc.update(
+        "insert into order_lines(order_id,product_id,quantity) values (?, ?, ?)",
+        THIRD,
+        UUID.randomUUID(),
+        5);
+  }
+
+  private void assert_order(String sort, UUID first, UUID second, UUID third) throws Exception {
+    mvc.perform(
+            get("/api/orders")
+                .param("status", "PAID")
+                .param("sort", sort)
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(first.toString()))
+        .andExpect(jsonPath("$[1].id").value(second.toString()))
+        .andExpect(jsonPath("$[2].id").value(third.toString()));
+  }
+
+  @Test
+  @DisplayName("Campo dirección o fragmento no permitido")
+  void should_reject_sort_when_field_direction_or_fragment_is_invalid() throws Exception {
+    for (String sort : new String[] {"", "unknown", "id DOWN", "id ASC extra"}) {
+      mvc.perform(
+              get("/api/orders")
+                  .param("status", "PAID")
+                  .param("sort", sort)
+                  .header("Authorization", "Bearer " + token))
+          .andExpect(status().isBadRequest())
+          .andExpect(
+              jsonPath("$.type").value("https://api.master-acdc.dev/problems/invalid-order-sort"));
+    }
+  }
 
   @BeforeEach
   void seed_orders() {

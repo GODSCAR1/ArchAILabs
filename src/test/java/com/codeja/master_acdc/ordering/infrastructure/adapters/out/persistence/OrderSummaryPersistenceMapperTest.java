@@ -11,7 +11,7 @@ class OrderSummaryPersistenceMapperTest {
   @Test
   void should_map_native_aggregates_when_reading_summary_row() {
     UUID id = UUID.randomUUID();
-    assertThat(OrderSummaryPersistenceMapper.fromNativeRow(new Object[] {id, null, 2L, 5L}))
+    assertThat(OrderSummaryPersistenceMapper.toDomain(new OrderSummaryRow(id, null, 2L, 5L)))
         .isEqualTo(new OrderSummary(id, null, 2, 5));
   }
 

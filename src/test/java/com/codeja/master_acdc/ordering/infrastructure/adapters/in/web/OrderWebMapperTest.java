@@ -3,6 +3,7 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderSortException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
@@ -14,6 +15,17 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class OrderWebMapperTest {
+  @Test
+  void should_report_invalid_sort_when_mapping_listing_criteria() {
+    assertThatThrownBy(() -> OrderWebMapper.listingCriteria("PAID", "id DOWN"))
+        .isInstanceOf(InvalidOrderSortException.class);
+    var problem =
+        new OrderExceptionHandler().handleInvalidOrderSort(new InvalidOrderSortException());
+    assertThat(problem.getStatus()).isEqualTo(400);
+    assertThat(problem.getType())
+        .hasToString("https://api.master-acdc.dev/problems/invalid-order-sort");
+  }
+
   @Test
   @DisplayName("Listado ordenado por unidades descendentes")
   void should_preserve_sort_when_mapping_listing_criteria() {
