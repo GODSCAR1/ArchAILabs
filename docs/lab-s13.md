@@ -119,7 +119,27 @@ administrada sin enlaces controlados por usuarios.
 
 ## 5. Reglas del proyecto
 
-_Pendiente._
+| Id | Patrón cubierto |
+|---|---|
+| `shop-order-sort-injection` | `criteria.sort()` llega a una consulta nativa. |
+| `shop-no-weak-password-reset-random` | Fuentes aleatorias débiles en contextos de secretos, incluidos códigos de verificación. |
+| `shop-export-path-traversal` | Lectura de ruta construida con `resolve` sin comprobación `startsWith`. |
+| `shop-sql-concatenation` | SQL/JPQL concatenado o con `String.format`, incluso en variables intermedias, en sinks JPA/Hibernate, JDBC y Spring JDBC. |
+| `shop-sql-injection-taint` | Entrada de petición o `criteria.sort()` alcanza esos sinks, con propagación intraprocedural. |
+| `shop-no-customer-id-param` | Parámetros anotados y campos o componentes `customerId` en la frontera web, incluidos DTO de nombre arbitrario y respuestas; excluye variables locales. |
+| `shop-no-log-tokens` | Tokens o contraseñas registrados por SLF4J, también a través de una variable intermedia. |
+
+Cada regla tiene fixture Java con ejemplos positivos y negativos. La ejecución de
+`semgrep --test semgrep-rules/` comprobó 7/7 reglas antes y después de añadir `semgrep-rules/`
+a `.semgrepignore`; la exclusión evita auditar como producción los ejemplos vulnerables. En Windows,
+los siete fixtures también se verificaron individualmente para evitar la contención sobre los ajustes
+de Semgrep. El escaneo `semgrep scan --config semgrep-rules/ --metrics=off --error src/main/java`
+ejecutó siete reglas sobre 379 archivos y obtuvo 0 hallazgos. Los perfiles públicos `p/java` y
+`p/owasp-top-ten` ejecutaron 166 reglas sobre 595 archivos y obtuvieron 0 hallazgos.
+
+Semgrep CE no sigue flujos entre archivos: los fixtures prueban patrones locales, no toda la cadena
+entre controlador, aplicación y adaptador. Por ello la regla de `customerId` examina también los
+modelos de respuesta de la frontera web, sin depender del nombre del DTO.
 
 ## 6. Integración en el loop
 

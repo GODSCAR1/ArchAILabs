@@ -2,33 +2,25 @@ rules:
   - id: shop-no-customer-id-param
     languages: [java]
     severity: ERROR
-    message: El cliente debe derivarse de la cuenta autenticada, no de la petición.
+    message: >-
+      La frontera web no acepta ni expone customerId: el cliente se deriva de la
+      cuenta autenticada (sub del token). Elimina el parámetro o el componente.
     paths:
       include:
         - '**/adapters/in/web/**'
         - '**/shop-no-customer-id-param.java'
     pattern-either:
-      - pattern: '$RET $METHOD(..., @RequestParam(...) $TYPE customerId, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @RequestParam $TYPE customerId, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @PathVariable(...) $TYPE customerId, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @PathVariable $TYPE customerId, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @RequestHeader(...) $TYPE customerId, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @RequestHeader $TYPE customerId, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @RequestBody $TYPE customerId, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @RequestParam("customerId") $TYPE $PARAM, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @RequestParam(value = "customerId", ...) $TYPE $PARAM, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @PathVariable("customerId") $TYPE $PARAM, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @PathVariable(value = "customerId", ...) $TYPE $PARAM, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @RequestHeader("customerId") $TYPE $PARAM, ...) { ... }'
-      - pattern: '$RET $METHOD(..., @RequestHeader(value = "customerId", ...) $TYPE $PARAM, ...) { ... }'
+      # Parámetros de controlador con ese nombre de variable.
+      - pattern: '$RET $METHOD(..., @$ANN(...) $TYPE customerId, ...) { ... }'
+      - pattern: '$RET $METHOD(..., @$ANN $TYPE customerId, ...) { ... }'
+      # Parámetros de controlador que leen "customerId" con otro nombre de variable.
+      - pattern: '$RET $METHOD(..., @$ANN("customerId") $TYPE $PARAM, ...) { ... }'
+      - pattern: '$RET $METHOD(..., @$ANN(value = "customerId", ...) $TYPE $PARAM, ...) { ... }'
+      - pattern: '$RET $METHOD(..., @$ANN(name = "customerId", ...) $TYPE $PARAM, ...) { ... }'
+      # Componente de record de la capa web, sea cual sea su nombre (petición o respuesta).
+      - pattern: 'record $DTO(..., $TYPE customerId, ...) { ... }'
+      # Campo de clase de la capa web (no variables locales dentro de métodos).
       - patterns:
-          - pattern: $TYPE customerId;
-          - pattern-inside: class $DTO { ... }
-          - metavariable-regex:
-              metavariable: $DTO
-              regex: '.*(Request|Body|Input|Command|Dto|DTO).*'
-      - patterns:
-          - pattern: record $DTO(..., $TYPE customerId, ...) { ... }
-          - metavariable-regex:
-              metavariable: $DTO
-              regex: '.*(Request|Body|Input|Command|Dto|DTO).*'
+          - pattern: '$TYPE customerId;'
+          - pattern-inside: 'class $CLASS { ... }'
+          - pattern-not-inside: '$RET $METHOD(...) { ... }'
