@@ -1,13 +1,16 @@
 package com.codeja.master_acdc.identity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeja.master_acdc.identity.domain.model.Registration;
 import com.codeja.master_acdc.identity.domain.port.Passwords;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.notification.InMemoryPasswordResetNotifier;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +20,52 @@ class PasswordResetFlowIT extends AuthHttpSupport {
   @Autowired private InMemoryPasswordResetNotifier notifier;
   @Autowired private Passwords passwords;
   @Autowired private StringRedisTemplate redis;
+
+  @Test
+  @DisplayName("Token propio no permite predecir el siguiente token ajeno")
+  void should_not_predict_other_token_when_own_reset_token_is_observed() throws Exception {
+    String ownEmail = email();
+    String otherEmail = email();
+    var ownId = register.register(new Registration(ownEmail, PASSWORD, null));
+    var otherId = register.register(new Registration(otherEmail, PASSWORD, null));
+    login(ownEmail, PASSWORD).andExpect(status().isOk());
+    login(otherEmail, PASSWORD).andExpect(status().isOk());
+    var before = state(ownId, otherId);
+    String own = requestToken(ownEmail);
+    String other = requestToken(otherEmail);
+    assertAll(
+        () -> assertThat(state(ownId, otherId)).isEqualTo(before),
+        () ->
+            assertThat(PasswordResetLcgOracle.predictions(own).contains(other))
+                .as("El token ajeno no debe coincidir con una predicción LCG")
+                .isFalse());
+  }
+
+  private List<List<Map<String, Object>>> state(UUID own, UUID other) {
+    return List.of(
+        jdbc.queryForList(
+            "select id, password_hash, session_version from user_account where id in (?, ?) order"
+                + " by id",
+            own,
+            other),
+        jdbc.queryForList(
+            "select * from refresh_token where user_id in (?, ?) order by id", own, other),
+        jdbc.queryForList("select * from orders order by id"),
+        jdbc.queryForList("select * from stock order by product_id"));
+  }
+
+  private String requestToken(String email) throws Exception {
+    var response =
+        mvc.perform(
+                authorizedPost("/api/auth/password-reset/request")
+                    .content(json.writeValueAsString(Map.of("email", email))))
+            .andExpect(status().isAccepted())
+            .andExpect(content().string(""))
+            .andReturn()
+            .getResponse();
+    assertThat(response.getCookies()).isEmpty();
+    return notifier.lastMessageFor(email).orElseThrow().token();
+  }
 
   @Test
   @DisplayName("Recuperación pública sin sesión ni cookie")
