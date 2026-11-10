@@ -13,17 +13,22 @@ public final class LocalExportFiles implements ExportFiles {
   private final Path base;
 
   public LocalExportFiles(Path base) {
-    this.base = base;
+    this.base = base.toAbsolutePath().normalize();
   }
 
   @Override
   public ExportContent read(String name) {
     try {
-      // S13-03: siembra intencionada; el change de remediación confinará la ruta.
-      return new ExportContent(Files.readAllBytes(base.resolve(name)));
+      Path candidate = base.resolve(name).normalize();
+      if (!candidate.startsWith(base)) {
+        throw new ExportException("invalid-export-name");
+      }
+      return new ExportContent(Files.readAllBytes(candidate));
     } catch (NoSuchFileException exception) {
       throw new ExportException("export-not-found");
-    } catch (IOException | InvalidPathException exception) {
+    } catch (InvalidPathException exception) {
+      throw new ExportException("invalid-export-name");
+    } catch (IOException exception) {
       throw new ExportException("export-read-failed");
     }
   }

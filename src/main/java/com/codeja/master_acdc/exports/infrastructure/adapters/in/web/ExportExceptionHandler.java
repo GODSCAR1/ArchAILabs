@@ -10,7 +10,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ExportExceptionHandler {
   @ExceptionHandler(ExportException.class)
   public ProblemDetail handle(ExportException exception) {
-    var status = exception.code().equals("export-not-found") ? 404 : 500;
+    var status =
+        switch (exception.code()) {
+          case "invalid-export-name" -> 400;
+          case "export-not-found" -> 404;
+          default -> 500;
+        };
     var detail =
         ProblemDetail.forStatusAndDetail(
             org.springframework.http.HttpStatusCode.valueOf(status), exception.code());

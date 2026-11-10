@@ -102,6 +102,21 @@ es una prueba estadística de seguridad criptográfica.
 - Verde: `bash ./mvnw -q -Dtest=PasswordResetPredictionTest,SecurePasswordResetSecretGeneratorTest -Dit.test=PasswordResetFlowIT verify` pasó los tests unitarios y HTTP, incluidos formato, hash y revocación.
 - Regla `shop-no-weak-password-reset-random`: `semgrep --test semgrep-rules/` pasó 2/2 reglas; el escaneo de `src/main/java` con `--no-git-ignore` examinó 379 archivos y obtuvo 0 hallazgos. Detecta `Random`, `ThreadLocalRandom`, `Math.random` y `RandomGenerator` en implementaciones de `PasswordResetSecrets` o contextos nombrados como secretos, incluidos códigos de verificación; acepta `SecureRandom`, jitter de TTL y simulaciones ajenas.
 
+### S13-03 — lectura fuera de la carpeta de exports
+
+El adaptador leía `base.resolve(name)` sin comprobar el destino (CWE-22): un ADMIN podía leer
+archivos externos accesibles al proceso. En el rojo `c7be7fc`, `AdminExportDownloadIT` recibió
+HTTP 200 y el centinela externo para ascenso al padre, separador nativo y ruta absoluta.
+
+El adaptador conserva una base absoluta normalizada y exige `candidate.startsWith(base)` sobre
+objetos `Path` después de resolver y normalizar. Un escape o ruta inválida responde 400
+`invalid-export-name`; se mantienen 404 para inexistentes y 500 para errores de E/S. El control
+es léxico: no impide escapes por enlaces simbólicos dentro de la base; se presupone una carpeta
+administrada sin enlaces controlados por usuarios.
+
+- Verde: `bash ./mvnw -q -Dtest=LocalExportFilesTest,AdminExportControllerTest -Dit.test=AdminExportDownloadIT verify` pasó, incluida la carpeta hermana `exports-old`.
+- Regla `shop-export-path-traversal`: `semgrep --test semgrep-rules/` pasó 3/3; el escaneo dirigido del adaptador ejecutó la regla sobre un archivo con 0 hallazgos. Reconoce el patrón directo sembrado, no demuestra el confinamiento de todas las implementaciones posibles.
+
 ## 5. Reglas del proyecto
 
 _Pendiente._

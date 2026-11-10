@@ -1,0 +1,36 @@
+rules:
+  - id: shop-export-path-traversal
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Ruta construida con resolve() y leída sin confinar. Normaliza la base y el
+      candidato y comprueba candidate.startsWith(base) antes de leer (CWE-22).
+    metadata:
+      cwe: "CWE-22: Path Traversal"
+    patterns:
+      - pattern-either:
+          # Lectura directa sobre el resolve.
+          - pattern: java.nio.file.Files.$READ($BASE.resolve($NAME), ...)
+          # Lectura sobre una variable obtenida de resolve (con o sin normalize).
+          - patterns:
+              - pattern-either:
+                  - pattern-inside: |
+                      $P = $BASE.resolve($NAME);
+                      ...
+                  - pattern-inside: |
+                      $P = $BASE.resolve($NAME).normalize();
+                      ...
+                  - pattern-inside: |
+                      $T $P = $BASE.resolve($NAME);
+                      ...
+                  - pattern-inside: |
+                      $T $P = $BASE.resolve($NAME).normalize();
+                      ...
+              - pattern: java.nio.file.Files.$READ($P, ...)
+              # Confinamiento explícito antes de leer: no es hallazgo.
+              - pattern-not-inside: |
+                  if (!$P.startsWith(...)) { ... }
+                  ...
+      - metavariable-regex:
+          metavariable: $READ
+          regex: ^(readAllBytes|readString|readAllLines|lines|newInputStream|newBufferedReader|copy)$
