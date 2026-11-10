@@ -1,0 +1,44 @@
+rules:
+  - id: shop-sql-injection-taint
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Entrada de la petición llega a una consulta SQL o JPQL. La taint de Semgrep CE
+      es intraprocedural: complementa a shop-sql-concatenation, no la sustituye (CWE-89).
+    mode: taint
+    pattern-sources:
+      - pattern: $CRITERIA.sort()
+      - patterns:
+          - pattern-either:
+              - pattern-inside: |
+                  $RETURN $METHOD(..., @RequestParam(...) $TYPE $INPUT, ...) { ... }
+              - pattern-inside: |
+                  $RETURN $METHOD(..., @RequestParam $TYPE $INPUT, ...) { ... }
+              - pattern-inside: |
+                  $RETURN $METHOD(..., @PathVariable(...) $TYPE $INPUT, ...) { ... }
+              - pattern-inside: |
+                  $RETURN $METHOD(..., @PathVariable $TYPE $INPUT, ...) { ... }
+              - pattern-inside: |
+                  $RETURN $METHOD(..., @RequestHeader(...) $TYPE $INPUT, ...) { ... }
+              - pattern-inside: |
+                  $RETURN $METHOD(..., @RequestBody $TYPE $INPUT, ...) { ... }
+          - pattern: $INPUT
+    pattern-sanitizers:
+      - pattern: $P.setParameter(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              # JPA / Hibernate
+              - pattern: $DB.createQuery($QUERY, ...)
+              - pattern: $DB.createNativeQuery($QUERY, ...)
+              - pattern: $DB.createSelectionQuery($QUERY, ...)
+              - pattern: $DB.createMutationQuery($QUERY, ...)
+              # JDBC
+              - pattern: $DB.prepareStatement($QUERY, ...)
+              - pattern: $DB.prepareCall($QUERY, ...)
+              - pattern: (java.sql.Statement $DB).$EXEC($QUERY, ...)
+              # Spring JDBC
+              - pattern: (org.springframework.jdbc.core.JdbcTemplate $DB).$JDBC($QUERY, ...)
+              - pattern: (org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate $DB).$JDBC($QUERY, ...)
+              - pattern: (org.springframework.jdbc.core.simple.JdbcClient $DB).sql($QUERY)
+          - focus-metavariable: $QUERY

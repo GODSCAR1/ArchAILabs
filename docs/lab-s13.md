@@ -115,7 +115,7 @@ es léxico: no impide escapes por enlaces simbólicos dentro de la base; se pres
 administrada sin enlaces controlados por usuarios.
 
 - Verde: `bash ./mvnw -q -Dtest=LocalExportFilesTest,AdminExportControllerTest -Dit.test=AdminExportDownloadIT verify` pasó, incluida la carpeta hermana `exports-old`.
-- Regla `shop-export-path-traversal`: `semgrep --test semgrep-rules/` pasó 3/3; el escaneo dirigido del adaptador ejecutó la regla sobre un archivo con 0 hallazgos. Reconoce el patrón directo sembrado, no demuestra el confinamiento de todas las implementaciones posibles.
+- Regla `shop-export-path-traversal`: reconoce lecturas directas y mediante variable derivada de `resolve`, también con `normalize`, en varios métodos de `Files`; excluye el patrón de comprobación previa con `startsWith`. No demuestra el confinamiento de todas las implementaciones posibles.
 
 ## 5. Reglas del proyecto
 

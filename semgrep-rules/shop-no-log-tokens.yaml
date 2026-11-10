@@ -1,0 +1,19 @@
+rules:
+  - id: shop-no-log-tokens
+    languages: [java]
+    severity: ERROR
+    message: No registrar tokens ni contraseñas.
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern: $SECRET
+          - metavariable-regex:
+              metavariable: $SECRET
+              regex: '^(token|accessToken|refreshToken|password)$'
+    pattern-sinks:
+      - patterns:
+          - pattern: (org.slf4j.Logger $LOGGER).$LEVEL(..., $ARG, ...)
+          - metavariable-regex:
+              metavariable: $LEVEL
+              regex: '^(trace|debug|info|warn|error)$'
+          - focus-metavariable: $ARG

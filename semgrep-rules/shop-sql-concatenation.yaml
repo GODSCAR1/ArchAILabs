@@ -1,0 +1,36 @@
+rules:
+  - id: shop-sql-concatenation
+    languages: [java]
+    severity: ERROR
+    message: >-
+      SQL o JPQL construido por concatenación. Usa parámetros enlazados, Criteria
+      o una lista blanca que no copie texto de la entrada (CWE-89).
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern: $SQL + $VALUE
+          - metavariable-regex:
+              metavariable: $SQL
+              regex: '(?is).*\b(select|update|delete|insert|from|where|order\s+by|group\s+by|having)\b.*'
+      - patterns:
+          - pattern: String.format($SQL, ...)
+          - metavariable-regex:
+              metavariable: $SQL
+              regex: '(?is).*\b(select|update|delete|insert|from|where|order\s+by)\b.*'
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              # JPA / Hibernate
+              - pattern: $DB.createQuery($QUERY, ...)
+              - pattern: $DB.createNativeQuery($QUERY, ...)
+              - pattern: $DB.createSelectionQuery($QUERY, ...)
+              - pattern: $DB.createMutationQuery($QUERY, ...)
+              # JDBC
+              - pattern: $DB.prepareStatement($QUERY, ...)
+              - pattern: $DB.prepareCall($QUERY, ...)
+              - pattern: (java.sql.Statement $DB).$EXEC($QUERY, ...)
+              # Spring JDBC
+              - pattern: (org.springframework.jdbc.core.JdbcTemplate $DB).$JDBC($QUERY, ...)
+              - pattern: (org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate $DB).$JDBC($QUERY, ...)
+              - pattern: (org.springframework.jdbc.core.simple.JdbcClient $DB).sql($QUERY)
+          - focus-metavariable: $QUERY

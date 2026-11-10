@@ -22,3 +22,6 @@ target/
 # (los bloques de configuración que contienen no se cargan nunca); la
 # configuración real se escanea en src/main/resources.
 openspec/changes/archive/
+
+# Fixtures con vulnerabilidades sintéticas: se comprueban con semgrep --test.
+semgrep-rules/
