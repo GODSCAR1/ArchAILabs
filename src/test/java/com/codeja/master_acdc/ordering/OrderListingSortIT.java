@@ -1,6 +1,10 @@
 package com.codeja.master_acdc.ordering;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,8 +16,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
@@ -71,5 +77,59 @@ class OrderListingSortIT extends IdentityIntegrationSupport {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(FIRST.toString()))
         .andExpect(jsonPath("$[1].id").value(SECOND.toString()));
+  }
+
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  @DisplayName("Ordenación inyectada se rechaza y conserva pedidos")
+  void should_reject_injected_sort_when_listing_orders() throws Exception {
+    UUID product = UUID.randomUUID();
+    jdbc.update("insert into stock(product_id, available) values (?, ?)", product, 17);
+    var orders = jdbc.queryForList("select * from orders order by id");
+    var lines = jdbc.queryForList("select * from order_lines order by order_id, product_id");
+    var stock = jdbc.queryForList("select * from stock order by product_id");
+    try {
+      assertAll(
+          () ->
+              assertDoesNotThrow(
+                  this::assertInjectedSortRejected,
+                  "La ordenación inyectada debe rechazarse con HTTP 400"),
+          () -> assertEquals(orders, jdbc.queryForList("select * from orders order by id")),
+          () ->
+              assertEquals(
+                  lines,
+                  jdbc.queryForList("select * from order_lines order by order_id, product_id")),
+          () -> assertEquals(stock, jdbc.queryForList("select * from stock order by product_id")),
+          () ->
+              mvc.perform(
+                      get("/api/orders")
+                          .param("status", "PAID")
+                          .header("Authorization", "Bearer " + token))
+                  .andExpect(status().isOk()));
+    } finally {
+      // Sin transacción de test: el seed de @BeforeEach se confirma y hay que retirarlo a mano.
+      var customers =
+          jdbc.queryForList(
+              "select distinct customer_id from orders where id in (?, ?)",
+              UUID.class,
+              FIRST,
+              SECOND);
+      jdbc.update("delete from order_lines where order_id in (?, ?)", FIRST, SECOND);
+      jdbc.update("delete from orders where id in (?, ?)", FIRST, SECOND);
+      customers.forEach(customer -> jdbc.update("delete from customers where id = ?", customer));
+      jdbc.update("delete from stock where product_id = ?", product);
+    }
+  }
+
+  private void assertInjectedSortRejected() throws Exception {
+    mvc.perform(
+            get("/api/orders")
+                .param("status", "PAID")
+                .param("sort", "totalUnits; drop table orders--")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isBadRequest())
+        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+        .andExpect(
+            jsonPath("$.type").value("https://api.master-acdc.dev/problems/invalid-order-sort"));
   }
 }
