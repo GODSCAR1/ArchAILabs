@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "G-01: PemKeyLoader solo contiene el literal de cabecera/pie PEM para parsear; la clave se carga en runtime"
+targetRules = ["private-key"]
+paths = ['''src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/PemKeyLoader\.java''']

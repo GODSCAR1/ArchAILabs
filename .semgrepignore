@@ -1,0 +1,24 @@
+# Semgrep sustituye su lista por defecto cuando existe este fichero:
+# las entradas por defecto (1.182) se copian aquí para no perderlas.
+.git
+build/
+vendor/
+dist/
+*.min.js
+.env/
+.tox/
+node_modules/
+.npm/
+.yarn/
+.venv/
+test/
+tests/
+testsuite/
+
+# Proyecto
+target/
+
+# S-09 (lab S13): specs archivadas de OpenSpec. Son documentación histórica
+# (los bloques de configuración que contienen no se cargan nunca); la
+# configuración real se escanea en src/main/resources.
+openspec/changes/archive/
