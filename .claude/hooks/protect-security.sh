@@ -16,7 +16,7 @@ suppression_msg='las supresiones (nosemgrep, gitleaks:allow) solo las añade una
 env_msg='.env contiene secretos locales y está fuera del alcance del agente. Usa variables de entorno ya configuradas o pide a la persona el nombre de la variable; no leas, copies ni muestres su valor.'
 
 is_env_path() {
-  local b; b=$(basename "${1//\\//}")
+  local b="${1//\\//}"; b="${b##*/}"   # sin basename: las palabras que empiezan por "-" no son opciones
   [[ "$b" =~ ^\.env(\..+)?$ && "$b" != ".env.example" ]]
 }
 
