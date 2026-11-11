@@ -30,6 +30,7 @@ abstract class AdminUsersSupport extends IdentityIntegrationSupport {
                         + idFor(index))
             .toList());
     jdbc.update("delete from refresh_token");
+    jdbc.update("delete from password_reset_token"); // lab S13: FK a user_account (V9)
     jdbc.update("delete from user_account");
     var rows =
         IntStream.range(0, 120)
