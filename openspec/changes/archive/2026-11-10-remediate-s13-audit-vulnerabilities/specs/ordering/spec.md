@@ -31,3 +31,9 @@ El sistema SHALL rechazar campos, direcciones y fragmentos de ordenación fuera 
 - **WHEN** solicita GET `/api/orders?status=PAID` con sort vacío, campo desconocido, dirección distinta de ASC/DESC o fragmentos adicionales
 - **THEN** responde HTTP 400 con type `https://api.master-acdc.dev/problems/invalid-order-sort`
 - **AND** pedidos y stock no cambian
+
+## REMOVED Requirements
+
+### Requirement: Orden solicitado en el listado de pedidos
+**Reason**: Era la siembra intencionada S13-01 del laboratorio: aceptaba la expresión de `sort` tal cual y la concatenaba en el `ORDER BY` (inyección SQL). La sustituyen "Ordenación restringida del listado de pedidos" y "Rechazo de ordenación arbitraria sin efectos".
+**Migration**: Los clientes solo pueden ordenar por `id`, `customerName`, `lineCount` o `totalUnits`, con `ASC` o `DESC` opcional; cualquier otro valor responde 400 `invalid-order-sort`. Sin `sort` se mantiene `id ASC`.
