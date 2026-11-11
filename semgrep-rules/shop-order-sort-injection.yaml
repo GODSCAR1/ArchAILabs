@@ -1,0 +1,14 @@
+rules:
+  - id: shop-order-sort-injection
+    languages: [java]
+    severity: ERROR
+    message: No concatenar la ordenación de pedidos en consultas nativas.
+    mode: taint
+    pattern-sources:
+      - pattern: $CRITERIA.sort()
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $SESSION.createNativeQuery($SQL, ...)
+              - pattern: $SESSION.createNativeQuery($SQL)
+          - focus-metavariable: $SQL

@@ -61,7 +61,8 @@ class OrderSummaryProfilingIT {
 
   private void assertMeasuredLoad(int orderCount) {
     insertData(orderCount);
-    var criteria = new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE);
+    var criteria =
+        new OrderListingCriteria(OrderStatus.PAID, OrderReadScope.Global.INSTANCE, "id ASC");
     orderSummaryQuery.findByStatus(criteria);
 
     Statistics statistics = statistics();

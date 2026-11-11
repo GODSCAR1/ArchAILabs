@@ -7,13 +7,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.codeja.master_acdc.OrderBearer;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogProduct;
 import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
+import com.codeja.master_acdc.identity.infrastructure.adapters.out.notification.InMemoryPasswordResetNotifier;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -22,7 +31,26 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import tools.jackson.databind.ObjectMapper;
 
+@Import(SecurityMatrixSupport.MatrixExports.class)
 abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
+  // Lab S13 (H2): recuperación y exports en la matriz.
+  static final String RECOVERED_PASSWORD = "Unique!67890Z";
+  static final byte[] EXPORT_BYTES = "id,total\n1,2\n".getBytes(StandardCharsets.UTF_8);
+
+  @TestConfiguration
+  static class MatrixExports {
+    @Bean
+    @Primary
+    Path matrixExportDirectory() throws IOException {
+      return Files.createTempDirectory("exports-matrix-");
+    }
+  }
+
+  @Autowired Path exportDirectory;
+  @Autowired InMemoryPasswordResetNotifier notifier;
+  UUID recoveryTarget;
+  String recoveryEmail;
+
   @Autowired MockMvc mvc;
   @Autowired JdbcTemplate jdbc;
   @Autowired AccessTokenIssuer issuer;
@@ -64,6 +92,38 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
     paid = seedOrder(customer, "PAID");
     foreignPaid = seedOrder(foreignCustomer, "PAID");
     seedManagementTargets();
+    seedRecoveryTarget();
+    Files.write(exportDirectory.resolve("pedidos.csv"), EXPORT_BYTES);
+  }
+
+  private void seedRecoveryTarget() {
+    recoveryTarget = UUID.randomUUID();
+    recoveryEmail = recoveryTarget + "@example.com";
+    jdbc.update(
+        "insert into user_account(id,email,password_hash,roles,enabled,session_version) values"
+            + " (?,?,'unused','{CUSTOMER}',true,5)",
+        recoveryTarget,
+        recoveryEmail);
+  }
+
+  MockHttpServletRequestBuilder resetRequest() {
+    return post("/api/auth/password-reset/request")
+        .contentType("application/json")
+        .content(json.writeValueAsString(Map.of("email", recoveryEmail)));
+  }
+
+  MockHttpServletRequestBuilder resetConfirm(String token) {
+    return post("/api/auth/password-reset/confirm")
+        .contentType("application/json")
+        .content(
+            json.writeValueAsString(
+                Map.of("email", recoveryEmail, "token", token, "newPassword", RECOVERED_PASSWORD)));
+  }
+
+  /** Token vigente del destinatario, obtenido por el canal de notificación (no del actor). */
+  String issueResetToken() throws Exception {
+    mvc.perform(resetRequest().secure(true)).andExpect(status().isAccepted());
+    return notifier.lastMessageFor(recoveryEmail).orElseThrow().token();
   }
 
   private UUID seedOrder(UUID owner, String state) {
@@ -136,7 +196,15 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
   }
 
   @AfterEach
-  void clean_independent_resources() {
+  void clean_independent_resources() throws IOException {
+    jdbc.update("delete from password_reset_token where user_id=?", recoveryTarget);
+    jdbc.update("delete from refresh_token where user_id=?", recoveryTarget);
+    jdbc.update("delete from user_account where id=?", recoveryTarget);
+    redis.delete(
+        com.codeja.master_acdc.identity.infrastructure.adapters.out.redis.RedisSessionVersions
+                .PREFIX
+            + recoveryTarget);
+    Files.deleteIfExists(exportDirectory.resolve("pedidos.csv"));
     jdbc.update("delete from refresh_token where user_id in (?,?)", blockTarget, unblockTarget);
     jdbc.update("delete from user_account where id in (?,?)", blockTarget, unblockTarget);
     redis.delete(

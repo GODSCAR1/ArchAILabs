@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
       AuthController.class,
       LoginController.class,
       SessionController.class,
+      PasswordResetController.class,
       AdminUsersController.class,
       AdminUserManagementController.class
     })

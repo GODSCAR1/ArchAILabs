@@ -40,3 +40,8 @@ graphify-out/
 session-*.md
 bench/results/
 *.pem
+
+### Secretos locales (lab S13): nunca se versionan; el agente no los lee
+.env
+.env.*
+!.env.example

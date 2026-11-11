@@ -195,7 +195,8 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
     var own =
         new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
             com.codeja.master_acdc.ordering.domain.model.OrderStatus.PAID,
-            new com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Own(customer));
+            new com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Own(customer),
+            "id ASC");
     org.mockito.Mockito.doReturn(
             java.util.Optional.of(
                 new com.codeja.master_acdc.ordering.api.CurrentOrderActor.Actor(
@@ -212,7 +213,8 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
   private com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria globalPaid() {
     return new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
         com.codeja.master_acdc.ordering.domain.model.OrderStatus.PAID,
-        com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Global.INSTANCE);
+        com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Global.INSTANCE,
+        "id ASC");
   }
 
   @Test

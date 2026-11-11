@@ -3,6 +3,7 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderSortException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
@@ -10,23 +11,43 @@ import com.codeja.master_acdc.ordering.domain.model.OrderSummary;
 import com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class OrderWebMapperTest {
   @Test
+  void should_report_invalid_sort_when_mapping_listing_criteria() {
+    assertThatThrownBy(() -> OrderWebMapper.listingCriteria("PAID", "id DOWN"))
+        .isInstanceOf(InvalidOrderSortException.class);
+    var problem =
+        new OrderExceptionHandler().handleInvalidOrderSort(new InvalidOrderSortException());
+    assertThat(problem.getStatus()).isEqualTo(400);
+    assertThat(problem.getType())
+        .hasToString("https://api.master-acdc.dev/problems/invalid-order-sort");
+  }
+
+  @Test
+  @DisplayName("Listado ordenado por unidades descendentes")
+  void should_preserve_sort_when_mapping_listing_criteria() {
+    assertThat(OrderWebMapper.listingCriteria("PAID", "totalUnits DESC").sort())
+        .isEqualTo("totalUnits DESC");
+  }
+
+  @Test
   void should_require_exact_status_when_mapping_listing_criteria() {
-    assertThat(OrderWebMapper.listingCriteria("PAID"))
+    assertThat(OrderWebMapper.listingCriteria("PAID", "id ASC"))
         .isEqualTo(
             new com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria(
                 OrderStatus.PAID,
-                com.codeja.master_acdc.ordering.domain.model.OrderReadScope.None.INSTANCE));
+                com.codeja.master_acdc.ordering.domain.model.OrderReadScope.None.INSTANCE,
+                "id ASC"));
     for (String value : new String[] {null, "", " "}) {
-      assertThatThrownBy(() -> OrderWebMapper.listingCriteria(value))
+      assertThatThrownBy(() -> OrderWebMapper.listingCriteria(value, "id ASC"))
           .isInstanceOf(
               com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException.class);
     }
     for (String value : new String[] {"paid", "OTHER"}) {
-      assertThatThrownBy(() -> OrderWebMapper.listingCriteria(value))
+      assertThatThrownBy(() -> OrderWebMapper.listingCriteria(value, "id ASC"))
           .isInstanceOf(
               com.codeja.master_acdc.ordering.domain.exception.InvalidOrderStatusException.class);
     }

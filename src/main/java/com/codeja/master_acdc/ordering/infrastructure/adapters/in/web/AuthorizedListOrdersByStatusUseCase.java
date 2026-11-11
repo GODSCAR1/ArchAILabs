@@ -19,6 +19,7 @@ public class AuthorizedListOrdersByStatusUseCase implements ListOrdersByStatusUs
   @Override
   @PreAuthorize("hasAnyAuthority('order:read-own','order:read-any')")
   public List<OrderSummary> list(OrderListingCriteria criteria) {
-    return delegate.list(new OrderListingCriteria(criteria.status(), actor.readingScope()));
+    return delegate.list(
+        new OrderListingCriteria(criteria.status(), actor.readingScope(), criteria.sort()));
   }
 }

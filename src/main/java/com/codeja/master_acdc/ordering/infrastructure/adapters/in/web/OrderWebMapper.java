@@ -14,12 +14,13 @@ import java.util.UUID;
 public final class OrderWebMapper {
   private OrderWebMapper() {}
 
-  public static OrderListingCriteria listingCriteria(String status) {
+  public static OrderListingCriteria listingCriteria(String status, String sort) {
     if (status == null || status.isBlank()) {
       throw new MissingOrderStatusException();
     }
     try {
-      return new OrderListingCriteria(OrderStatus.valueOf(status), OrderReadScope.None.INSTANCE);
+      return new OrderListingCriteria(
+          OrderStatus.valueOf(status), OrderReadScope.None.INSTANCE, sort);
     } catch (IllegalArgumentException exception) {
       throw new InvalidOrderStatusException(status);
     }

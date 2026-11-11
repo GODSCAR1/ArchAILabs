@@ -47,6 +47,7 @@ class OrderListingIT {
     jdbcTemplate.update("delete from order_lines");
     jdbcTemplate.update("delete from orders");
     jdbcTemplate.update("delete from refresh_token");
+    jdbcTemplate.update("delete from password_reset_token"); // lab S13: FK a user_account (V9)
     jdbcTemplate.update("delete from user_account");
     jdbcTemplate.update("delete from customers");
     support = OrderBearer.issue(jdbcTemplate, tokenIssuer, null, "SUPPORT");

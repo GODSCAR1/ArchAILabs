@@ -4,6 +4,7 @@ import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductExceptio
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidLineException;
+import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderSortException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderStatusException;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException;
 import com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException;
@@ -22,6 +23,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class OrderExceptionHandler {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
+
+  @ExceptionHandler(InvalidOrderSortException.class)
+  ProblemDetail handleInvalidOrderSort(InvalidOrderSortException exception) {
+    return problem(HttpStatus.BAD_REQUEST, "invalid-order-sort", exception.getMessage());
+  }
 
   @ExceptionHandler(MissingOrderStatusException.class)
   ProblemDetail handleMissingOrderStatus(MissingOrderStatusException exception) {

@@ -39,8 +39,11 @@ public class OrderController {
   @org.springframework.security.access.prepost.PreAuthorize(
       "hasAnyAuthority('order:read-own','order:read-any')")
   public List<OrderSummaryResponse> list(
-      @RequestParam(value = "status", required = false) String status) {
-    return listOrdersByStatusUseCase.list(OrderWebMapper.listingCriteria(status)).stream()
+      @RequestParam(value = "status", required = false) String status,
+      @RequestParam(value = "sort", required = false) String sort) {
+    return listOrdersByStatusUseCase
+        .list(OrderWebMapper.listingCriteria(status, sort == null ? "id ASC" : sort))
+        .stream()
         .map(OrderWebMapper::summary)
         .toList();
   }
