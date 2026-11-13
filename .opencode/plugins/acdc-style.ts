@@ -34,20 +34,22 @@ export const AcdcStyle: Plugin = async ({ $, directory }) => {
       const edited = files.get(input.callID)
       files.delete(input.callID)                       // sin esto, el Map crece sin límite
       if (!edited) return
-      for (const file of edited) output.output += await verifyFile(file)
+      output.output += await verifyFiles(edited)
     },
   }
 
-  async function verifyFile(file: string): Promise<string> {
-    // Raíz del árbol del ARCHIVO (worktrees), no el directorio de la sesión
-    const top = await $`git -C ${path.dirname(file)} rev-parse --show-toplevel`.quiet().nothrow()
+  async function verifyFiles(files: string[]): Promise<string> {
+    // Raíz del árbol de los ARCHIVOS (worktrees), no el directorio de la sesión
+    const top = await $`git -C ${path.dirname(files[0])} rev-parse --show-toplevel`.quiet().nothrow()
     if (top.exitCode !== 0) return ""
     const root = path.resolve(top.stdout.toString().trim())
-    const rel = path.relative(root, file).replace(/\\/g, "/")
-    if (!/^src\/(main|test)\/java\//.test(rel)) return ""
+    const sources = files.filter(file =>
+      /^src\/(main|test)\/java\//.test(path.relative(root, file).replace(/\\/g, "/")))
+    if (!sources.length) return ""
 
-    // La ruta va como argumento; el script devuelve exit 2 y el informe por stderr si algo falla
-    const r = await $`bash .claude/hooks/verify-file.sh ${file}`.cwd(root).quiet().nothrow()
+    // Todas las rutas del parche en UNA llamada: una pasada de Maven por paso, no una por archivo.
+    // El script devuelve exit 2 y el informe por stderr si algo falla.
+    const r = await $`bash .claude/hooks/verify-file.sh ${sources}`.cwd(root).quiet().nothrow()
     if (r.exitCode === 0) return ""
     const report = r.stderr.toString().trim() || (r.stdout.toString() + r.stderr.toString()).slice(-1500)
     return `\n\n[AC/DC capa 1] ${report}`
