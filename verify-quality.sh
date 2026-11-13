@@ -124,9 +124,21 @@ else
       || { echo "AC/DC: hay hallazgos abiertos de la capa 2 (.acdc/open-findings.md). Clasifícalos y corrígelos:" >&2; cat .acdc/open-findings.md >&2; exit 1; }
   fi
 fi
-echo "▶ Capa 1: formato y estilo"
-./mvnw -q spotless:check
-./mvnw -q checkstyle:check
+echo "▶ Capa 1: formato, estilo, bugs y malas prácticas (lab S16b, docs/lab-s16b.md)"
+# Supresiones de la capa 1: solo en archivos aprobados por una persona (scripts/security-suppressions.txt).
+# Para el build, un aviso suprimido y un bug corregido son la misma salida limpia.
+L1_SUPPRESSED=$(git ls-files -co --exclude-standard -z -- 'src/*.java' \
+  | xargs -0 grep -lE '@SuppressFBWarnings|NOPMD|@SuppressWarnings\(.*"(PMD\.|checkstyle:|[A-Z][A-Za-z]+")' 2>/dev/null | sort -u || true)
+L1_ALLOWED=$(tr -d '\r' < scripts/security-suppressions.txt | grep -vE '^[[:space:]]*(#|$)' | sort -u)
+L1_EXTRA=$(comm -23 <(echo "$L1_SUPPRESSED") <(echo "$L1_ALLOWED") | sed '/^$/d')
+[[ -z "$L1_EXTRA" ]] \
+  || { echo "AC/DC: supresión no aprobada de SpotBugs, PMD, Error Prone/NullAway o Checkstyle (@SuppressFBWarnings, @SuppressWarnings(\"PMD.…\"/\"NullAway\"/check), NOPMD). Corrige el código; las supresiones solo las añade una persona en el PR, con motivo:" >&2; echo "$L1_EXTRA" >&2; exit 1; }
+# Un solo Maven y sin -q: PMD informa como [WARNING]. Error Prone y NullAway fallan en compile.
+if ! L1=$(./mvnw -B spotless:check checkstyle:check compile spotbugs:check pmd:check 2>&1); then
+  grep -aE '^\[ERROR\]|PMD Failure' <<<"$L1" | grep -avE 'Re-run Maven|full stack trace|\[Help 1\]|For more information|^\[ERROR\][[:space:]]*$' >&2 || true
+  echo "AC/DC: la capa 1 falló. Corrige cada línea de arriba (archivo, línea, regla o patrón); no suprimas avisos ni toques config/, pom.xml o .mvn/." >&2
+  exit 1
+fi
 echo "▶ Tests"
 case "${1:---fast}" in
   --fast)

@@ -32,9 +32,13 @@ public final class OrderActorResolver {
 
   public OrderReadScope readingScope() {
     var actor = account();
+    var authentication = SecurityContextHolder.getContext().getAuthentication();
+    if (authentication == null) {
+      throw new AccessDeniedException("forbidden");
+    }
     boolean global =
-        SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
-            .anyMatch(authority -> authority.getAuthority().equals("order:read-any"));
+        authentication.getAuthorities().stream()
+            .anyMatch(authority -> "order:read-any".equals(authority.getAuthority()));
     if (global) {
       return OrderReadScope.Global.INSTANCE;
     }

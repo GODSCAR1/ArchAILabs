@@ -8,6 +8,11 @@ public class InvalidSearchParameterException extends RuntimeException {
     this.parameter = parameter;
   }
 
+  public InvalidSearchParameterException(String parameter, Throwable cause) {
+    super(null, cause);
+    this.parameter = parameter;
+  }
+
   String parameter() {
     return parameter;
   }

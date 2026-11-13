@@ -11,7 +11,7 @@ public record SessionVersion(long value) {
     try {
       return new SessionVersion(Math.incrementExact(value));
     } catch (ArithmeticException exception) {
-      throw new IdentityException("session-version-unavailable");
+      throw new IdentityException("session-version-unavailable", exception);
     }
   }
 }

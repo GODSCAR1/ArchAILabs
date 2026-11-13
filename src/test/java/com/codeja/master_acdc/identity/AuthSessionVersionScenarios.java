@@ -166,7 +166,7 @@ abstract class AuthSessionVersionScenarios extends AuthHttpConcurrencyScenarios 
     var factory =
         new org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory(
             new org.springframework.data.redis.connection.RedisStandaloneConfiguration(
-                "127.0.0.1", closedPort()),
+                java.net.InetAddress.getLoopbackAddress().getHostAddress(), closedPort()),
             client);
     factory.afterPropertiesSet();
     try {

@@ -30,7 +30,7 @@ public final class LockedSessionVersions implements SessionVersions {
         | org.springframework.dao.QueryTimeoutException
         | CannotCreateTransactionException
         | TransactionSystemException exception) {
-      throw new IdentityException("session-version-unavailable");
+      throw new IdentityException("session-version-unavailable", exception);
     }
   }
 

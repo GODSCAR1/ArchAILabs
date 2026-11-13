@@ -5,4 +5,7 @@
  * inmutables y validan sus invariantes en el constructor. Regla que ArchUnit verificará desde S17;
  * aún no activo.
  */
+@NullMarked
 package com.codeja.master_acdc.catalog.domain.model;
+
+import org.jspecify.annotations.NullMarked;

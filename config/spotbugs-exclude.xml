@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Filtro de SpotBugs (zona protegida: solo lo edita una persona). Cada Match lleva su motivo.
+     Triage de la línea base: docs/lab-s16b.md -->
+<FindBugsFilter>
+  <!-- Código generado (metamodelo JPA de hibernate-processor, clases *_): no lo escribimos nosotros -->
+  <Match>
+    <Class name="~.*_"/>
+  </Match>
+
+  <!-- EI_EXPOSE_REP2 fuera de domain: son beans (puertos, repositorios, plantillas) recibidos por
+       constructor; compartir la referencia es justo lo que se quiere. En domain se mantiene. -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+    <Package name="~com\.codeja\.master_acdc\.[a-z]+\.(infrastructure|application|api)(\..*)?"/>
+  </Match>
+
+  <!-- EI_EXPOSE_REP en infrastructure: DTOs de transporte (records de petición/respuesta, filas de
+       proyección) y adaptadores que exponen el cliente nativo. No protegen invariantes: eso es
+       trabajo de domain, donde el patrón se mantiene (igual que en application). -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP"/>
+    <Package name="~com\.codeja\.master_acdc\.[a-z]+\.infrastructure(\..*)?"/>
+  </Match>
+
+  <!-- Recovery es un record que agrupa dos puertos (beans) para el caso de uso; no es estado. -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP"/>
+    <Class name="com.codeja.master_acdc.identity.application.ConfirmPasswordResetService$Recovery"/>
+  </Match>
+
+  <!-- CSRF desactivado solo en las cadenas de Actuator y JWKS: sin cookies ni sesión (ADR 0011).
+       La cadena de la API sigue vigilada. -->
+  <Match>
+    <Bug pattern="SPRING_CSRF_PROTECTION_DISABLED"/>
+    <Class name="com.codeja.master_acdc.identity.infrastructure.config.HttpSecurityConfiguration"/>
+    <Method name="~lambda\$(actuatorSecurity|jwksSecurity)\$\d+"/>
+  </Match>
+
+  <!-- ThreadLocalRandom para el jitter del TTL de cache (ADR 0010): no es un secreto ni un token. -->
+  <Match>
+    <Bug pattern="PREDICTABLE_RANDOM"/>
+    <Class name="com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache.CacheTtlPolicy"/>
+  </Match>
+
+  <!-- Regex de email de HTML5: Registration limita la entrada a 254 caracteres antes de aplicarla
+       y los cuantificadores anidados no se solapan con el separador (sin backtracking exponencial). -->
+  <Match>
+    <Bug pattern="REDOS"/>
+    <Class name="com.codeja.master_acdc.identity.domain.model.Registration"/>
+  </Match>
+</FindBugsFilter>

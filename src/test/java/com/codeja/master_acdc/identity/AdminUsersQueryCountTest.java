@@ -21,7 +21,7 @@ import org.springframework.test.context.TestPropertySource;
       "spring.jpa.properties.hibernate.generate_statistics=true",
       "spring.jpa.properties.hibernate.session_factory.statement_inspector=com.codeja.master_acdc.identity.AdminUsersQueryCountTest$SqlCapture"
     })
-public class AdminUsersQueryCountTest extends AdminUsersSupport {
+class AdminUsersQueryCountTest extends AdminUsersSupport {
   @Autowired EntityManager entityManager;
   @Autowired EntityManagerFactory factory;
 

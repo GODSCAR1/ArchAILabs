@@ -35,10 +35,6 @@ class ProductDetailMigrationIT {
         .isEqualTo(1);
   }
 
-  private JdbcTemplate jdbcTemplate() {
-    return new JdbcTemplate(dataSource());
-  }
-
   private DataSource dataSource() {
     DriverManagerDataSource dataSource = new DriverManagerDataSource();
     dataSource.setDriverClassName("org.postgresql.Driver");

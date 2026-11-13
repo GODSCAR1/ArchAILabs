@@ -4,7 +4,8 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 
 ## Comandos (tu shell en Windows es PowerShell: invoca los scripts con `bash`)
 - Compilar y probar: `bash ./mvnw -q test`. Formato: `bash ./mvnw spotless:apply`.
-- Verify: `bash ./verify-quality.sh --fast` (specs + Spotless + Checkstyle + tests). Solo estilo: `bash ./mvnw -q checkstyle:check`.
+- Verify: `bash ./verify-quality.sh --fast` (specs + capa 1 + tests). Solo estilo: `bash ./mvnw -q checkstyle:check`.
+- Capa 1 completa (formato, estilo, compilación con Error Prone/NullAway, SpotBugs y PMD): `bash ./mvnw -B spotless:check checkstyle:check compile spotbugs:check pmd:check`. Sin `-q`: PMD informa como `[WARNING] PMD Failure`.
 
 ## Arquitectura (hexagonal estricta)
 - `domain/` NUNCA importa Spring, JPA ni Jackson (`@Entity`, `@Repository`, `@Service`, `@Component` prohibidos ahí). (pendiente: ArchUnit en S17)
@@ -35,6 +36,17 @@ El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu tu
 - Métodos ≤ 40 líneas, ≤ 5 parámetros, complejidad ciclomática ≤ 10, archivos ≤ 500 líneas: extrae métodos con nombre o agrupa parámetros en un record. Motivo: el código generado tiende a resolverlo todo en un método largo con `if` anidados.
 - `switch` sobre enums: usa una expresión `switch` (`case X -> ...`) para que el compilador exija cubrir todos los valores. `equals` siempre con `hashCode`. Sin imports con `*`.
 - NUNCA añadas `@SuppressWarnings("checkstyle:...")` ni edites `config/checkstyle*.xml`: si una regla no aplica, detente y explica por qué; una persona decide la supresión y la justifica.
+
+### Bugs y malas prácticas (SpotBugs + FindSecBugs, PMD, Error Prone + NullAway — lab S16b, `docs/lab-s16b.md`)
+Tras cada edición de un `.java` se compila y se analiza la clase: recibes archivo, línea y el patrón o la regla. Corrige el código; el aviso no se discute ni se silencia.
+- Compara `String` con `equals()`, NUNCA con `==` (compara referencias). Literal delante: `"PROMO".equals(code)`. Lo detecta SpotBugs (`ES_COMPARING_*`).
+- `BigDecimal`, `String`, `Instant` y los `record` son inmutables: asigna o devuelve SIEMPRE el resultado de `multiply`/`add`/`subtract`/`setScale`/`trim`/`replace`/`plus`. Lo detectan Error Prone (`ReturnValueIgnored`) y SpotBugs (`RV_RETURN_VALUE_IGNORED`).
+- NUNCA captures `NullPointerException`: elimina la causa (comprueba el valor o usa `Optional`). Motivo: el `catch` esconde el bug y cualquier otro NPE del bloque. Lo detecta PMD (`AvoidCatchingNPE`).
+- Clientes HTTP: usa `RestClient` o un HTTP interface client (`@HttpExchange`); NUNCA `RestTemplate`. Motivo: `RestTemplate` está en mantenimiento y los agentes lo escriben "como siempre se ha hecho" porque es lo que más aparece en su entrenamiento. Regla propia de PMD: `NoRestTemplate`.
+- Paquetes `@NullMarked` (hoy: `ordering.domain..` y `catalog.domain..`): todo es no nulo por defecto. Lo que puede faltar se devuelve como `Optional` (retornos) o se anota con `@Nullable` de `org.jspecify.annotations` (campos y parámetros). NUNCA devuelvas `null` ni desreferencies el resultado de `Map.get` o de un método `@Nullable` sin decidir antes qué pasa cuando falta (comprobación, valor por defecto, excepción de dominio, `Optional`). Lo detecta NullAway al compilar.
+- Getters de colecciones en `domain`: devuelve una copia inmutable (`List.copyOf`), nunca la colección interna (`EI_EXPOSE_REP`).
+- NUNCA silencies un aviso: prohibido `@SuppressFBWarnings`, `@SuppressWarnings("PMD.…")`, `@SuppressWarnings("NullAway")` o con el nombre de un check de Error Prone, y `// NOPMD`. Tampoco edites `config/spotbugs-exclude.xml`, `config/pmd/ruleset.xml`, `.mvn/jvm.config` ni los `compilerArgs` de `pom.xml`. Si crees que un aviso no aplica, detente y explica por qué: la exclusión la decide y la justifica una persona. `verify-quality.sh` falla si aparece una supresión en un archivo no aprobado.
+- Un `IllegalAccessError` al compilar es un problema del build (`.mvn/jvm.config`), no de tu código: avisa a la persona en lugar de cambiar código.
 
 ## Persistencia (JPA: inventory y ordering) — ADR `docs/decisiones/listado-de-pedidos.md`
 - Todas las asociaciones son `fetch = FetchType.LAZY`; en `@ManyToOne`/`@OneToOne` escríbelo explícito (por defecto son EAGER). NUNCA `FetchType.EAGER`, `hibernate.enable_lazy_load_no_trans` ni `spring.jpa.open-in-view=true`. (Checkstyle `toOneLazy`/`noEagerFetch`)
@@ -143,7 +155,7 @@ Spring Security 7 — APIs eliminadas (no las uses aunque aparezcan en ejemplos 
 - Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
-- PROHIBIDO editar `config/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `semgrep-rules/`, `.semgrepignore`, `.gitleaks.toml`, `gitleaks-baseline.json`, `.acdc/open-findings.md`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`. Si hace falta, detente y pide permiso a una persona.
+- PROHIBIDO editar `config/`, `.mvn/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `semgrep-rules/`, `.semgrepignore`, `.gitleaks.toml`, `gitleaks-baseline.json`, `.acdc/open-findings.md`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`. Si hace falta, detente y pide permiso a una persona.
 
 ## graphify
 - Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.

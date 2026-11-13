@@ -13,7 +13,6 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import jakarta.persistence.LockModeType;
 import jakarta.persistence.QueryHint;
-import jakarta.persistence.Version;
 import java.lang.reflect.Method;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.QueryHints;
@@ -37,19 +36,6 @@ class PersistenceRulesTest {
           .that()
           .areAssignableTo(Repository.class)
           .should(haveProtectedFindForUpdateMethods());
-
-  private static ArchCondition<JavaClass> haveVersionField() {
-    return new ArchCondition<>("have a field annotated with @Version") {
-      @Override
-      public void check(JavaClass item, ConditionEvents events) {
-        if (item.getFields().stream().noneMatch(field -> field.isAnnotatedWith(Version.class))) {
-          events.add(
-              new SimpleConditionEvent(
-                  item, false, item.getName() + " has no field annotated with @Version"));
-        }
-      }
-    };
-  }
 
   private static ArchCondition<JavaClass> haveNoTransactionalAnnotations() {
     return new ArchCondition<>("not use @Transactional on classes or methods") {

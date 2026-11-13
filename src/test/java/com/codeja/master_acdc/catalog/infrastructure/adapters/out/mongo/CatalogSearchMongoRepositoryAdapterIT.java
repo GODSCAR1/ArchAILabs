@@ -25,6 +25,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
@@ -149,7 +150,7 @@ class CatalogSearchMongoRepositoryAdapterIT {
   @Test
   @DisplayName("Estado repetido")
   void should_apply_status_filter_when_status_is_repeated() {
-    LinkedMultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
+    MultiValueMap<String, String> parameters = new LinkedMultiValueMap<>();
     parameters.add("status", "ACTIVE");
     parameters.add("status", "ACTIVE");
     parameters.add("sort", "name,asc");

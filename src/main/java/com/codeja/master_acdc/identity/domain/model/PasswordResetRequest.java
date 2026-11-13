@@ -5,7 +5,7 @@ public record PasswordResetRequest(String email) {
     try {
       email = new Registration(email, "", null).email();
     } catch (IdentityException exception) {
-      throw new IdentityException("invalid-password-reset-request");
+      throw new IdentityException("invalid-password-reset-request", exception);
     }
   }
 

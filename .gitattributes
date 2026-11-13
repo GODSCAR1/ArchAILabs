@@ -2,6 +2,7 @@
 *.cmd text eol=crlf
 graphify-out/graph.json merge=graphify
 *.sh text eol=lf
+.mvn/jvm.config text eol=lf
 *.ts text eol=lf
 *.java text eol=lf
 *.sql text eol=lf

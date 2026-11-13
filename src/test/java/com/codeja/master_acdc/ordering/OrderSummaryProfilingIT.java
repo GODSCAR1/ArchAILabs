@@ -7,6 +7,7 @@ import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
 import jakarta.persistence.EntityManagerFactory;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.hibernate.SessionFactory;
@@ -117,6 +118,7 @@ class OrderSummaryProfilingIT {
   }
 
   private static UUID idFor(int index) {
-    return UUID.nameUUIDFromBytes(("order-summary-profiling-" + index).getBytes());
+    return UUID.nameUUIDFromBytes(
+        ("order-summary-profiling-" + index).getBytes(StandardCharsets.UTF_8));
   }
 }

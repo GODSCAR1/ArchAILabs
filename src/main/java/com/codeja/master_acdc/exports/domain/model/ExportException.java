@@ -8,6 +8,11 @@ public final class ExportException extends RuntimeException {
     this.code = code;
   }
 
+  public ExportException(String code, Throwable cause) {
+    super(code, cause);
+    this.code = code;
+  }
+
   public String code() {
     return code;
   }

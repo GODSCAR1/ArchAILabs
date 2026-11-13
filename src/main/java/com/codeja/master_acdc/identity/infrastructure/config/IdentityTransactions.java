@@ -25,7 +25,7 @@ public final class IdentityTransactions {
             return operation.get();
           });
     } catch (PessimisticLockingFailureException exception) {
-      throw new IdentityException("authentication-busy");
+      throw new IdentityException("authentication-busy", exception);
     }
   }
 }

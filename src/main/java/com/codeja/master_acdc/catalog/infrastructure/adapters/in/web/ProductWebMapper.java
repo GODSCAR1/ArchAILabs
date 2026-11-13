@@ -8,6 +8,7 @@ import com.codeja.master_acdc.catalog.domain.model.ProductSearchPage;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchRow;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -86,7 +87,7 @@ final class ProductWebMapper {
         parts.length == 1 || "asc".equalsIgnoreCase(parts[1])
             ? ProductSearchOrder.Direction.ASC
             : ProductSearchOrder.Direction.DESC;
-    if (parts.length == 2 && !Set.of("asc", "desc").contains(parts[1].toLowerCase())) {
+    if (parts.length == 2 && !Set.of("asc", "desc").contains(parts[1].toLowerCase(Locale.ROOT))) {
       throw new InvalidSortFieldException(parts[1]);
     }
     return new ProductSearchOrder(parts[0], direction);
@@ -98,7 +99,7 @@ final class ProductWebMapper {
           .map(ProductStatus::valueOf)
           .collect(Collectors.toSet());
     } catch (IllegalArgumentException exception) {
-      throw new InvalidSearchParameterException("status");
+      throw new InvalidSearchParameterException("status", exception);
     }
   }
 
@@ -110,7 +111,7 @@ final class ProductWebMapper {
     try {
       return Long.valueOf(value);
     } catch (NumberFormatException exception) {
-      throw new InvalidSearchParameterException(name);
+      throw new InvalidSearchParameterException(name, exception);
     }
   }
 
@@ -122,7 +123,7 @@ final class ProductWebMapper {
     try {
       return UUID.fromString(value);
     } catch (IllegalArgumentException exception) {
-      throw new InvalidSearchParameterException(name);
+      throw new InvalidSearchParameterException(name, exception);
     }
   }
 
@@ -135,7 +136,7 @@ final class ProductWebMapper {
     try {
       return Integer.parseInt(value);
     } catch (NumberFormatException exception) {
-      throw new InvalidSearchParameterException(name);
+      throw new InvalidSearchParameterException(name, exception);
     }
   }
 

@@ -32,7 +32,7 @@ abstract class OrderRefundSupport extends IdentityIntegrationSupport {
 
   String bearer(String role) {
     return "Bearer "
-        + OrderBearer.issue(jdbc, issuer, role.equals("CUSTOMER") ? customer : null, role);
+        + OrderBearer.issue(jdbc, issuer, "CUSTOMER".equals(role) ? customer : null, role);
   }
 
   ResultActions refund(String id, String bearer) throws Exception {
