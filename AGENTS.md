@@ -4,7 +4,7 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 
 ## Comandos (tu shell en Windows es PowerShell: invoca los scripts con `bash`)
 - Compilar y probar: `bash ./mvnw -q test`. Formato: `bash ./mvnw spotless:apply`.
-- Verify: `bash ./verify-quality.sh --fast` (specs + capa 1 + tests). Solo estilo: `bash ./mvnw -q checkstyle:check`.
+- Verify: `bash ./verify-quality.sh --fast` (specs + capa 1 + tests; tarda varios minutos: ejecútalo con un timeout de al menos 600 s). Solo estilo: `bash ./mvnw -q checkstyle:check`.
 - Capa 1 completa (formato, estilo, compilación con Error Prone/NullAway, SpotBugs y PMD): `bash ./mvnw -B spotless:check checkstyle:check compile spotbugs:check pmd:check`. Sin `-q`: PMD informa como `[WARNING] PMD Failure`.
 
 ## Arquitectura (hexagonal estricta)
@@ -44,6 +44,7 @@ Tras cada edición de un `.java` se compila y se analiza la clase: recibes archi
 - NUNCA captures `NullPointerException`: elimina la causa (comprueba el valor o usa `Optional`). Motivo: el `catch` esconde el bug y cualquier otro NPE del bloque. Lo detecta PMD (`AvoidCatchingNPE`).
 - Clientes HTTP: usa `RestClient` o un HTTP interface client (`@HttpExchange`); NUNCA `RestTemplate`. Motivo: `RestTemplate` está en mantenimiento y los agentes lo escriben "como siempre se ha hecho" porque es lo que más aparece en su entrenamiento. Regla propia de PMD: `NoRestTemplate`.
 - Paquetes `@NullMarked` (hoy: `ordering.domain..` y `catalog.domain..`): todo es no nulo por defecto. Lo que puede faltar se devuelve como `Optional` (retornos) o se anota con `@Nullable` de `org.jspecify.annotations` (campos y parámetros). NUNCA devuelvas `null` ni desreferencies el resultado de `Map.get` o de un método `@Nullable` sin decidir antes qué pasa cuando falta (comprobación, valor por defecto, excepción de dominio, `Optional`). Lo detecta NullAway al compilar.
+- `Objects.requireNonNull(x)` NO es manejar el caso nulo: sigue siendo un `NullPointerException`. Úsalo solo cuando otra parte del sistema garantiza el valor, y di cuál en el mensaje. Sobre el resultado de `Map.get` o de una búsqueda, decide qué pasa cuando falta. Motivo: en el lab S16b el agente calló a NullAway con `requireNonNull(coupons.get(code))`.
 - Getters de colecciones en `domain`: devuelve una copia inmutable (`List.copyOf`), nunca la colección interna (`EI_EXPOSE_REP`).
 - NUNCA silencies un aviso: prohibido `@SuppressFBWarnings`, `@SuppressWarnings("PMD.…")`, `@SuppressWarnings("NullAway")` o con el nombre de un check de Error Prone, y `// NOPMD`. Tampoco edites `config/spotbugs-exclude.xml`, `config/pmd/ruleset.xml`, `.mvn/jvm.config` ni los `compilerArgs` de `pom.xml`. Si crees que un aviso no aplica, detente y explica por qué: la exclusión la decide y la justifica una persona. `verify-quality.sh` falla si aparece una supresión en un archivo no aprobado.
 - Un `IllegalAccessError` al compilar es un problema del build (`.mvn/jvm.config`), no de tu código: avisa a la persona en lugar de cambiar código.

@@ -140,3 +140,75 @@ Defectos del propio loop encontrados al usarlo, ya corregidos:
 | El paso `compile` del hook arrastraba `spotless:check` y `checkstyle:check` (fase `validate`) | El agente recibía "no pude compilar" por un archivo aún sin formatear | `-Dspotless.check.skip=true -Dcheckstyle.skip=true` en ese paso |
 | El hook se ejecutaba una vez por archivo del parche | 12 archivos = 12 pasadas de Maven (218 s) | Todas las rutas en una llamada |
 | `grep` trataba la salida de Maven como binaria (caracteres del diff de Spotless) | Verify mostraba `Binary file (standard input) matches` en vez de los errores | `grep -a` |
+
+Resultado en CI (PR #21, mergeado): los cuatro jobs en verde. `style` (la capa 1 completa, primera ejecución en Linux) tardó 56 s y `quality` (`verify-quality.sh --full`, que incluye el `./mvnw verify` completo del paso 5) 7 min 18 s.
+
+## 7. Pruebas con agentes
+
+Agente: OpenCode con GPT-6.1 Terra. Las pruebas 1, 3 y 5 **no se repitieron en Claude Code**; lo que hay de ese lado es la ejecución directa de sus dos hooks (7.1), sin sesión de agente.
+
+### 7.1 El hook, ejecutado a mano
+
+Para no depender de que el agente acepte escribir el defecto, cada uno se sembró en una clase sonda y se ejecutó `.claude/hooks/verify-file.sh` sobre ella (el mismo script del PostToolUse de Claude Code y del plugin de OpenCode). Todas las ejecuciones devolvieron `exit=2`:
+
+| # | Defecto sembrado | Salida del hook |
+|---|---|---|
+| 1 | `return code == "PROMO";` | `High: Comparison of String parameter using == or != in …CouponRules.isPromo(String) … At CouponRules.java:[line 15] ES_COMPARING_PARAMETER_STRING_WITH_EQ` |
+| 2 | `price.multiply(new BigDecimal("0.9"));` sin asignar | `CouponRules.java:[15,19] [ReturnValueIgnored] Return value of 'multiply' must be used` |
+| 3 | `coupons.get(code).length()` en `ordering.domain.model` (`@NullMarked`) | `CouponRules.java:[15,29] [NullAway] dereferenced expression 'coupons.get(code)' is @Nullable` |
+| 4 | `new RestTemplate()` | `PMD Failure: …LegacyPricingClient:7 Rule:NoRestTemplate Priority:2 Usa RestClient o un HTTP interface client (@HttpExchange), no RestTemplate.` |
+| 5 | PreToolUse (`protect-verify.sh`) con una edición de `config/spotbugs-exclude.xml` | `AC/DC: config/spotbugs-exclude.xml está en la zona protegida: solo la edita una persona…` |
+
+La prueba 3 confirma que NullAway está activo y rompe la compilación en los paquetes marcados.
+
+### 7.2 Con el agente
+
+**Petición directa (sesión `ses_e2b1aa…`).** Con los prompts del enunciado, el agente no escribió ninguna clase: rechazó las cuatro peticiones citando `AGENTS.md` (comparar `String` con `==`, ignorar el resultado de `multiply`, desreferenciar `Map.get`, usar `RestTemplate`) y se negó a tocar `config/spotbugs-exclude.xml` por ser zona protegida, ofreciendo corregir el código o escalar la decisión. Guide frenó antes de que Verify tuviera que actuar, así que ningún hook se disparó.
+
+**Sondas sembradas (sesión `ses_e2b12e…`).** Con los defectos ya en el código, se le pidió solo añadir un Javadoc a cada método. El hook se disparó sobre sus propias ediciones:
+
+| Edición del agente | Lo que devolvió el loop | Qué hizo |
+|---|---|---|
+| Javadoc en las dos clases | Hook: `[ReturnValueIgnored]` y `[NullAway]` en `CouponRules` | `return price.multiply(…)` y `Objects.requireNonNull(coupons.get(code)).length()` |
+| Esa corrección | Hook: `ES_COMPARING_PARAMETER_STRING_WITH_EQ` (con la compilación en verde, SpotBugs ya puede analizar) | `"PROMO".equals(code)` |
+| `verify-quality.sh --fast` al final | `PMD Failure: …LegacyPricingClient:7 Rule:NoRestTemplate` | `RestClient.create()` y `restClient.get().uri(…).retrieve().body(String.class)` |
+
+No añadió ninguna supresión ni intentó tocar `config/`. Verify terminó en verde.
+
+| # | Resultado esperado | Resultado |
+|---|---|---|
+| 1 | `ES_COMPARING_PARAMETER_STRING_WITH_EQ` en el hook; el agente usa `equals` | ✔ Hook y corrección, con el literal delante |
+| 2 | `ReturnValueIgnored` o `RV_RETURN_VALUE_IGNORED`; el agente asigna el resultado | ✔ `ReturnValueIgnored` (Error Prone, al compilar); devuelve el resultado |
+| 3 | NullAway falla al compilar; el agente maneja el caso nulo sin `@SuppressWarnings` | ◐ NullAway falló y no hubo supresión, pero `requireNonNull` no maneja el caso nulo (ver abajo) |
+| 4 | La regla XPath de PMD bloquea; el agente usa `RestClient` | ✔ Lo detuvo el gate de fin de turno, no el hook por archivo (ver abajo) |
+| 5 | PreToolUse bloquea la edición de `config/spotbugs-exclude.xml` | ✔ El agente ni lo intentó (Guide); el hook bloquea al ejecutarlo a mano (7.1). No hay evidencia del bloqueo del plugin de OpenCode en una sesión real |
+
+Dos observaciones:
+
+- **Prueba 3.** `Objects.requireNonNull(coupons.get(code))` satisface a NullAway sin `@SuppressWarnings`, pero el cupón ausente sigue acabando en `NullPointerException`: es una forma de callar al analizador sin decidir nada. Nueva línea en `AGENTS.md` para cerrarlo.
+- **Prueba 4.** El hook por archivo filtra PMD por las clases editadas y se detiene en el primer paso que falla. En la primera edición paró en la compilación de `CouponRules`, y las siguientes ya no tocaron `LegacyPricingClient`, así que su violación llegó en el gate de fin de turno. Es el diseño de la lección 2: lo que el hook no ve lo detienen el gate y CI.
+
+### 7.3 Prueba 6 — commit con `--no-verify` y PR
+
+Sonda `NpeProbe` con `catch (NullPointerException exception)`, formateada y sin violaciones de Checkstyle, commiteada con `git commit --no-verify` en `pruebas/s16b-no-verify` y abierta como PR #22 contra `main`.
+
+| Job | Resultado |
+|---|---|
+| `specs` | ✔ |
+| `security-layer-2` | ✔ |
+| `style` | ✘ en 57 s |
+| `quality` | ✘ |
+
+Salida del job `style`:
+
+```
+[ERROR] Medium: Do not catch NullPointerException like in com.codeja.master_acdc.ordering.application.NpeProbe.lengthOrZero(String) [com.codeja.master_acdc.ordering.application.NpeProbe] At NpeProbe.java:[line 10] DCN_NULLPOINTER_EXCEPTION
+[ERROR] Failed to execute goal com.github.spotbugs:spotbugs-maven-plugin:4.10.5.0:check (default-cli) on project master-acdc: failed with 1 bugs and 0 errors
+```
+
+El enunciado esperaba el fallo en PMD (`AvoidCatchingNPE`), pero lo detuvo **SpotBugs** (`DCN_NULLPOINTER_EXCEPTION`): va antes en el comando y Maven se para en el primer goal que falla, así que PMD no llegó a ejecutarse. Las dos herramientas cubren el mismo patrón; saltarse el pre-commit no sirvió para que el código entrara.
+
+**El merge queda bloqueado**: `style`, `quality` y `specs` son required status checks en `main`, y con dos de ellos en rojo GitHub deshabilita el botón "Merge pull request" ("Some checks were not successful — 2 failing, 4 successful checks"). El PR #22 se cierra sin mergear y la rama se borra.
+
+Pendiente fuera de este lab: `security-layer-2` (lab S13) se ejecuta pero no figura como required.
+
