@@ -32,7 +32,7 @@ Tres salidas posibles: **corregir**, **excluir con motivo** (en `config/spotbugs
 |---|---|---|---|
 | `EI_EXPOSE_REP2` | 38 | Excluir fuera de `domain` (`infrastructure`, `application`, `api`) | Los 38 son beans recibidos por constructor: compartir la referencia es lo que se quiere |
 | `EI_EXPOSE_REP` | 12 | Excluir en `infrastructure` (11) y en `ConfirmPasswordResetService.Recovery` (1) | DTOs de transporte y adaptadores; `Recovery` es un record que agrupa dos puertos. Se mantiene en `domain` y en el resto de `application` |
-| `NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE` | 6 | Corregir | Ver abajo: 1 NPE real, 2 sin comprobar la autenticación, 3 getters repetidos tras su comprobación |
+| `NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE` | 6 | Corregir | Ver abajo: 1 NPE real, 2 sin comprobar la autenticación, 1 invariante sin declarar (`sub`) y 2 getters repetidos tras su comprobación |
 | `NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE` | 1 | Corregir | `RedisProductDetailCache.put` hacía el cast sin comprobar `null`; ahora `instanceof` con patrón e `IllegalArgumentException` |
 | `CT_CONSTRUCTOR_THROW` | 1 | Corregir | `CatalogStockProjectionJob` pasa a `final` (solo usa `@Scheduled`, no necesita proxy) |
 | `SPRING_CSRF_PROTECTION_DISABLED` | 2 | Excluir por método | Cadenas de Actuator y JWKS: sin cookies ni sesión (ADR 0011). La cadena de la API sigue vigilada |
