@@ -53,8 +53,9 @@ public class ProductSearchMongoRepositoryAdapter implements ProductSearchReposit
   }
 
   private void addTextFilter(List<Criteria> filters, ProductSearchCriteria criteria) {
-    if (criteria.text() != null && !criteria.text().isBlank()) {
-      filters.add(Criteria.where("name").regex(Pattern.quote(criteria.text()), "i"));
+    String text = criteria.text();
+    if (text != null && !text.isBlank()) {
+      filters.add(Criteria.where("name").regex(Pattern.quote(text), "i"));
     }
   }
 

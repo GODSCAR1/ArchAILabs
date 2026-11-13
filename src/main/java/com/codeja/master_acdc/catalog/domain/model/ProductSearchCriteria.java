@@ -4,12 +4,13 @@ import com.codeja.master_acdc.catalog.domain.exception.InvalidPriceRangeExceptio
 import com.codeja.master_acdc.catalog.domain.exception.InvalidSortFieldException;
 import java.util.Set;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 public record ProductSearchCriteria(
-    String text,
-    UUID categoryId,
-    Long minPrice,
-    Long maxPrice,
+    @Nullable String text,
+    @Nullable UUID categoryId,
+    @Nullable Long minPrice,
+    @Nullable Long maxPrice,
     Set<ProductStatus> statuses,
     boolean inStock,
     int page,
