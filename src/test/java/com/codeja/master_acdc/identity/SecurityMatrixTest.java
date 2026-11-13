@@ -29,6 +29,9 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
       "catalog.cache.enabled=true",
       "spring.jpa.properties.hibernate.generate_statistics=true"
     })
+// Supresión aprobada (lab S16b): la matriz de seguridad concentra a propósito todos los endpoints
+// y roles en una clase (ADR 0011); dividirla rompería la lectura de la matriz.
+@SuppressWarnings("PMD.GodClass")
 class SecurityMatrixTest extends SecurityMatrixSupport {
   @org.springframework.beans.factory.annotation.Autowired
   private jakarta.persistence.EntityManagerFactory factory;
@@ -111,7 +114,7 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
     var request =
         (S13.contains(endpoint) ? recoveryOrExportRequest(endpoint) : request(endpoint))
             .secure(true);
-    if (!role.equals("Anónimo")) {
+    if (!"Anónimo".equals(role)) {
       request.header("Authorization", bearer(role));
     }
     var before = snapshot();
@@ -357,7 +360,7 @@ class SecurityMatrixTest extends SecurityMatrixSupport {
             });
         assertThat(ids)
             .containsExactlyInAnyOrderElementsOf(
-                role.equals("CUSTOMER")
+                "CUSTOMER".equals(role)
                     ? List.of(paid.toString())
                     : List.of(paid.toString(), foreignPaid.toString()));
       }

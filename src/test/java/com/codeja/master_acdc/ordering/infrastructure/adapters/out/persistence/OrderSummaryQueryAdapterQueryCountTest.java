@@ -7,6 +7,7 @@ import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.hibernate.SessionFactory;
@@ -101,6 +102,6 @@ class OrderSummaryQueryAdapterQueryCountTest {
   }
 
   private static UUID idFor(int index) {
-    return UUID.nameUUIDFromBytes(("query-count-" + index).getBytes());
+    return UUID.nameUUIDFromBytes(("query-count-" + index).getBytes(StandardCharsets.UTF_8));
   }
 }

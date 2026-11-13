@@ -3,4 +3,7 @@
  *
  * <p>NUNCA importa Spring ni JPA (@Entity, @Repository, @Service prohibidos aquí).
  */
+@NullMarked
 package com.codeja.master_acdc.ordering.domain;
+
+import org.jspecify.annotations.NullMarked;

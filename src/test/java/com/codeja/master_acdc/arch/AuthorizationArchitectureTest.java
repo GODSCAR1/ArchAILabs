@@ -85,7 +85,7 @@ class AuthorizationArchitectureTest {
         .forEach(
             type ->
                 assertThat(type.getAllFields())
-                    .noneMatch(field -> field.getName().equalsIgnoreCase("customerId")));
+                    .noneMatch(field -> "customerId".equalsIgnoreCase(field.getName())));
   }
 
   private void assertController(Class<?> controller) {

@@ -33,10 +33,12 @@ public final class JwtDecoderFactory {
     decoder.setJwtValidator(
         new DelegatingOAuth2TokenValidator<>(
             new JwtIssuerValidator(settings.issuer()),
-            jwt ->
-                jwt.getAudience().contains(settings.audience())
-                    ? OAuth2TokenValidatorResult.success()
-                    : invalid(),
+            jwt -> {
+              List<String> audience = jwt.getAudience();
+              return audience != null && audience.contains(settings.audience())
+                  ? OAuth2TokenValidatorResult.success()
+                  : invalid();
+            },
             jwt -> validateTime(jwt, clock),
             java.util.Objects.requireNonNull(versions)));
     return decoder;
@@ -44,11 +46,14 @@ public final class JwtDecoderFactory {
 
   private static OAuth2TokenValidatorResult validateTime(Jwt jwt, Clock clock) {
     var now = clock.instant();
-    if (jwt.getExpiresAt() == null
-        || !now.isBefore(jwt.getExpiresAt())
-        || jwt.getIssuedAt() == null
-        || jwt.getIssuedAt().isAfter(now)
-        || (jwt.getNotBefore() != null && now.isBefore(jwt.getNotBefore()))) {
+    var expiresAt = jwt.getExpiresAt();
+    var issuedAt = jwt.getIssuedAt();
+    var notBefore = jwt.getNotBefore();
+    if (expiresAt == null
+        || !now.isBefore(expiresAt)
+        || issuedAt == null
+        || issuedAt.isAfter(now)
+        || (notBefore != null && now.isBefore(notBefore))) {
       return invalid();
     }
     return OAuth2TokenValidatorResult.success();

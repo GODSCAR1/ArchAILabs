@@ -2,3 +2,5 @@
 # verify-quality.sh falla si aparece una supresión en cualquier otro archivo (lab S13).
 # S-10: metrics del Actuator protegido por la cadena actuatorSecurity (docs/lab-s13.md, triaje).
 src/main/resources/application.properties
+# Lab S16b (capa 1): @SuppressWarnings("PMD.GodClass") en la matriz de seguridad (docs/lab-s16b.md, triage).
+src/test/java/com/codeja/master_acdc/identity/SecurityMatrixTest.java

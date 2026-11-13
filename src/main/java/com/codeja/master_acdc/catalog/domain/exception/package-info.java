@@ -4,4 +4,7 @@
  *
  * <p>Java puro: NUNCA importa Spring, JPA ni Jackson.
  */
+@NullMarked
 package com.codeja.master_acdc.catalog.domain.exception;
+
+import org.jspecify.annotations.NullMarked;

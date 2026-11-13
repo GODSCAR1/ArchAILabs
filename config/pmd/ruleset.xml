@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Ruleset de PMD (zona protegida: solo lo edita una persona). Cada exclusión lleva su motivo. -->
+<ruleset name="master-acdc"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+  <description>Reglas PMD del proyecto del máster</description>
+
+  <!-- ImplicitFunctionalInterface: los puertos hexagonales tienen un solo método y son
+       contratos de caso de uso, no destinos de lambdas -->
+  <rule ref="category/java/bestpractices.xml">
+    <exclude name="ImplicitFunctionalInterface"/>
+    <!-- Tests (389 violaciones en la línea base): PMD no cuenta como assert MockMvc.andExpect,
+         ArchUnit ni las aserciones dentro de lambdas, y "un assert por test" no es convención del
+         proyecto. Los mensajes van en AssertJ (.as) y en @DisplayName. -->
+    <exclude name="UnitTestContainsTooManyAsserts"/>
+    <exclude name="UnitTestShouldIncludeAssert"/>
+    <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
+    <!-- Las clases base de los IT son abstractas para que JUnit no las ejecute por sí solas -->
+    <exclude name="AbstractClassWithoutAbstractMethod"/>
+    <!-- SLF4J con placeholders ({}) no construye el mensaje si el nivel está apagado -->
+    <exclude name="GuardLogStatement"/>
+    <!-- Se vuelve a incluir abajo con los tipos permitidos -->
+    <exclude name="LooseCoupling"/>
+  </rule>
+
+  <!-- org.bson.Document y JavaClasses (ArchUnit) son los tipos de la API, no implementaciones
+       intercambiables de una interfaz -->
+  <rule ref="category/java/bestpractices.xml/LooseCoupling">
+    <properties>
+      <property name="allowedTypes" value="java.util.Properties,org.bson.Document,com.tngtech.archunit.core.domain.JavaClasses"/>
+    </properties>
+  </rule>
+
+  <rule ref="category/java/errorprone.xml/AvoidCatchingNPE"/>
+  <!-- ExecutorService: los tests de concurrencia lo cierran con shutdownNow() en finally y PMD no
+       lo reconoce como cierre. El resto son los tipos permitidos por defecto. -->
+  <rule ref="category/java/errorprone.xml/CloseResource">
+    <properties>
+      <property name="allowedResourceTypes" value="java.io.ByteArrayOutputStream,java.io.ByteArrayInputStream,java.io.StringWriter,java.io.CharArrayWriter,java.util.stream.Stream,java.util.stream.IntStream,java.util.stream.LongStream,java.util.stream.DoubleStream,java.util.concurrent.ExecutorService"/>
+    </properties>
+  </rule>
+  <rule ref="category/java/design.xml/SimplifyBooleanReturns"/>
+  <rule ref="category/java/design.xml/GodClass"/>
+  <rule ref="category/java/design.xml/CognitiveComplexity">
+    <properties>
+      <property name="reportLevel" value="12"/>
+    </properties>
+  </rule>
+
+  <!-- Regla propia (lab S16b). Motivo en AGENTS.md: los agentes escriben el cliente HTTP
+       "como siempre se ha hecho"; RestTemplate está en mantenimiento y el proyecto usa RestClient. -->
+  <rule name="NoRestTemplate"
+      language="java"
+      message="Usa RestClient o un HTTP interface client (@HttpExchange), no RestTemplate"
+      class="net.sourceforge.pmd.lang.rule.xpath.XPathRule">
+    <description>RestTemplate está en mantenimiento; el proyecto usa RestClient.</description>
+    <priority>2</priority>
+    <properties>
+      <property name="xpath">
+        <value>//ConstructorCall[pmd-java:typeIs('org.springframework.web.client.RestTemplate')]</value>
+      </property>
+    </properties>
+  </rule>
+</ruleset>

@@ -31,7 +31,8 @@ jobs:
         run: bash scripts/spec-guard.sh "origin/${BASE_REF}"
 
   style:
-    # Capa 1 (formato + estilo): rápido y vinculante. Marcar como required status check en main.
+    # Capa 1 (formato, estilo, bugs y malas prácticas): vinculante. Required status check en main.
+    # Error Prone y NullAway se ejecutan al compilar; SpotBugs (+ FindSecBugs) y PMD, después.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -42,7 +43,7 @@ jobs:
           cache: maven
       - run: chmod +x mvnw      # el bit de ejecución no viaja desde Windows
       # Solo check: CI nunca reescribe ni hace commit (lo revisado debe ser lo mergeado)
-      - run: ./mvnw -B -ntp spotless:check checkstyle:check
+      - run: ./mvnw -B -ntp spotless:check checkstyle:check compile spotbugs:check pmd:check
 
   quality:
     runs-on: ubuntu-latest
