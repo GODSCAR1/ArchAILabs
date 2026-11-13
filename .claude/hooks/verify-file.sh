@@ -49,7 +49,7 @@ cd "$ROOT" || exit 0
 
 # 1. Estilo: solo los archivos editados
 if ! OUT=$(./mvnw -q checkstyle:check -Dcheckstyle.includes="$(join "${INCS[@]}")" 2>&1); then
-  V=$(grep -E '^\[ERROR\] .*\.java:\[' <<<"$OUT" | sed -E 's/^\[ERROR\] //')
+  V=$(grep -aE '^\[ERROR\] .*\.java:\[' <<<"$OUT" | sed -E 's/^\[ERROR\] //')
   if [[ -n "$V" ]]; then
     { echo "AC/DC Checkstyle en $WHAT: corrige cada violación (no añadas supresiones ni toques config/)."
       echo "$V"; } >&2
@@ -65,7 +65,7 @@ fi
 if (( ${#MAIN[@]} > 0 )); then
   if ! OUT=$(./mvnw -q compile spotbugs:check -Dspotless.check.skip=true -Dcheckstyle.skip=true \
                -Dspotbugs.onlyAnalyze="$(join "${MAIN[@]}")" 2>&1); then
-    V=$(grep -E '^\[ERROR\] ((High|Medium|Low):|.*\.java:\[)' <<<"$OUT" | sed -E 's/^\[ERROR\] //' | sort -u | head -20)
+    V=$(grep -aE '^\[ERROR\] ((High|Medium|Low):|.*\.java:\[)' <<<"$OUT" | sed -E 's/^\[ERROR\] //' | sort -u | head -20)
     if [[ -n "$V" ]]; then
       { echo "AC/DC compilación/SpotBugs en $WHAT: corrige el código. No lo suprimas (@SuppressWarnings, @SuppressFBWarnings) ni toques config/ o pom.xml."
         echo "$V"; } >&2
@@ -78,7 +78,7 @@ if (( ${#MAIN[@]} > 0 )); then
 fi
 
 # 3. Malas prácticas: PMD sin -q (las violaciones salen como [WARNING]); se decide por la salida
-V=$(./mvnw -B pmd:check 2>&1 | grep -F -f <(printf '%s\n' "${PATS[@]}") | sed -E 's/^\[[A-Z]+\] //' | sort -u | head -20)
+V=$(./mvnw -B pmd:check 2>&1 | grep -aF -f <(printf '%s\n' "${PATS[@]}") | sed -E 's/^\[[A-Z]+\] //' | sort -u | head -20)
 if [[ -n "$V" ]]; then
   { echo "AC/DC PMD en $WHAT: corrige cada mala práctica (no uses NOPMD ni @SuppressWarnings, no toques config/)."
     echo "$V"; } >&2

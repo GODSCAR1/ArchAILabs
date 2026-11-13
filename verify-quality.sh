@@ -135,7 +135,7 @@ L1_EXTRA=$(comm -23 <(echo "$L1_SUPPRESSED") <(echo "$L1_ALLOWED") | sed '/^$/d'
   || { echo "AC/DC: supresión no aprobada de SpotBugs, PMD, Error Prone/NullAway o Checkstyle (@SuppressFBWarnings, @SuppressWarnings(\"PMD.…\"/\"NullAway\"/check), NOPMD). Corrige el código; las supresiones solo las añade una persona en el PR, con motivo:" >&2; echo "$L1_EXTRA" >&2; exit 1; }
 # Un solo Maven y sin -q: PMD informa como [WARNING]. Error Prone y NullAway fallan en compile.
 if ! L1=$(./mvnw -B spotless:check checkstyle:check compile spotbugs:check pmd:check 2>&1); then
-  grep -E '^\[ERROR\]|PMD Failure' <<<"$L1" | grep -vE 'Re-run Maven|full stack trace|\[Help 1\]|For more information|^\[ERROR\][[:space:]]*$' >&2 || true
+  grep -aE '^\[ERROR\]|PMD Failure' <<<"$L1" | grep -avE 'Re-run Maven|full stack trace|\[Help 1\]|For more information|^\[ERROR\][[:space:]]*$' >&2 || true
   echo "AC/DC: la capa 1 falló. Corrige cada línea de arriba (archivo, línea, regla o patrón); no suprimas avisos ni toques config/, pom.xml o .mvn/." >&2
   exit 1
 fi
