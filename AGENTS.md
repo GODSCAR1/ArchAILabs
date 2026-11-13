@@ -4,7 +4,7 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 
 ## Comandos (tu shell en Windows es PowerShell: invoca los scripts con `bash`)
 - Compilar y probar: `bash ./mvnw -q test`. Formato: `bash ./mvnw spotless:apply`.
-- Verify: `bash ./verify-quality.sh --fast` (specs + capa 1 + tests). Solo estilo: `bash ./mvnw -q checkstyle:check`.
+- Verify: `bash ./verify-quality.sh --fast` (specs + capa 1 + tests; tarda varios minutos: ejecútalo con un timeout de al menos 600 s). Solo estilo: `bash ./mvnw -q checkstyle:check`.
 - Capa 1 completa (formato, estilo, compilación con Error Prone/NullAway, SpotBugs y PMD): `bash ./mvnw -B spotless:check checkstyle:check compile spotbugs:check pmd:check`. Sin `-q`: PMD informa como `[WARNING] PMD Failure`.
 
 ## Arquitectura (hexagonal estricta)
