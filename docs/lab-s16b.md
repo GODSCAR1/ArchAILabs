@@ -188,3 +188,27 @@ Dos observaciones:
 - **Prueba 3.** `Objects.requireNonNull(coupons.get(code))` satisface a NullAway sin `@SuppressWarnings`, pero el cupón ausente sigue acabando en `NullPointerException`: es una forma de callar al analizador sin decidir nada. Nueva línea en `AGENTS.md` para cerrarlo.
 - **Prueba 4.** El hook por archivo filtra PMD por las clases editadas y se detiene en el primer paso que falla. En la primera edición paró en la compilación de `CouponRules`, y las siguientes ya no tocaron `LegacyPricingClient`, así que su violación llegó en el gate de fin de turno. Es el diseño de la lección 2: lo que el hook no ve lo detienen el gate y CI.
 
+### 7.3 Prueba 6 — commit con `--no-verify` y PR
+
+Sonda `NpeProbe` con `catch (NullPointerException exception)`, formateada y sin violaciones de Checkstyle, commiteada con `git commit --no-verify` en `pruebas/s16b-no-verify` y abierta como PR #22 contra `main`.
+
+| Job | Resultado |
+|---|---|
+| `specs` | ✔ |
+| `security-layer-2` | ✔ |
+| `style` | ✘ en 57 s |
+| `quality` | ✘ |
+
+Salida del job `style`:
+
+```
+[ERROR] Medium: Do not catch NullPointerException like in com.codeja.master_acdc.ordering.application.NpeProbe.lengthOrZero(String) [com.codeja.master_acdc.ordering.application.NpeProbe] At NpeProbe.java:[line 10] DCN_NULLPOINTER_EXCEPTION
+[ERROR] Failed to execute goal com.github.spotbugs:spotbugs-maven-plugin:4.10.5.0:check (default-cli) on project master-acdc: failed with 1 bugs and 0 errors
+```
+
+El enunciado esperaba el fallo en PMD (`AvoidCatchingNPE`), pero lo detuvo **SpotBugs** (`DCN_NULLPOINTER_EXCEPTION`): va antes en el comando y Maven se para en el primer goal que falla, así que PMD no llegó a ejecutarse. Las dos herramientas cubren el mismo patrón; saltarse el pre-commit no sirvió para que el código entrara.
+
+**El merge queda bloqueado**: `style`, `quality` y `specs` son required status checks en `main`, y con dos de ellos en rojo GitHub deshabilita el botón "Merge pull request" ("Some checks were not successful — 2 failing, 4 successful checks"). El PR #22 se cierra sin mergear y la rama se borra.
+
+Pendiente fuera de este lab: `security-layer-2` (lab S13) se ejecuta pero no figura como required.
+
