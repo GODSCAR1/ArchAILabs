@@ -7,6 +7,7 @@ import com.codeja.master_acdc.identity.domain.model.IdentityException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -63,6 +64,8 @@ public class SessionController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void changePassword(
       @AuthenticationPrincipal Jwt jwt, @RequestBody PasswordChangeRequest request) {
-    passwords.changePassword(IdentityWebMapper.toPasswordChange(jwt.getSubject(), request));
+    passwords.changePassword(
+        IdentityWebMapper.toPasswordChange(
+            Objects.requireNonNull(jwt.getSubject(), "JWT subject is required"), request));
   }
 }

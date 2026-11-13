@@ -22,7 +22,7 @@ public record Price(long value) {
     try {
       return new Price(raw.longValueExact());
     } catch (ArithmeticException outOfRange) {
-      throw new InvalidProductException("price is out of range");
+      throw new InvalidProductException("price is out of range", outOfRange);
     }
   }
 }

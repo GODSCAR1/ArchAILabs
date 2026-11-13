@@ -36,9 +36,10 @@ final class PasswordResetLcgOracle {
 
   private static String generate(long state) {
     var bytes = ByteBuffer.allocate(32).order(ByteOrder.LITTLE_ENDIAN);
+    long current = state;
     while (bytes.hasRemaining()) {
-      state = next(state);
-      bytes.putInt((int) (state >>> 16));
+      current = next(current);
+      bytes.putInt((int) (current >>> 16));
     }
     return HexFormat.of().formatHex(bytes.array());
   }

@@ -56,10 +56,10 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
     var before = rows(user.id());
     doAnswer(
             invocation -> {
-              if (!failure.equals("before")) {
+              if (!"before".equals(failure)) {
                 invocation.callRealMethod();
               }
-              if (failure.equals("commit")) {
+              if ("commit".equals(failure)) {
                 TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronization() {
                       @Override
@@ -76,7 +76,7 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
         .publish(eq(user.id()), any());
     assertThatThrownBy(() -> block(user.id())).hasMessage("session-version-unavailable");
     assertUnchanged(user, before);
-    if (failure.equals("before")) {
+    if ("before".equals(failure)) {
       assertThat(barrier.find(user.id())).isEmpty();
     } else {
       assertThat(barrier.find(user.id())).contains(new SessionVersion(1));
@@ -112,7 +112,7 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
       }
       writer.get(10, java.util.concurrent.TimeUnit.SECONDS);
       assertThat(reader.get(10, java.util.concurrent.TimeUnit.SECONDS))
-          .isEqualTo(operation.equals("miss") ? "1" : "rejected");
+          .isEqualTo("miss".equals(operation) ? "1" : "rejected");
       assertThat(rows(user.id()))
           .hasSize(1)
           .allSatisfy(row -> assertThat(row.get("revoked_at")).isNotNull());

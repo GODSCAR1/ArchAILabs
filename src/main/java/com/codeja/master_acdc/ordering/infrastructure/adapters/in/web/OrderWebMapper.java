@@ -22,7 +22,7 @@ public final class OrderWebMapper {
       return new OrderListingCriteria(
           OrderStatus.valueOf(status), OrderReadScope.None.INSTANCE, sort);
     } catch (IllegalArgumentException exception) {
-      throw new InvalidOrderStatusException(status);
+      throw new InvalidOrderStatusException(status, exception);
     }
   }
 

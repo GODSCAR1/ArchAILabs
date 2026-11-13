@@ -108,7 +108,7 @@ class AdminUserManagementIT extends AuthHttpSupport {
             "session-version-unavailable")
         .andExpect(header().string("Retry-After", "1"));
     assertThat(state()).isEqualTo(before);
-    if (failure.equals("before")) {
+    if ("before".equals(failure)) {
       mvc.perform(
               get("/api/orders")
                   .param("status", "PAID")
@@ -128,10 +128,10 @@ class AdminUserManagementIT extends AuthHttpSupport {
   private void injectFailure(UUID id, String failure) {
     doAnswer(
             invocation -> {
-              if (!failure.equals("before")) {
+              if (!"before".equals(failure)) {
                 invocation.callRealMethod();
               }
-              if (failure.equals("commit")) {
+              if ("commit".equals(failure)) {
                 TransactionSynchronizationManager.registerSynchronization(
                     new TransactionSynchronization() {
                       @Override

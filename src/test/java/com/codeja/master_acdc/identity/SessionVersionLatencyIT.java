@@ -79,25 +79,34 @@ class SessionVersionLatencyIT extends IdentityIntegrationSupport {
         pauseRedis();
       }
       try {
-        for (int warmup = 0; warmup < mode.warmup; warmup++) {
-          measure(mode, token, baseline, 0, warmup);
-        }
-        for (int round = 1; round <= 5; round++) {
-          for (int index = 0; index < mode.perRound; index++) {
-            samples.add(measure(mode, token, baseline, round, index));
-          }
-        }
+        collectSamples(mode, token, baseline, samples);
       } finally {
-        if (mode == Mode.TIMEOUT) {
-          assertThat(identityRedis.execInContainer("redis-cli", "CLIENT", "UNPAUSE").getExitCode())
-              .isZero();
-        }
+        resumeRedisAfterTimeout(mode);
       }
     }
     assertThat(samples).hasSize(570);
     assertThat(decoder.decode(token).getSubject())
         .isEqualTo(SignedJWT.parse(token).getJWTClaimsSet().getSubject());
     writeEvidence(samples);
+  }
+
+  private void collectSamples(Mode mode, String token, JwtDecoder baseline, List<Sample> samples)
+      throws java.text.ParseException {
+    for (int warmup = 0; warmup < mode.warmup; warmup++) {
+      measure(mode, token, baseline, 0, warmup);
+    }
+    for (int round = 1; round <= 5; round++) {
+      for (int index = 0; index < mode.perRound; index++) {
+        samples.add(measure(mode, token, baseline, round, index));
+      }
+    }
+  }
+
+  private void resumeRedisAfterTimeout(Mode mode) throws java.io.IOException, InterruptedException {
+    if (mode == Mode.TIMEOUT) {
+      assertThat(identityRedis.execInContainer("redis-cli", "CLIENT", "UNPAUSE").getExitCode())
+          .isZero();
+    }
   }
 
   private Sample measure(Mode mode, String token, JwtDecoder baseline, int round, int index)
@@ -230,7 +239,7 @@ class SessionVersionLatencyIT extends IdentityIntegrationSupport {
         + " latency threshold.\n";
   }
 
-  private static String percentiles(long[] values) {
+  private static String percentiles(long... values) {
     return String.format(
         Locale.ROOT, "%.3f / %.3f", percentile(values, 0.50), percentile(values, 0.95));
   }

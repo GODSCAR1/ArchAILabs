@@ -25,11 +25,11 @@ public final class LocalExportFiles implements ExportFiles {
       }
       return new ExportContent(Files.readAllBytes(candidate));
     } catch (NoSuchFileException exception) {
-      throw new ExportException("export-not-found");
+      throw new ExportException("export-not-found", exception);
     } catch (InvalidPathException exception) {
-      throw new ExportException("invalid-export-name");
+      throw new ExportException("invalid-export-name", exception);
     } catch (IOException exception) {
-      throw new ExportException("export-read-failed");
+      throw new ExportException("export-read-failed", exception);
     }
   }
 }

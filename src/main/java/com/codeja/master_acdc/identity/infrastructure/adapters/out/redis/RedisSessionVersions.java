@@ -41,7 +41,7 @@ public final class RedisSessionVersions implements SessionVersionBarrier {
       return Optional.ofNullable(redis.opsForValue().get(PREFIX + accountId))
           .map(RedisSessionVersions::parse);
     } catch (DataAccessException exception) {
-      throw new IdentityException("session-version-unavailable");
+      throw new IdentityException("session-version-unavailable", exception);
     }
   }
 
@@ -54,7 +54,7 @@ public final class RedisSessionVersions implements SessionVersionBarrier {
       return find(accountId)
           .orElseThrow(() -> new IdentityException("session-version-unavailable"));
     } catch (DataAccessException exception) {
-      throw new IdentityException("session-version-unavailable");
+      throw new IdentityException("session-version-unavailable", exception);
     }
   }
 
@@ -67,7 +67,7 @@ public final class RedisSessionVersions implements SessionVersionBarrier {
         throw new IdentityException("session-version-unavailable");
       }
     } catch (DataAccessException exception) {
-      throw new IdentityException("session-version-unavailable");
+      throw new IdentityException("session-version-unavailable", exception);
     }
   }
 
@@ -78,7 +78,7 @@ public final class RedisSessionVersions implements SessionVersionBarrier {
     try {
       return new SessionVersion(Long.parseLong(value));
     } catch (NumberFormatException exception) {
-      throw new IdentityException("session-version-corrupt");
+      throw new IdentityException("session-version-corrupt", exception);
     }
   }
 }

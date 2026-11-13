@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.bson.UuidRepresentation;
@@ -99,7 +100,7 @@ class CatalogDetailMongoQueryCountTest {
   }
 
   private CatalogProduct product() {
-    HashMap<String, String> attributes = new HashMap<>();
+    Map<String, String> attributes = new HashMap<>();
     List<CatalogVariant> variants = new ArrayList<>();
     for (int index = 0; index < 60; index++) {
       attributes.put("attribute-" + index, "value-" + index);

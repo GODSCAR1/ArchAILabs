@@ -28,7 +28,7 @@ public final class TransactionalRegister implements RegisterUseCase {
       if (cause instanceof SQLException sql
           && "23505".equals(sql.getSQLState())
           && sql.getMessage().contains("user_account_email_key")) {
-        throw new IdentityException("email-already-registered");
+        throw new IdentityException("email-already-registered", exception);
       }
       throw exception;
     }

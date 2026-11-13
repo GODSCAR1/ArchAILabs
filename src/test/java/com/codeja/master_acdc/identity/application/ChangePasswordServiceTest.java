@@ -24,7 +24,7 @@ class ChangePasswordServiceTest extends SessionServiceTestSupport {
       new ChangePasswordService(
           new ChangePasswordService.Revocation(accounts, tokens, barrier),
           passwords,
-          new PasswordPolicy(value -> value.equals("password1234")),
+          new PasswordPolicy(value -> "password1234".equals(value)),
           clock);
 
   @Test

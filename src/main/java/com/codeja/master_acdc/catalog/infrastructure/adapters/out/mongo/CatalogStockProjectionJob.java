@@ -14,7 +14,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 
-public class CatalogStockProjectionJob {
+public final class CatalogStockProjectionJob {
 
   private final NamedParameterJdbcTemplate jdbcTemplate;
   private final MongoTemplate mongoTemplate;

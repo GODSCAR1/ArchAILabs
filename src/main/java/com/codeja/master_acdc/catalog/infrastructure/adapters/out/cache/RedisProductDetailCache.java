@@ -41,12 +41,12 @@ public final class RedisProductDetailCache extends AbstractValueAdaptingCache {
 
   @Override
   public void put(Object key, Object value) {
+    if (!(value instanceof ProductDetail detail)) {
+      throw new IllegalArgumentException("Redis product cache requires a non-null ProductDetail");
+    }
     redis
         .opsForValue()
-        .set(
-            redisKey(key),
-            (ProductDetail) value,
-            CacheTtlPolicy.jitter(CacheTtlPolicy.PRODUCTS_L2_TTL));
+        .set(redisKey(key), detail, CacheTtlPolicy.jitter(CacheTtlPolicy.PRODUCTS_L2_TTL));
   }
 
   @Override

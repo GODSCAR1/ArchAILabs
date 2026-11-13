@@ -16,7 +16,7 @@ public final class AdminUserWebMapper {
       }
       return parsed;
     } catch (IllegalArgumentException exception) {
-      throw new IdentityException("user-not-found");
+      throw new IdentityException("user-not-found", exception);
     }
   }
 
@@ -37,7 +37,7 @@ public final class AdminUserWebMapper {
     try {
       return Integer.parseInt(params.getFirst(key));
     } catch (NumberFormatException exception) {
-      throw new IdentityException("invalid-user-page");
+      throw new IdentityException("invalid-user-page", exception);
     }
   }
 

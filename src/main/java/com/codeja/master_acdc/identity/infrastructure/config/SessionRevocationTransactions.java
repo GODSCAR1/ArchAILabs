@@ -20,14 +20,14 @@ public final class SessionRevocationTransactions {
             return null;
           });
     } catch (DataAccessResourceFailureException | CannotCreateTransactionException exception) {
-      throw new IdentityException("session-version-unavailable");
+      throw new IdentityException("session-version-unavailable", exception);
     } catch (TransactionSystemException exception) {
       if (exception.getMostSpecificCause() instanceof java.sql.SQLException sql
           && sql.getSQLState() != null
           && (sql.getSQLState().startsWith("08")
               || "40003".equals(sql.getSQLState())
               || "57P01".equals(sql.getSQLState()))) {
-        throw new IdentityException("session-version-unavailable");
+        throw new IdentityException("session-version-unavailable", exception);
       }
       throw exception;
     }

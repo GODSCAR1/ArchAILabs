@@ -62,7 +62,7 @@ class OrderAuthorizationQueryCountTest extends IdentityIntegrationSupport {
   @ValueSource(strings = {"CUSTOMER", "SUPPORT"})
   void should_use_at_most_two_statements_when_http_lists_120_own_and_foreign_orders(String role)
       throws Exception {
-    boolean own = role.equals("CUSTOMER");
+    boolean own = "CUSTOMER".equals(role);
     String token = OrderBearer.issue(jdbc, issuer, own ? owner : null, role);
     decoder.decode(token);
     Statistics statistics = clearStatistics();

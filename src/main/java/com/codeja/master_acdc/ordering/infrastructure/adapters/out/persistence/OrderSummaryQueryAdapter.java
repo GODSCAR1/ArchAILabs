@@ -47,10 +47,10 @@ public class OrderSummaryQueryAdapter implements OrderSummaryQuery {
           default -> throw new IllegalStateException("Ordenación no válida");
         };
     var primary =
-        parts.length == 2 && parts[1].equals("DESC")
+        parts.length == 2 && "DESC".equals(parts[1])
             ? builder.desc(expression)
             : builder.asc(expression);
-    query.orderBy(parts[0].equals("id") ? List.of(primary) : List.of(primary, builder.asc(id)));
+    query.orderBy("id".equals(parts[0]) ? List.of(primary) : List.of(primary, builder.asc(id)));
     return entityManager.createQuery(query).getResultList().stream()
         .map(OrderSummaryPersistenceMapper::toDomain)
         .toList();

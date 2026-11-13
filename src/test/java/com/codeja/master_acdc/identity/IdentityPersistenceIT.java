@@ -22,7 +22,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-public class IdentityPersistenceIT extends IdentityIntegrationSupport {
+class IdentityPersistenceIT extends IdentityIntegrationSupport {
   @Autowired private JdbcTemplate jdbc;
   @Autowired private RegisterUseCase register;
   @Autowired private UserAccounts accounts;
@@ -139,8 +139,9 @@ public class IdentityPersistenceIT extends IdentityIntegrationSupport {
 
   private void insertAccount(String email, UUID customer) {
     jdbc.update(
-        "insert into user_account(id,email,password_hash,roles,enabled,customer_id) values"
-            + " (?,?,?,ARRAY['ADMIN'],true,?)",
+        """
+        insert into user_account(id,email,password_hash,roles,enabled,customer_id) values (?,?,?,ARRAY['ADMIN'],true,?)\
+        """,
         UUID.randomUUID(),
         email,
         "hash",
