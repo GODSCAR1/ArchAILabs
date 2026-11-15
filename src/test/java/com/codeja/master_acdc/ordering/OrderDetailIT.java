@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
 class OrderDetailIT extends IdentityIntegrationSupport {
@@ -56,10 +57,13 @@ class OrderDetailIT extends IdentityIntegrationSupport {
   void should_hide_missing_malformed_or_foreign_order_when_customer_reads_detail()
       throws Exception {
     for (String id : new String[] {order.toString(), UUID.randomUUID().toString(), "not-uuid"}) {
-      detail(id, UUID.randomUUID(), "CUSTOMER")
-          .andExpect(status().isNotFound())
-          .andExpect(
-              jsonPath("$.type").value("https://api.master-acdc.dev/problems/order-not-found"));
+      MvcResult result = detail(id, UUID.randomUUID(), "CUSTOMER").andReturn();
+      assertThat(result.getResponse().getStatus())
+          .as("pedido ajeno, inexistente o mal formado (%s): 404 sin revelar si existe", id)
+          .isEqualTo(404);
+      jsonPath("$.type")
+          .value("https://api.master-acdc.dev/problems/order-not-found")
+          .match(result);
     }
     unchanged();
   }

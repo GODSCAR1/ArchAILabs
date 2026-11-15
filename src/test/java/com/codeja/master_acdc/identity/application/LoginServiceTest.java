@@ -7,11 +7,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.codeja.master_acdc.identity.domain.model.AccessToken;
+import com.codeja.master_acdc.identity.TestTokens;
 import com.codeja.master_acdc.identity.domain.model.Login;
 import com.codeja.master_acdc.identity.domain.model.RefreshToken;
 import com.codeja.master_acdc.identity.domain.model.UserAccount;
-import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import com.codeja.master_acdc.identity.domain.port.Passwords;
 import com.codeja.master_acdc.identity.domain.port.RefreshTokens;
 import com.codeja.master_acdc.identity.domain.port.UserAccounts;
@@ -29,27 +28,26 @@ class LoginServiceTest {
   private final UserAccounts accounts = mock(UserAccounts.class);
   private final Passwords passwords = mock(Passwords.class);
   private final RefreshTokens refreshes = mock(RefreshTokens.class);
-  private final AccessTokenIssuer issuer = mock(AccessTokenIssuer.class);
   private final Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:00:00Z"), ZoneOffset.UTC);
-  private final LoginService service =
-      new LoginService(
-          accounts,
-          passwords,
-          new LoginService.TokenDependencies(
-              refreshes, new SecureRefreshSecretGenerator(), issuer, clock));
   private final UserAccount account =
       new UserAccount(
           UUID.randomUUID(),
           "a@example.com",
           "hash",
           new UserAccount.Profile(Set.of("CUSTOMER"), true, 0, UUID.randomUUID()));
+  private final TestTokens testTokens = new TestTokens(clock, account);
+  private final LoginService service =
+      new LoginService(
+          accounts,
+          passwords,
+          new LoginService.TokenDependencies(
+              refreshes, new SecureRefreshSecretGenerator(), testTokens.issuer(), clock));
 
   @Test
   void should_create_family_when_enabled_account_authenticates() {
     when(accounts.findByEmail("a@example.com")).thenReturn(Optional.of(account));
     when(passwords.matches("secret", "hash")).thenReturn(true);
     when(accounts.findForUpdate(account.id())).thenReturn(Optional.of(account));
-    when(issuer.issue(account)).thenReturn(new AccessToken("jwt", 900));
     var result = service.login(new Login("A@Example.com", "secret"));
     var captor = ArgumentCaptor.forClass(RefreshToken.class);
     verify(refreshes).save(captor.capture());
@@ -59,7 +57,7 @@ class LoginServiceTest {
     assertThat(token.lifetime().familyExpiresAt()).isEqualTo(clock.instant().plusSeconds(2592000));
     assertThat(token.tokenHash()).hasSize(64).isNotEqualTo(result.refreshToken());
     assertThat(result.refreshToken()).hasSize(43);
-    assertThat(result.accessToken().expiresIn()).isEqualTo(900);
+    testTokens.assertToken(result.accessToken(), account);
   }
 
   @Test
@@ -68,7 +66,7 @@ class LoginServiceTest {
     assertThatThrownBy(() -> service.login(new Login("unknown@example.com", "wrong")))
         .hasMessage("invalid-credentials");
     verify(passwords).matchesDummy("wrong");
-    verifyNoInteractions(refreshes, issuer);
+    verifyNoInteractions(refreshes);
   }
 
   @Test
@@ -77,7 +75,7 @@ class LoginServiceTest {
     assertThatThrownBy(() -> service.login(new Login(account.email(), "wrong")))
         .hasMessage("invalid-credentials");
     verify(passwords).matches("wrong", "hash");
-    verifyNoInteractions(refreshes, issuer);
+    verifyNoInteractions(refreshes);
   }
 
   @Test
@@ -96,6 +94,6 @@ class LoginServiceTest {
       assertThatThrownBy(() -> service.login(new Login(account.email(), "secret")))
           .hasMessage("invalid-credentials");
     }
-    verifyNoInteractions(refreshes, issuer);
+    verifyNoInteractions(refreshes);
   }
 }

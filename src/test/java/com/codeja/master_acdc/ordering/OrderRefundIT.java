@@ -10,20 +10,14 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 class OrderRefundIT extends OrderRefundSupport {
-  @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
-  private com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher cancellations;
-
-  @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
-  private com.codeja.master_acdc.inventory.api.InventoryFacade inventory;
-
   @org.junit.jupiter.api.BeforeEach
   void clear_effect_observations() {
-    org.mockito.Mockito.clearInvocations(cancellations, inventory);
+    org.mockito.Mockito.clearInvocations(spiedCancellations, spiedInventory);
   }
 
   @org.junit.jupiter.api.AfterEach
   void verify_refund_has_no_inventory_or_cancellation_effects() {
-    org.mockito.Mockito.verifyNoInteractions(cancellations, inventory);
+    org.mockito.Mockito.verifyNoInteractions(spiedCancellations, spiedInventory);
   }
 
   @ParameterizedTest

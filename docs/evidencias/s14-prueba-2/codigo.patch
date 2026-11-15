@@ -1,0 +1,33 @@
+diff --git a/src/test/java/com/codeja/master_acdc/identity/SessionLifecycleIT.java b/src/test/java/com/codeja/master_acdc/identity/SessionLifecycleIT.java
+index 7e4b567..f190fbd 100644
+--- a/src/test/java/com/codeja/master_acdc/identity/SessionLifecycleIT.java
++++ b/src/test/java/com/codeja/master_acdc/identity/SessionLifecycleIT.java
+@@ -2,6 +2,7 @@ package com.codeja.master_acdc.identity;
+ 
+ import static org.assertj.core.api.Assertions.assertThat;
+ import static org.assertj.core.api.Assertions.assertThatThrownBy;
++import static org.mockito.Mockito.doReturn;
+ 
+ import com.codeja.master_acdc.identity.application.RefreshService;
+ import com.codeja.master_acdc.identity.application.RefreshTokenAccess;
+@@ -115,6 +116,20 @@ class SessionLifecycleIT extends SessionIntegrationSupport {
+         .isFalse();
+   }
+ 
++  @Test
++  @DisplayName("Refresh rechazado cuando el reloj supera su caducidad")
++  void should_reject_refresh_without_writes_when_application_clock_passes_expiry() {
++    doReturn(Instant.parse("2026-10-01T12:00:00Z")).when(spiedClock).instant();
++    var user = registered();
++    var session = login(user);
++    var before = rows(user.id());
++
++    doReturn(session.refreshExpiresAt().plusSeconds(1)).when(spiedClock).instant();
++
++    assertThat(refresh.refresh(session.refreshToken()).accepted()).isFalse();
++    assertThat(rows(user.id())).isEqualTo(before);
++  }
++
+   @Test
+   @DisplayName("Refresh vencido o desconocido")
+   void should_preserve_rows_when_refresh_is_unknown_disabled_revoked_or_expired() {

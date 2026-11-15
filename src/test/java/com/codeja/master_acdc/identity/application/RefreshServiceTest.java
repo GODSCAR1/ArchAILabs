@@ -2,12 +2,14 @@ package com.codeja.master_acdc.identity.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeja.master_acdc.identity.RefreshTokenAssert;
 import com.codeja.master_acdc.identity.domain.model.RefreshToken;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +24,7 @@ class RefreshServiceTest extends SessionServiceTestSupport {
   void should_rotate_with_account_before_token_when_refresh_is_valid() {
     var result = service.refresh(SECRET);
     assertThat(result.accepted()).isTrue();
+    testTokens.assertToken(result.tokens().orElseThrow().accessToken(), account);
     var order = inOrder(tokens, accounts);
     order.verify(tokens).findUserIdByHash(token.tokenHash());
     order.verify(accounts).findForUpdate(account.id());
@@ -30,7 +33,9 @@ class RefreshServiceTest extends SessionServiceTestSupport {
     verify(tokens, times(2)).save(captured.capture());
     var previous = captured.getAllValues().getFirst();
     var next = captured.getAllValues().getLast();
+    RefreshTokenAssert.assertThat(previous).isUsed();
     assertThat(previous.state().rotatedAt()).isEqualTo(now);
+    RefreshTokenAssert.assertThat(next).belongsToFamily(token.family().id());
     assertThat(next.family()).isEqualTo(token.family());
     assertThat(next.lifetime().expiresAt()).isEqualTo(now.plusSeconds(604800));
     assertThat(next.lifetime().familyExpiresAt()).isEqualTo(token.lifetime().familyExpiresAt());
@@ -50,16 +55,24 @@ class RefreshServiceTest extends SessionServiceTestSupport {
             token.state());
     when(tokens.findForUpdateByHash(token.tokenHash())).thenReturn(Optional.of(capped));
     var result = service.refresh(SECRET).tokens().orElseThrow();
+    testTokens.assertToken(result.accessToken(), account);
     assertThat(result.refreshExpiresAt()).isEqualTo(capped.lifetime().familyExpiresAt());
+    var captured = ArgumentCaptor.forClass(RefreshToken.class);
+    verify(tokens, times(2)).save(captured.capture());
+    var successor = captured.getAllValues().getLast();
+    RefreshTokenAssert.assertThat(successor).belongsToFamily(capped.family().id());
+    assertThat(successor.lifetime().expiresAt())
+        .isEqualTo(capped.lifetime().familyExpiresAt())
+        .isNotEqualTo(now.plusSeconds(604800));
   }
 
   @Test
   @DisplayName("Refresh vencido o desconocido")
   void should_reject_without_writes_when_refresh_is_missing_expired_revoked_or_disabled() {
-    assertThat(service.refresh(null).accepted()).isFalse();
-    assertThat(service.refresh("invalid").accepted()).isFalse();
+    assertRejected(service.refresh(null));
+    assertRejected(service.refresh("invalid"));
     when(tokens.findUserIdByHash(token.tokenHash())).thenReturn(Optional.empty());
-    assertThat(service.refresh(SECRET).accepted()).isFalse();
+    assertRejected(service.refresh(SECRET));
     when(tokens.findUserIdByHash(token.tokenHash())).thenReturn(Optional.of(account.id()));
     for (var rejected :
         new RefreshToken[] {
@@ -77,7 +90,7 @@ class RefreshServiceTest extends SessionServiceTestSupport {
               new RefreshToken.State(null, now))
         }) {
       when(tokens.findForUpdateByHash(token.tokenHash())).thenReturn(Optional.of(rejected));
-      assertThat(service.refresh(SECRET).accepted()).isFalse();
+      assertRejected(service.refresh(SECRET));
     }
     when(tokens.findForUpdateByHash(token.tokenHash())).thenReturn(Optional.of(token));
     when(accounts.findForUpdate(account.id()))
@@ -89,9 +102,8 @@ class RefreshServiceTest extends SessionServiceTestSupport {
                     account.passwordHash(),
                     new com.codeja.master_acdc.identity.domain.model.UserAccount.Profile(
                         account.profile().roles(), false, 0, null))));
-    assertThat(service.refresh(SECRET).accepted()).isFalse();
+    assertRejected(service.refresh(SECRET));
     verify(tokens, never()).save(any());
-    verify(issuer, never()).issue(any());
   }
 
   @Test
@@ -106,9 +118,18 @@ class RefreshServiceTest extends SessionServiceTestSupport {
                     token.tokenHash(),
                     token.lifetime(),
                     new RefreshToken.State(now.minusSeconds(1), null))));
-    assertThat(service.refresh(SECRET).accepted()).isFalse();
-    verify(tokens).revokeFamily(token.family().id(), now);
+    assertRejected(service.refresh(SECRET));
+    verify(
+            tokens,
+            description(
+                "reutilizar un refresh token ya rotado debe revocar TODA la familia (ADR 0011)"))
+        .revokeFamily(token.family().id(), now);
     verify(tokens, never()).save(any());
-    verify(issuer, never()).issue(any());
+  }
+
+  private static void assertRejected(
+      com.codeja.master_acdc.identity.domain.model.RefreshResult result) {
+    assertThat(result.accepted()).isFalse();
+    assertThat(result.tokens()).isEmpty();
   }
 }

@@ -1,0 +1,130 @@
+diff --git a/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/PasswordEncoderAdapterTest.java b/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/PasswordEncoderAdapterTest.java
+index bbdb344..13581fc 100644
+--- a/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/PasswordEncoderAdapterTest.java
++++ b/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/PasswordEncoderAdapterTest.java
+@@ -28,6 +28,15 @@ class PasswordEncoderAdapterTest {
+     assertThat(adapter.matches("valid-password\0", hash)).isFalse();
+   }
+ 
++  @Test
++  @DisplayName("Contraseña ausente no autentica")
++  void should_reject_login_when_password_is_null() {
++    var adapter =
++        new PasswordEncoderAdapter(PasswordEncoderFactories.createDelegatingPasswordEncoder());
++    String hash = adapter.encode("valid-password");
++    assertThat(adapter.matches(null, hash)).isFalse();
++  }
++
+   @Test
+   void should_encode_delegated_bcrypt_when_password_is_representable() {
+     var adapter =
+diff --git a/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/SessionVersionValidatorTest.java b/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/SessionVersionValidatorTest.java
+index 0851ea6..0ec0332 100644
+--- a/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/SessionVersionValidatorTest.java
++++ b/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/SessionVersionValidatorTest.java
+@@ -23,6 +23,13 @@ class SessionVersionValidatorTest {
+     assertThat(validator.validate(token(null)).hasErrors()).isTrue();
+   }
+ 
++  @Test
++  @DisplayName("Token sin sujeto no autentica")
++  void should_reject_token_when_subject_is_missing() {
++    var jwt = Jwt.withTokenValue("unit").header("alg", "RS256").claim("sv", 7).build();
++    assertThat(validator.validate(jwt).hasErrors()).isTrue();
++  }
++
+   @Test
+   @DisplayName("Versión no numérica no autentica")
+   void should_reject_non_integral_or_invalid_values_when_version_is_untrusted() {
+diff --git a/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtSettingsTest.java b/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtSettingsTest.java
+new file mode 100755
+index 0000000..5e17c84
+--- /dev/null
++++ b/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtSettingsTest.java
+@@ -0,0 +1,33 @@
++package com.codeja.master_acdc.identity.infrastructure.adapters.out.security;
++
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
++
++import java.util.stream.Stream;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.params.ParameterizedTest;
++import org.junit.jupiter.params.provider.Arguments;
++import org.junit.jupiter.params.provider.MethodSource;
++
++class JwtSettingsTest {
++  @ParameterizedTest
++  @MethodSource("invalidSettings")
++  @DisplayName("Configuración JWT incompleta o sin resolver se rechaza")
++  void should_reject_settings_when_required_values_are_invalid(
++      String key, String issuer, String audience, String expectedMessage) {
++    assertThatThrownBy(() -> new JwtSettings(key, issuer, audience))
++        .isInstanceOf(IllegalArgumentException.class)
++        .hasMessageContaining(expectedMessage);
++  }
++
++  private static Stream<Arguments> invalidSettings() {
++    return Stream.of(
++        Arguments.of(null, "https://example.com", "api", "Missing or invalid JWT settings"),
++        Arguments.of(" ", "https://example.com", "api", "Missing or invalid JWT settings"),
++        Arguments.of("key", "https://example.com", null, "Missing or invalid JWT settings"),
++        Arguments.of("key", "https://example.com", " ", "Missing or invalid JWT settings"),
++        Arguments.of("key", null, "api", "Missing or invalid JWT settings"),
++        Arguments.of("key", "https://example.com/${ISSUER}", "api", "Illegal character"),
++        Arguments.of(
++            "key", "https://example.com", "${AUDIENCE}", "Missing or invalid JWT settings"));
++  }
++}
+diff --git a/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/PemKeyLoaderTest.java b/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/PemKeyLoaderTest.java
+new file mode 100755
+index 0000000..7095719
+--- /dev/null
++++ b/src/test/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/PemKeyLoaderTest.java
+@@ -0,0 +1,47 @@
++package com.codeja.master_acdc.identity.infrastructure.adapters.out.security;
++
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
++
++import java.io.IOException;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.security.KeyPairGenerator;
++import java.security.NoSuchAlgorithmException;
++import java.util.Base64;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.junit.jupiter.api.io.TempDir;
++
++class PemKeyLoaderTest {
++  @TempDir Path directory;
++
++  @Test
++  @DisplayName("PEM sin cierre PKCS8 se rechaza")
++  void should_reject_key_when_pem_footer_is_missing() throws IOException {
++    Path path = directory.resolve("key.pem");
++    Files.writeString(
++        path, pem("invalid").lines().limit(2).collect(java.util.stream.Collectors.joining("\n")));
++    assertThatThrownBy(() -> PemKeyLoader.load(path.toString()))
++        .isInstanceOf(IllegalArgumentException.class)
++        .hasMessage("Expected PKCS8 private PEM");
++  }
++
++  @Test
++  @DisplayName("Clave RSA de tamaño distinto a 2048 se rechaza")
++  void should_reject_key_when_rsa_modulus_is_not_2048_bits()
++      throws IOException, NoSuchAlgorithmException {
++    var generator = KeyPairGenerator.getInstance("RSA");
++    generator.initialize(1024);
++    String body =
++        Base64.getEncoder().encodeToString(generator.generateKeyPair().getPrivate().getEncoded());
++    Path path = directory.resolve("key.pem");
++    Files.writeString(path, pem(body));
++    assertThatThrownBy(() -> PemKeyLoader.load(path.toString()))
++        .isInstanceOf(IllegalArgumentException.class)
++        .hasMessage("Expected RSA CRT 2048 key");
++  }
++
++  private static String pem(String body) {
++    return "[PEM-BEGIN]\n" + body + "\n[PEM-END]";
++  }
++}

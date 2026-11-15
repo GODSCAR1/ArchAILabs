@@ -11,26 +11,19 @@ import com.codeja.master_acdc.OrderBearer;
 import com.codeja.master_acdc.identity.IdentityIntegrationSupport;
 import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-@Import(AdminExportDownloadIT.TempExports.class)
 class AdminExportDownloadIT extends IdentityIntegrationSupport {
   private static final String SENTINEL = "synthetic-external-export-sentinel";
-  private static Path directory;
+  @Autowired private Path exportDirectory;
   @Autowired private MockMvc mvc;
   @Autowired private JdbcTemplate jdbc;
   @Autowired private AccessTokenIssuer issuer;
@@ -54,8 +47,8 @@ class AdminExportDownloadIT extends IdentityIntegrationSupport {
   }
 
   private void assertRejectedEscape(String kind) throws Exception {
-    Path external = Files.createTempFile(directory.getParent(), "export-outside-", ".txt");
-    Path internal = Files.createTempFile(directory, "export-inside-", ".txt");
+    Path external = Files.createTempFile(exportDirectory.getParent(), "export-outside-", ".txt");
+    Path internal = Files.createTempFile(exportDirectory, "export-inside-", ".txt");
     try {
       Files.writeString(external, SENTINEL);
       Files.writeString(internal, "internal fixture");
@@ -97,7 +90,7 @@ class AdminExportDownloadIT extends IdentityIntegrationSupport {
     };
   }
 
-  private static void assertSecureResponse(MvcResult response, Path external) {
+  private void assertSecureResponse(MvcResult response, Path external) {
     assertAll(
         () -> status().isBadRequest().match(response),
         () ->
@@ -108,30 +101,14 @@ class AdminExportDownloadIT extends IdentityIntegrationSupport {
                 .match(response),
         () ->
             assertThat(response.getResponse().getContentAsString())
-                .doesNotContain(SENTINEL, external.toString(), directory.toString()));
-  }
-
-  @TestConfiguration
-  static class TempExports {
-    @Bean
-    @Primary
-    Path testExportDirectory() throws IOException {
-      directory = Files.createTempDirectory("exports-it-");
-      return directory;
-    }
-  }
-
-  @AfterAll
-  static void cleanup() throws IOException {
-    Files.deleteIfExists(directory.resolve("pedidos.csv"));
-    Files.deleteIfExists(directory);
+                .doesNotContain(SENTINEL, external.toString(), exportDirectory.toString()));
   }
 
   @Test
   @DisplayName("Administrador descarga un export existente")
   void should_download_export_when_admin_is_authorized() throws Exception {
     byte[] bytes = {1, 2, 3};
-    Files.write(directory.resolve("pedidos.csv"), bytes);
+    Files.write(exportDirectory.resolve("pedidos.csv"), bytes);
     String token = OrderBearer.issue(jdbc, issuer, null, "ADMIN");
     mvc.perform(
             get("/api/admin/exports")

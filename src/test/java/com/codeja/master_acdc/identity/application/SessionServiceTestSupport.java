@@ -3,7 +3,7 @@ package com.codeja.master_acdc.identity.application;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.codeja.master_acdc.identity.domain.model.AccessToken;
+import com.codeja.master_acdc.identity.TestTokens;
 import com.codeja.master_acdc.identity.domain.model.RefreshSecret;
 import com.codeja.master_acdc.identity.domain.model.RefreshToken;
 import com.codeja.master_acdc.identity.domain.model.UserAccount;
@@ -25,13 +25,14 @@ class SessionServiceTestSupport {
   final UserAccounts accounts = mock(UserAccounts.class);
   final RefreshTokens tokens = mock(RefreshTokens.class);
   final RefreshSecretGenerator secrets = mock(RefreshSecretGenerator.class);
-  final AccessTokenIssuer issuer = mock(AccessTokenIssuer.class);
   final UserAccount account =
       new UserAccount(
           UUID.randomUUID(),
           "a@example.com",
           "hash",
           new UserAccount.Profile(Set.of("CUSTOMER"), true, 0, UUID.randomUUID()));
+  final TestTokens testTokens = new TestTokens(clock, account);
+  final AccessTokenIssuer issuer = testTokens.issuer();
   final RefreshToken token =
       new RefreshToken(
           UUID.randomUUID(),
@@ -48,6 +49,5 @@ class SessionServiceTestSupport {
     when(accounts.findForUpdate(account.id())).thenReturn(Optional.of(account));
     when(tokens.findForUpdateByHash(token.tokenHash())).thenReturn(Optional.of(token));
     when(secrets.generate()).thenReturn(new RefreshSecret("b".repeat(43), "b".repeat(64)));
-    when(issuer.issue(account)).thenReturn(new AccessToken("jwt", 900));
   }
 }

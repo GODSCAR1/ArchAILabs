@@ -20,7 +20,11 @@ guard_msg() {
 # Shell: bloquear comandos que escriben, mueven o borran un test guardián.
 if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
   CMD=$(jq -r '.tool_input.command // empty' <<<"$INPUT")
-  WRITES='(>|sed[[:space:]]+-i|(^|[^[:alnum:]_-])(rm|mv|cp|tee|truncate|unlink)[[:space:]]|git[[:space:]]+(rm|mv|checkout|restore)|set-content|add-content|out-file|copy-item|move-item|remove-item|rename-item|new-item|clear-content)'
+  # Lab S14: el umbral de cobertura no se sortea pasando la propiedad (-D, MAVEN_OPTS) a Maven.
+  if grep -qE 'acdc\.coverage' <<<"$CMD"; then
+    echo "AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiva desde la línea de comandos. Cubre las ramas de regla con tests o explica a la persona por qué una rama no merece test y detente." >&2; exit 2
+  fi
+  WRITES='(>|sed[[:space:]]+-i|perl[[:space:]]+-[[:alnum:]]*i|(^|[^[:alnum:]_-])(rm|mv|cp|tee|truncate|unlink)[[:space:]]|git[[:space:]]+(rm|mv|checkout|restore)|set-content|add-content|out-file|copy-item|move-item|remove-item|rename-item|new-item|clear-content)'
   if grep -qiE "$WRITES" <<<"$CMD"; then
     for g in "${GUARDS[@]}"; do
       name=$(basename "$g")
@@ -39,6 +43,10 @@ if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
     # Lab S16b: capa 1 (filtro de SpotBugs, ruleset de PMD, Checkstyle, flags de Error Prone).
     if grep -qE 'spotbugs-exclude|pmd[\\/]+ruleset|checkstyle[^[:space:]]*\.xml|jvm\.config' <<<"$CMD"; then
       echo "AC/DC: la configuración de la capa 1 (config/spotbugs-exclude.xml, config/pmd/ruleset.xml, config/checkstyle*.xml, .mvn/jvm.config) es zona protegida. No se edita ni se sortea desde la shell: corrige el código o explica a la persona por qué la regla no aplica y detente." >&2; exit 2
+    fi
+    # Lab S14 (prueba 4): el build y el loop (umbral de JaCoCo, gate de verify-quality.sh) tampoco se editan desde la shell.
+    if grep -qE '(^|[^[:alnum:]_.-])(pom\.xml|verify-quality\.sh|lefthook\.yml)|\.mvn[\\/]' <<<"$CMD"; then
+      echo "AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbral de JaCoCo). No se editan ni se sortean desde la shell: explica el cambio a la persona y detente." >&2; exit 2
     fi
     if grep -qF "CatalogSchemaValidator" <<<"$CMD"; then
       echo "AC/DC: CatalogSchemaValidator está en la zona protegida (validador \$jsonSchema del catálogo, ADR 0009). No se edita, no se desactiva ni se sortea: explica el problema a la persona y detente." >&2; exit 2

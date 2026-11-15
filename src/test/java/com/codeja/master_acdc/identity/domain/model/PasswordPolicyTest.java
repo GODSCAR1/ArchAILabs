@@ -12,6 +12,14 @@ class PasswordPolicyTest {
   private final PasswordPolicy policy = new PasswordPolicy(new CommonPasswordsAdapter());
 
   @Test
+  @DisplayName("Contraseña con carácter nulo")
+  void should_reject_password_when_it_contains_a_null_character() {
+    assertThatThrownBy(() -> policy.validate("long-password\0value"))
+        .isInstanceOf(IdentityException.class)
+        .hasMessage("invalid-password");
+  }
+
+  @Test
   @DisplayName("Contraseña corta o común")
   void should_reject_password_when_short_or_common() {
     for (String password : new String[] {"short", "password1234", "PASSWORD1234"}) {

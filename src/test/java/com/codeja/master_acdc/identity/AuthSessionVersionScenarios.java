@@ -30,9 +30,6 @@ abstract class AuthSessionVersionScenarios extends AuthHttpConcurrencyScenarios 
   @Autowired StringRedisTemplate redis;
   @Autowired GenericContainer<?> identityRedis;
 
-  @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
-  RedisSessionVersions sharedVersions;
-
   @Test
   @DisplayName("Fallo compartido durante escritura impide confirmar contraseña")
   void should_return_retryable_problem_when_barrier_write_fails_after_authentication()
@@ -43,7 +40,7 @@ abstract class AuthSessionVersionScenarios extends AuthHttpConcurrencyScenarios 
     org.mockito.Mockito.doThrow(
             new com.codeja.master_acdc.identity.domain.model.IdentityException(
                 "session-version-unavailable"))
-        .when(sharedVersions)
+        .when(spiedSessionVersions)
         .publish(
             org.mockito.ArgumentMatchers.eq(browser.user()), org.mockito.ArgumentMatchers.any());
     problem(password(browser, PASSWORD, "Changed!12345X"), 503, "session-version-unavailable")
@@ -69,7 +66,7 @@ abstract class AuthSessionVersionScenarios extends AuthHttpConcurrencyScenarios 
               throw new com.codeja.master_acdc.identity.domain.model.IdentityException(
                   "session-version-unavailable");
             })
-        .when(sharedVersions)
+        .when(spiedSessionVersions)
         .publish(
             org.mockito.ArgumentMatchers.eq(browser.user()), org.mockito.ArgumentMatchers.any());
     problem(password(browser, PASSWORD, "Changed!12345X"), 503, "session-version-unavailable")
@@ -172,11 +169,11 @@ abstract class AuthSessionVersionScenarios extends AuthHttpConcurrencyScenarios 
     try {
       var disconnected = new RedisSessionVersions(new StringRedisTemplate(factory));
       org.mockito.Mockito.doAnswer(invocation -> disconnected.find(browser.user()))
-          .when(sharedVersions)
+          .when(spiedSessionVersions)
           .find(browser.user());
       withWarning(browser, () -> assertRejected(browser.access()));
     } finally {
-      org.mockito.Mockito.reset(sharedVersions);
+      org.mockito.Mockito.reset(spiedSessionVersions);
       factory.destroy();
     }
     mvc.perform(orders(browser.access())).andExpect(status().isOk());

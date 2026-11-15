@@ -8,12 +8,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeja.master_acdc.identity.domain.model.IdentityException;
 import com.codeja.master_acdc.identity.domain.model.PasswordChange;
 import com.codeja.master_acdc.identity.domain.model.PasswordPolicy;
 import com.codeja.master_acdc.identity.domain.model.SessionVersion;
 import com.codeja.master_acdc.identity.domain.model.UserAccount;
 import com.codeja.master_acdc.identity.domain.port.Passwords;
 import com.codeja.master_acdc.identity.domain.port.SessionVersionBarrier;
+import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +28,30 @@ class ChangePasswordServiceTest extends SessionServiceTestSupport {
           passwords,
           new PasswordPolicy(value -> "password1234".equals(value)),
           clock);
+
+  @Test
+  @DisplayName("Cuenta deshabilitada no puede cambiar la contraseña")
+  void should_reject_without_changes_when_account_is_disabled_and_password_matches() {
+    var disabled =
+        new UserAccount(
+            account.id(),
+            account.email(),
+            account.passwordHash(),
+            new UserAccount.Profile(
+                account.profile().roles(), false, 0, account.profile().customerId()));
+    when(accounts.findForUpdate(account.id())).thenReturn(Optional.of(disabled));
+    when(passwords.matches("current", "hash")).thenReturn(true);
+    assertThatThrownBy(
+            () ->
+                service.changePassword(
+                    new PasswordChange(account.id(), "current", "Unique!67890Z")))
+        .isInstanceOf(IdentityException.class)
+        .hasMessage("invalid-credentials");
+    verify(accounts, never()).save(any());
+    verify(tokens, never()).revokeUser(any(), any());
+    verify(barrier, never()).publish(any(), any());
+    verify(passwords, never()).encode(any());
+  }
 
   @Test
   @DisplayName("Cambio de contraseña cierra renovación de otro dispositivo")

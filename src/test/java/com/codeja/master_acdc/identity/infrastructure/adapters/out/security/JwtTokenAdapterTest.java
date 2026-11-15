@@ -3,6 +3,7 @@ package com.codeja.master_acdc.identity.infrastructure.adapters.out.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeja.master_acdc.FixedClockExtension;
 import com.codeja.master_acdc.identity.domain.model.UserAccount;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -13,7 +14,6 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.List;
@@ -22,12 +22,15 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
+@ExtendWith(FixedClockExtension.class)
 class JwtTokenAdapterTest {
   private final SessionVersionValidator versions =
       new SessionVersionValidator(
@@ -38,17 +41,87 @@ class JwtTokenAdapterTest {
           "https://api.master-acdc.dev",
           "master-acdc-api");
   private final com.nimbusds.jose.jwk.RSAKey key = PemKeyLoader.load(settings.privateKey());
-  private final Clock clock = Clock.fixed(Instant.parse("2026-11-08T12:00:00Z"), ZoneOffset.UTC);
+  private final Clock clock;
   private final ImmutableJWKSet<com.nimbusds.jose.proc.SecurityContext> source =
       new ImmutableJWKSet<>(new JWKSet(key));
-  private final JwtTokenAdapter adapter =
-      new JwtTokenAdapter(new NimbusJwtEncoder(source), settings, clock, key.getKeyID());
+  private final JwtTokenAdapter adapter;
   private final UserAccount account =
       new UserAccount(
           UUID.randomUUID(),
           "a@example.com",
           "hash",
           new UserAccount.Profile(Set.of("CUSTOMER"), true, 0, UUID.randomUUID()));
+
+  JwtTokenAdapterTest(Clock clock) {
+    this.clock = clock;
+    this.adapter =
+        new JwtTokenAdapter(new NimbusJwtEncoder(source), settings, clock, key.getKeyID());
+  }
+
+  @Test
+  @DisplayName("JWT sin iat se rechaza y el mismo JWT con iat es válido")
+  void should_require_issued_at_when_signed_token_has_other_valid_claims() throws Exception {
+    var generated = new com.nimbusds.jose.jwk.gen.RSAKeyGenerator(2048).keyID("test").generate();
+    var decoder =
+        JwtDecoderFactory.create(
+            new ImmutableJWKSet<>(new JWKSet(generated)), settings, clock, versions);
+    var claims =
+        new JWTClaimsSet.Builder()
+            .issuer(settings.issuer())
+            .audience(settings.audience())
+            .subject(account.id().toString())
+            .claim("sv", 0)
+            .issueTime(Date.from(clock.instant()))
+            .expirationTime(Date.from(clock.instant().plusSeconds(60)))
+            .build();
+    var missing = new JWTClaimsSet.Builder(claims).issueTime(null).build();
+    String withoutIssuedAt = sign(missing, generated.getKeyID(), JWSAlgorithm.RS256, generated);
+    assertThatThrownBy(() -> decoder.decode(withoutIssuedAt))
+        .isInstanceOf(JwtValidationException.class);
+    String withIssuedAt = sign(claims, generated.getKeyID(), JWSAlgorithm.RS256, generated);
+    assertThat(decoder.decode(withIssuedAt).getIssuedAt()).isEqualTo(clock.instant());
+  }
+
+  @Test
+  @DisplayName("Validación temporal de JWT firmados")
+  void should_validate_time_when_signed_claims_cross_boundaries() throws Exception {
+    var generated = new com.nimbusds.jose.jwk.gen.RSAKeyGenerator(2048).keyID("test").generate();
+    var decoder =
+        JwtDecoderFactory.create(
+            new ImmutableJWKSet<>(new JWKSet(generated)), settings, clock, versions);
+    var claims =
+        new JWTClaimsSet.Builder()
+            .issuer(settings.issuer())
+            .audience(settings.audience())
+            .subject(account.id().toString())
+            .claim("sv", 0)
+            .issueTime(Date.from(clock.instant().minusSeconds(1)))
+            .expirationTime(Date.from(clock.instant().plusSeconds(60)))
+            .build();
+    for (var changed :
+        new JWTClaimsSet[] {
+          new JWTClaimsSet.Builder(claims).expirationTime(null).build(),
+          new JWTClaimsSet.Builder(claims).expirationTime(Date.from(clock.instant())).build(),
+          new JWTClaimsSet.Builder(claims)
+              .issueTime(Date.from(clock.instant().plusSeconds(1)))
+              .build(),
+          new JWTClaimsSet.Builder(claims)
+              .notBeforeTime(Date.from(clock.instant().plusSeconds(1)))
+              .build()
+        }) {
+      String token = sign(changed, generated.getKeyID(), JWSAlgorithm.RS256, generated);
+      assertThatThrownBy(() -> decoder.decode(token)).isInstanceOf(JwtException.class);
+    }
+    var past =
+        new JWTClaimsSet.Builder(claims)
+            .notBeforeTime(Date.from(clock.instant().minusSeconds(1)))
+            .build();
+    assertThat(
+            decoder
+                .decode(sign(past, generated.getKeyID(), JWSAlgorithm.RS256, generated))
+                .getSubject())
+        .isEqualTo(account.id().toString());
+  }
 
   @Test
   void should_reject_valid_signature_when_required_session_validator_disagrees() {
@@ -66,6 +139,7 @@ class JwtTokenAdapterTest {
     var token = adapter.issue(account);
     var jwt = JwtDecoderFactory.create(source, settings, clock, versions).decode(token.value());
     assertThat(jwt.getClaims())
+        .as("claims del access token (ADR 0011): exactamente estos ocho, ningún dato personal")
         .containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles", "sv");
     assertThat(((Number) jwt.getClaims().get("sv")).longValue())
         .isEqualTo(account.profile().sessionVersion());
@@ -147,6 +221,7 @@ class JwtTokenAdapterTest {
         JwtDecoderFactory.create(source, settings, clock, versions)
             .decode(adapter.issue(user).value());
     assertThat(jwt.getClaims())
+        .as("claims del access token (ADR 0011): exactamente estos ocho, ningún dato personal")
         .containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles", "sv");
     assertThat(jwt.getClaimAsStringList("roles"))
         .containsExactlyElementsOf(roles.stream().sorted().toList());

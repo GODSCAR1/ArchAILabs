@@ -9,11 +9,25 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeja.master_acdc.identity.domain.model.IdentityException;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 class PasswordEncoderAdapterTest {
+  @Test
+  @DisplayName("Contraseña con carácter nulo no se codifica ni autentica")
+  void should_reject_password_when_it_contains_a_null_character() {
+    var adapter =
+        new PasswordEncoderAdapter(PasswordEncoderFactories.createDelegatingPasswordEncoder());
+    String hash = adapter.encode("valid-password");
+    assertThatThrownBy(() -> adapter.encode("valid-password\0"))
+        .isInstanceOf(IdentityException.class)
+        .hasMessage("invalid-password");
+    assertThat(adapter.matches("valid-password\0", hash)).isFalse();
+  }
+
   @Test
   void should_encode_delegated_bcrypt_when_password_is_representable() {
     var adapter =

@@ -7,7 +7,6 @@ import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
-import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,12 +15,10 @@ import java.util.concurrent.Executors;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class OrderRefundConcurrencyIT extends OrderRefundSupport {
-  @MockitoSpyBean OrderRepository orders;
   private final CyclicBarrier reads = new CyclicBarrier(2);
   private final Set<Long> transactions = ConcurrentHashMap.newKeySet();
 
@@ -31,7 +28,7 @@ class OrderRefundConcurrencyIT extends OrderRefundSupport {
       throws Exception {
     seed("PAID");
     doAnswer(this::synchronizeRead)
-        .when(orders)
+        .when(spiedOrders)
         .findVisibleById(eq(order), eq(OrderReadScope.Global.INSTANCE));
     List<MvcResult> results = race(false);
     assertRace(results, "order-not-refundable");
@@ -44,9 +41,9 @@ class OrderRefundConcurrencyIT extends OrderRefundSupport {
   void should_apply_only_winner_effects_when_cancellation_and_refund_compete() throws Exception {
     seed("PAID");
     doAnswer(this::synchronizeRead)
-        .when(orders)
+        .when(spiedOrders)
         .findVisibleById(eq(order), eq(OrderReadScope.Global.INSTANCE));
-    doAnswer(this::synchronizeRead).when(orders).findByIdAndCustomerId(order, customer);
+    doAnswer(this::synchronizeRead).when(spiedOrders).findByIdAndCustomerId(order, customer);
     List<MvcResult> results = race(true);
     boolean cancelled = results.get(1).getResponse().getStatus() == 200;
     assertRace(results, cancelled ? "order-not-refundable" : "order-not-cancellable");

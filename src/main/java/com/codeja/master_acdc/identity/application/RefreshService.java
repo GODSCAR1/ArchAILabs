@@ -46,8 +46,7 @@ public final class RefreshService implements RefreshUseCase {
     }
     if (!locked.account().profile().enabled()
         || token.state().revokedAt() != null
-        || !now.isBefore(token.lifetime().expiresAt())
-        || !now.isBefore(token.lifetime().familyExpiresAt())) {
+        || !now.isBefore(token.lifetime().expiresAt())) {
       return RefreshResult.rejected();
     }
     var nextSecret = secrets.generate();
