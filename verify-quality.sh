@@ -139,13 +139,21 @@ if ! L1=$(./mvnw -B spotless:check checkstyle:check compile spotbugs:check pmd:c
   echo "AC/DC: la capa 1 falló. Corrige cada línea de arriba (archivo, línea, regla o patrón); no suprimas avisos ni toques config/, pom.xml o .mvn/." >&2
   exit 1
 fi
-echo "▶ Tests"
+echo "▶ Tests y cobertura de ramas de identity (lab S14, docs/lab-s14.md)"
+# Cobertura solo de ESTA ejecución: sin esto, jacoco.exec acumula datos de ejecuciones anteriores.
+rm -f target/jacoco.exec
+COVERAGE_GATE=-Dacdc.coverage.gate=true
+COVERAGE_HINT='AC/DC: fallan los tests o la cobertura de ramas de identity. Si es la cobertura ("Rule violated … branches covered ratio"), escribe tests que verifiquen las ramas de regla de negocio (target/site/jacoco/index.html). El umbral (pom.xml) no se baja y un test sin aserciones no cuenta.'
 case "${1:---fast}" in
   --fast)
     ./mvnw -q test
     # Lab S12: el flujo real de autenticación (Testcontainers) también corre en el loop rápido.
-    ./mvnw -q -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=AuthFlowIT verify ;;
-  --full) ./mvnw -q verify ;;
+    # Lab S14: el check de JaCoCo va al final de este verify. SessionVersionRedisIT entra porque la
+    # carrera de reconstrucción en Redis (SETNX) solo se prueba con Redis real; comparte el contexto
+    # de AuthFlowIT (IdentityIntegrationSupport), así que solo suma el tiempo de sus tests.
+    ./mvnw -q -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=AuthFlowIT,SessionVersionRedisIT "$COVERAGE_GATE" verify \
+      || { echo "$COVERAGE_HINT" >&2; exit 1; } ;;
+  --full) ./mvnw -q "$COVERAGE_GATE" verify || { echo "$COVERAGE_HINT" >&2; exit 1; } ;;
 esac
 # La matriz de seguridad debe haberse ejecutado entera (anónimo + 5 roles por endpoint).
 MATRIX_REPORT=target/surefire-reports/TEST-com.codeja.master_acdc.identity.SecurityMatrixTest.xml
