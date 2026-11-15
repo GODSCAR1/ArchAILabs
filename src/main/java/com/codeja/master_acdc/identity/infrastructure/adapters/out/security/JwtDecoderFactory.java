@@ -6,12 +6,16 @@ import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import java.time.Clock;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
+import org.springframework.security.oauth2.jwt.MappedJwtClaimSetConverter;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 public final class JwtDecoderFactory {
@@ -30,6 +34,19 @@ public final class JwtDecoderFactory {
     // Spring validators below own the exact clock and expiry boundary (no implicit Nimbus skew).
     processor.setJWTClaimsSetVerifier((claims, context) -> {});
     var decoder = new NimbusJwtDecoder(processor);
+    // Lab S14: el conversor por defecto rellena iat = exp - 1 s cuando falta, y validateTime nunca
+    // veía un iat nulo (un JWT sin iat pasaba). Se conserva el iat que trae el token, o ninguno.
+    var defaults = MappedJwtClaimSetConverter.withDefaults(Map.of());
+    decoder.setClaimSetConverter(
+        raw -> {
+          Map<String, Object> converted = defaults.convert(raw);
+          if (raw.get(JwtClaimNames.IAT) != null) {
+            return converted;
+          }
+          Map<String, Object> withoutIssuedAt = new HashMap<>(converted);
+          withoutIssuedAt.remove(JwtClaimNames.IAT);
+          return withoutIssuedAt;
+        });
     decoder.setJwtValidator(
         new DelegatingOAuth2TokenValidator<>(
             new JwtIssuerValidator(settings.issuer()),

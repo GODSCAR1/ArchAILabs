@@ -54,6 +54,13 @@ class RefreshServiceTest extends SessionServiceTestSupport {
     when(tokens.findForUpdateByHash(token.tokenHash())).thenReturn(Optional.of(capped));
     var result = service.refresh(SECRET).tokens().orElseThrow();
     assertThat(result.refreshExpiresAt()).isEqualTo(capped.lifetime().familyExpiresAt());
+    var captured = ArgumentCaptor.forClass(RefreshToken.class);
+    verify(tokens, times(2)).save(captured.capture());
+    var successor = captured.getAllValues().getLast();
+    RefreshTokenAssert.assertThat(successor).belongsToFamily(capped.family().id());
+    assertThat(successor.lifetime().expiresAt())
+        .isEqualTo(capped.lifetime().familyExpiresAt())
+        .isNotEqualTo(now.plusSeconds(604800));
   }
 
   @Test
