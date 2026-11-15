@@ -1,0 +1,18 @@
+# Hook PreToolUse de Claude Code (.claude/hooks/protect-verify.sh)
+Edit pom.xml => exit 2 | AC/DC: pom.xml está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+Write verify-quality.sh => exit 2 | AC/DC: verify-quality.sh está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+Bash sed -i s/0.80/0.50/ pom.xml => exit 0 | 
+Edit src/test/java/com/codeja/master_acdc/identity/application/RefreshServiceTest.java => exit 0 | 
+
+# Tras el arreglo
+Edit pom.xml => exit 2 | AC/DC: pom.xml está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scrip
+Bash sed -i s/0.80/0.50/ pom.xml => exit 2 | AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbral de JaCoCo). No se editan 
+Bash perl -pi -e s/gate=true/gate=false/ verify-quality.sh => exit 0 | 
+Bash MAVEN_OPTS=-Dacdc.coverage.branch.minimum=0.5 bash ./verify-quality.sh --fast => exit 2 | AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiva desde la línea de coman
+Bash cat pom.xml => exit 0 | 
+Bash grep -n jacoco pom.xml => exit 0 | 
+Bash ./mvnw -q test => exit 0 | 
+
+# Tras añadir perl -i a WRITES
+Bash perl -pi -e s/gate=true/gate=false/ verify-quality.sh => exit 2 | AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbral de Ja
+Bash perl -ne print pom.xml => exit 0 | 

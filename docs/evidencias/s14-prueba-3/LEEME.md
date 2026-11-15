@@ -1,0 +1,3 @@
+# Evidencia de la prueba 3 (lab S14)
+
+En `sesion-opencode.md` y `codigo.patch` los marcadores PEM de los fixtures de `PemKeyLoaderTest` se sustituyeron por `[PEM-BEGIN]` y `[PEM-END]`. No había ninguna clave: el cuerpo era `invalid`, o una clave RSA de 1024 bits generada al ejecutar el test. Pero la transcripción conserva la primera versión del test, la que hizo saltar la regla `private-key` de Gitleaks, y el pre-commit volvía a detectarla en la evidencia. Se redacta el texto en lugar de añadir una excepción en `.gitleaks.toml`: una excepción por ruta dejaría `docs/evidencias/` sin vigilancia para siempre.

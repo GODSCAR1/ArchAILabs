@@ -1,0 +1,31 @@
+# Sonda directa del hook tool.execute.before de .opencode/plugins/verify-quality.ts — 2026-11-15 06:32 UTC
+BLOQUEADO | edit pom.xml -> AC/DC: pom.xml está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+BLOQUEADO | write pom.xml (ruta relativa) -> AC/DC: pom.xml está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+PERMITIDO | bash sed sobre el umbral del pom
+BLOQUEADO | edit verify-quality.sh (quitar el gate) -> AC/DC: verify-quality.sh está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.
+PERMITIDO | bash cat pom.xml (lectura)
+PERMITIDO | edit test no protegido
+
+# Tras el arreglo — 2026-11-15 06:33 UTC
+BLOQUEADO | edit pom.xml -> AC/DC: pom.xml está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y
+BLOQUEADO | write pom.xml (ruta relativa) -> AC/DC: pom.xml está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el camb
+BLOQUEADO | bash sed sobre el umbral del pom -> AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbral de JaCoCo). No se editan ni se sortean desde la shell: ex
+BLOQUEADO | edit verify-quality.sh (quitar el gate) -> AC/DC: verify-quality.sh está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrad
+PERMITIDO | bash cat pom.xml (lectura)
+PERMITIDO | edit test no protegido
+PERMITIDO | bash perl -pi sobre verify-quality.sh
+BLOQUEADO | bash MAVEN_OPTS con el umbral -> AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiva desde la línea de coman
+BLOQUEADO | bash mvn -D umbral -> AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiva desde la línea de coman
+PERMITIDO | bash grep en pom.xml (lectura)
+
+# Tras añadir perl -i a WRITES — 2026-11-15 06:33 UTC
+BLOQUEADO | edit pom.xml -> AC/DC: pom.xml está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (sh
+BLOQUEADO | write pom.xml (ruta relativa) -> AC/DC: pom.xml está en la zona protegida: solo la edita una persona. No la modifiques por ning
+BLOQUEADO | bash sed sobre el umbral del pom -> AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbr
+BLOQUEADO | edit verify-quality.sh (quitar el gate) -> AC/DC: verify-quality.sh está en la zona protegida: solo la edita una persona. No la
+PERMITIDO | bash cat pom.xml (lectura)
+PERMITIDO | edit test no protegido
+BLOQUEADO | bash perl -pi sobre verify-quality.sh -> AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el
+BLOQUEADO | bash MAVEN_OPTS con el umbral -> AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiv
+BLOQUEADO | bash mvn -D umbral -> AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiva desde la 
+PERMITIDO | bash grep en pom.xml (lectura)

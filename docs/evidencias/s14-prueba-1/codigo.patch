@@ -1,0 +1,58 @@
+diff --git a/src/test/java/com/codeja/master_acdc/identity/application/RefreshServiceTest.java b/src/test/java/com/codeja/master_acdc/identity/application/RefreshServiceTest.java
+index 43cf3f6..555075a 100644
+--- a/src/test/java/com/codeja/master_acdc/identity/application/RefreshServiceTest.java
++++ b/src/test/java/com/codeja/master_acdc/identity/application/RefreshServiceTest.java
+@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
+ import static org.mockito.Mockito.when;
+ 
+ import com.codeja.master_acdc.identity.RefreshTokenAssert;
++import com.codeja.master_acdc.identity.domain.model.AccessToken;
+ import com.codeja.master_acdc.identity.domain.model.RefreshToken;
+ import java.util.Optional;
+ import org.junit.jupiter.api.DisplayName;
+@@ -24,6 +25,10 @@ class RefreshServiceTest extends SessionServiceTestSupport {
+   void should_rotate_with_account_before_token_when_refresh_is_valid() {
+     var result = service.refresh(SECRET);
+     assertThat(result.accepted()).isTrue();
++    var issued = result.tokens().orElseThrow();
++    assertThat(issued.accessToken()).isEqualTo(new AccessToken("jwt", 900));
++    assertThat(issued.refreshToken()).isEqualTo("b".repeat(43));
++    assertThat(issued.refreshExpiresAt()).isEqualTo(now.plusSeconds(604800));
+     var order = inOrder(tokens, accounts);
+     order.verify(tokens).findUserIdByHash(token.tokenHash());
+     order.verify(accounts).findForUpdate(account.id());
+@@ -36,6 +41,11 @@ class RefreshServiceTest extends SessionServiceTestSupport {
+     assertThat(previous.state().rotatedAt()).isEqualTo(now);
+     RefreshTokenAssert.assertThat(next).belongsToFamily(token.family().id());
+     assertThat(next.family()).isEqualTo(token.family());
++    assertThat(next.tokenHash()).isEqualTo("b".repeat(64));
++    assertThat(next.id()).isNotEqualTo(token.id());
++    assertThat(next.lifetime().createdAt()).isEqualTo(now);
++    assertThat(next.state().rotatedAt()).isNull();
++    assertThat(next.state().revokedAt()).isNull();
+     assertThat(next.lifetime().expiresAt()).isEqualTo(now.plusSeconds(604800));
+     assertThat(next.lifetime().familyExpiresAt()).isEqualTo(token.lifetime().familyExpiresAt());
+     assertThat(next.tokenHash()).isNotEqualTo(result.tokens().orElseThrow().refreshToken());
+@@ -126,4 +136,22 @@ class RefreshServiceTest extends SessionServiceTestSupport {
+     verify(tokens, never()).save(any());
+     verify(issuer, never()).issue(any());
+   }
++
++  @Test
++  @DisplayName("Reutilizar un token vencido y revocado sigue invalidando la familia")
++  void should_revoke_family_when_rotated_token_is_expired_and_revoked() {
++    var reused =
++        new RefreshToken(
++            token.id(),
++            token.family(),
++            token.tokenHash(),
++            new RefreshToken.Lifetime(now.minusSeconds(2), now.minusSeconds(1), now),
++            new RefreshToken.State(now.minusSeconds(1), now.minusSeconds(1)));
++    when(tokens.findForUpdateByHash(token.tokenHash())).thenReturn(Optional.of(reused));
++
++    assertThat(service.refresh(SECRET).accepted()).isFalse();
++    verify(tokens).revokeFamily(token.family().id(), now);
++    verify(tokens, never()).save(any());
++    verify(issuer, never()).issue(any());
++  }
+ }

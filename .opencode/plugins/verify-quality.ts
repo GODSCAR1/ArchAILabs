@@ -20,7 +20,7 @@ const PROTECTED = /^(config|\.mvn|\.claude|\.opencode|\.github|scripts)\/|^pom\.
 
 // Tests guardianes (lab S09, paso 8): misma lista que protect-verify.sh y verify-quality.sh
 const GUARDS_FILE = "scripts/protected-tests.txt"
-const WRITES = /(>|sed\s+-i|(^|[^\w-])(rm|mv|cp|tee|truncate|unlink)\s|git\s+(rm|mv|checkout|restore)|set-content|add-content|out-file|copy-item|move-item|remove-item|rename-item|new-item|clear-content)/i
+const WRITES = /(>|sed\s+-i|perl\s+-\w*i|(^|[^\w-])(rm|mv|cp|tee|truncate|unlink)\s|git\s+(rm|mv|checkout|restore)|set-content|add-content|out-file|copy-item|move-item|remove-item|rename-item|new-item|clear-content)/i
 
 function loadGuards(directory: string): string[] {
   // Falla cerrado: sin lista no se puede verificar
@@ -43,6 +43,8 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
       const guards = loadGuards(directory)
       if (input.tool === "bash") {
         const cmd = String(output.args?.command ?? "")
+        // Lab S14: el umbral de cobertura no se sortea pasando la propiedad (-D, MAVEN_OPTS) a Maven.
+        if (/acdc\.coverage/.test(cmd)) throw new Error("AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiva desde la línea de comandos. Cubre las ramas de regla con tests o explica a la persona por qué una rama no merece test y detente.")
         if (WRITES.test(cmd)) {
           const hit = guards.find(g => cmd.includes(path.basename(g)))
           if (hit) throw new Error(guardMessage(hit))
@@ -50,6 +52,8 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
           if (/HttpSecurityConfiguration|JwtTokenAdapter|JwtDecoderFactory|SessionVersionValidator|identity[\\/]domain[\\/]model[\\/]Role/.test(cmd)) throw new Error("AC/DC: la configuración de seguridad, el servicio de tokens y Role son zona protegida (ADR 0011). No se editan ni se sortean desde la shell: explica el cambio a la persona y detente.")
           if (/semgrep-rules|\.semgrepignore|\.gitleaks(\.toml|ignore)|gitleaks-baseline|open-findings\.md/.test(cmd)) throw new Error("AC/DC: la configuración de la capa 2 (semgrep-rules/, .semgrepignore, .gitleaks.toml, baseline, open-findings.md) es zona protegida. No se edita ni se sortea desde la shell: explica el cambio a la persona y detente.")
           if (/spotbugs-exclude|pmd[\\/]+ruleset|checkstyle\S*\.xml|jvm\.config/.test(cmd)) throw new Error("AC/DC: la configuración de la capa 1 (config/spotbugs-exclude.xml, config/pmd/ruleset.xml, config/checkstyle*.xml, .mvn/jvm.config) es zona protegida. No se edita ni se sortea desde la shell: corrige el código o explica a la persona por qué la regla no aplica y detente.")
+          // Lab S14 (prueba 4): el build y el loop (umbral de JaCoCo, gate de verify-quality.sh) tampoco se editan desde la shell.
+          if (/(^|[^\w.-])(pom\.xml|verify-quality\.sh|lefthook\.yml)|\.mvn[\\/]/.test(cmd)) throw new Error("AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbral de JaCoCo). No se editan ni se sortean desde la shell: explica el cambio a la persona y detente.")
           if (/CacheTtlPolicy|ProductDetailCache\.java/.test(cmd)) throw new Error("AC/DC: los TTL y la cache compuesta están en la zona protegida (ADR 0010, docs/caching.md). No se editan ni se sortean: explica el cambio a la persona y detente.")
         }
         return

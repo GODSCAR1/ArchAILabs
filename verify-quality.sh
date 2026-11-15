@@ -143,6 +143,15 @@ echo "▶ Tests y cobertura de ramas de identity (lab S14, docs/lab-s14.md)"
 # Cobertura solo de ESTA ejecución: sin esto, jacoco.exec acumula datos de ejecuciones anteriores.
 rm -f target/jacoco.exec
 COVERAGE_GATE=-Dacdc.coverage.gate=true
+# Segunda capa (lab S14, prueba 4): el umbral no baja del suelo acordado ni se sobrescribe por entorno.
+COVERAGE_FLOOR=0.80
+COVERAGE_MIN=$(tr -d '\r' < pom.xml | sed -n 's:.*<acdc.coverage.branch.minimum>\(.*\)</acdc.coverage.branch.minimum>.*:\1:p' | head -1)
+awk -v m="${COVERAGE_MIN:-0}" -v f="$COVERAGE_FLOOR" 'BEGIN { exit !(m + 0 >= f + 0) }' \
+  && tr -d '\r' < pom.xml | grep -q '<minimum>${acdc.coverage.branch.minimum}</minimum>' \
+  || { echo "AC/DC: el umbral de ramas de JaCoCo en pom.xml (${COVERAGE_MIN:-ausente}) está por debajo de $COVERAGE_FLOOR o desconectado del check. No se baja: restáuralo (docs/lab-s14.md, paso 7)." >&2; exit 1; }
+if grep -qs 'acdc\.coverage' <<<"${MAVEN_OPTS:-} ${MAVEN_ARGS:-} $(cat .mvn/maven.config 2>/dev/null)"; then
+  echo "AC/DC: MAVEN_OPTS, MAVEN_ARGS o .mvn/maven.config sobrescriben acdc.coverage.*. El umbral de cobertura no se cambia por entorno." >&2; exit 1
+fi
 COVERAGE_HINT='AC/DC: fallan los tests o la cobertura de ramas de identity. Si es la cobertura ("Rule violated … branches covered ratio"), escribe tests que verifiquen las ramas de regla de negocio (target/site/jacoco/index.html). El umbral (pom.xml) no se baja y un test sin aserciones no cuenta.'
 case "${1:---fast}" in
   --fast)
