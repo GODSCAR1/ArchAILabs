@@ -8,6 +8,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeja.master_acdc.identity.RefreshTokenAssert;
 import com.codeja.master_acdc.identity.domain.model.RefreshToken;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -30,7 +31,9 @@ class RefreshServiceTest extends SessionServiceTestSupport {
     verify(tokens, times(2)).save(captured.capture());
     var previous = captured.getAllValues().getFirst();
     var next = captured.getAllValues().getLast();
+    RefreshTokenAssert.assertThat(previous).isUsed();
     assertThat(previous.state().rotatedAt()).isEqualTo(now);
+    RefreshTokenAssert.assertThat(next).belongsToFamily(token.family().id());
     assertThat(next.family()).isEqualTo(token.family());
     assertThat(next.lifetime().expiresAt()).isEqualTo(now.plusSeconds(604800));
     assertThat(next.lifetime().familyExpiresAt()).isEqualTo(token.lifetime().familyExpiresAt());

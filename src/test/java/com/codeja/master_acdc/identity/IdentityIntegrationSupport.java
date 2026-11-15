@@ -5,8 +5,10 @@ import com.codeja.master_acdc.catalog.domain.port.ProductRepository;
 import com.codeja.master_acdc.identity.domain.port.UserAccounts;
 import com.codeja.master_acdc.identity.domain.port.UserSummaryQuery;
 import com.codeja.master_acdc.identity.infrastructure.adapters.out.redis.RedisSessionVersions;
+import com.codeja.master_acdc.inventory.api.InventoryFacade;
 import com.codeja.master_acdc.inventory.domain.port.StockReservationRepository;
 import com.codeja.master_acdc.ordering.api.CurrentOrderActor;
+import com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
 import java.time.Clock;
@@ -59,6 +61,8 @@ public abstract class IdentityIntegrationSupport {
   @MockitoSpyBean protected CurrentOrderActor spiedOrderActor;
   @MockitoSpyBean protected OrderRepository spiedOrders;
   @MockitoSpyBean protected OrderSummaryQuery spiedOrderSummaries;
+  @MockitoSpyBean protected OrderCancelledPublisher spiedCancellations;
+  @MockitoSpyBean protected InventoryFacade spiedInventory;
 
   @AfterEach
   void stopSqlCapture() {

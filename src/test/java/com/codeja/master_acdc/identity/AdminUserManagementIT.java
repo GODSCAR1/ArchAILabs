@@ -12,7 +12,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.codeja.master_acdc.OrderBearer;
 import com.codeja.master_acdc.identity.domain.model.IdentityException;
 import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
-import com.codeja.master_acdc.identity.infrastructure.adapters.out.redis.RedisSessionVersions;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -22,14 +21,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessResourceFailureException;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class AdminUserManagementIT extends AuthHttpSupport {
   @Autowired AccessTokenIssuer issuer;
   @Autowired DataSource dataSource;
-  @MockitoSpyBean RedisSessionVersions barrier;
 
   @ParameterizedTest
   @ValueSource(strings = {"block", "unblock"})
@@ -144,7 +141,7 @@ class AdminUserManagementIT extends AuthHttpSupport {
               }
               throw new IdentityException("session-version-unavailable");
             })
-        .when(barrier)
+        .when(spiedSessionVersions)
         .publish(eq(id), any());
   }
 

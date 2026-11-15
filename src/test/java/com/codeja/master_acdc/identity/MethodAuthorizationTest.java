@@ -11,10 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codeja.master_acdc.catalog.application.port.CreateProductUseCase;
 import com.codeja.master_acdc.catalog.application.port.EditProductUseCase;
-import com.codeja.master_acdc.catalog.domain.port.ProductEditingRepository;
-import com.codeja.master_acdc.catalog.domain.port.ProductRepository;
 import com.codeja.master_acdc.inventory.application.port.ReserveProductStockUseCase;
-import com.codeja.master_acdc.inventory.domain.port.StockReservationRepository;
 import java.math.BigDecimal;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +25,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 
 class MethodAuthorizationTest extends IdentityIntegrationSupport {
   @Autowired private com.codeja.master_acdc.identity.application.port.BlockUserUseCase blockUser;
@@ -36,14 +32,12 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
   @Autowired
   private com.codeja.master_acdc.identity.application.port.UnblockUserUseCase unblockUser;
 
-  @MockitoSpyBean private com.codeja.master_acdc.identity.domain.port.UserAccounts accounts;
-
   @ParameterizedTest
   @ValueSource(strings = {"ROLE_ADMIN", "user:manage"})
   @DisplayName("Gestión de cuenta exige doble autorización")
   void should_deny_without_delegation_when_either_admin_requirement_is_missing(String authority)
       throws Exception {
-    clearInvocations(accounts);
+    clearInvocations(spiedAccounts);
     com.codeja.master_acdc.AuthorizedCalls.withAuthorities(
         () -> {
           assertThatThrownBy(() -> blockUser.block(null)).isInstanceOf(AccessDeniedException.class);
@@ -64,20 +58,16 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
                                   .SimpleGrantedAuthority(authority))))
           .andExpect(status().isForbidden());
     }
-    verifyNoInteractions(accounts);
+    verifyNoInteractions(spiedAccounts);
   }
 
   @Autowired private com.codeja.master_acdc.identity.application.port.ListUsersUseCase listUsers;
   @Autowired private org.springframework.test.web.servlet.MockMvc mvc;
-  @MockitoSpyBean private com.codeja.master_acdc.identity.domain.port.UserSummaryQuery users;
   @Autowired private com.codeja.master_acdc.ordering.application.port.RefundOrderUseCase refund;
   @Autowired private CreateProductUseCase create;
   @Autowired private EditProductUseCase edit;
   @Autowired private ReserveProductStockUseCase reserve;
   @Autowired private JdbcTemplate jdbc;
-  @MockitoSpyBean private ProductRepository products;
-  @MockitoSpyBean private ProductEditingRepository editing;
-  @MockitoSpyBean private StockReservationRepository stock;
 
   @Autowired
   private com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase createOrder;
@@ -86,20 +76,16 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
   private com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase cancelOrder;
 
   @Autowired private com.codeja.master_acdc.ordering.application.port.GetOrderUseCase getOrder;
-  @MockitoSpyBean private com.codeja.master_acdc.ordering.api.CurrentOrderActor orderActor;
-  @MockitoSpyBean private com.codeja.master_acdc.ordering.domain.port.OrderRepository orders;
 
   @Autowired
   private com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase listOrders;
 
-  @MockitoSpyBean private com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery summaries;
-
   @BeforeEach
   void clear_repository_observations() {
-    clearInvocations(products, editing, stock);
-    clearInvocations(orderActor, orders);
-    clearInvocations(summaries);
-    clearInvocations(users);
+    clearInvocations(spiedProducts, spiedProductEditing, spiedStockReservations);
+    clearInvocations(spiedOrderActor, spiedOrders);
+    clearInvocations(spiedOrderSummaries);
+    clearInvocations(spiedUserSummaries);
   }
 
   @ParameterizedTest
@@ -108,7 +94,7 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
   @DisplayName("Permisos antes de consultar propiedad")
   void should_deny_before_delegation_when_bean_caller_lacks_permission(String command) {
     assertThatThrownBy(() -> invoke(command)).isInstanceOf(AccessDeniedException.class);
-    verifyNoInteractions(products, editing, stock);
+    verifyNoInteractions(spiedProducts, spiedProductEditing, spiedStockReservations);
   }
 
   @ParameterizedTest
@@ -116,7 +102,7 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
   void should_reject_before_delegation_when_bean_caller_has_no_authentication(String command) {
     assertThatThrownBy(() -> invoke(command))
         .isInstanceOf(AuthenticationCredentialsNotFoundException.class);
-    verifyNoInteractions(products, editing, stock);
+    verifyNoInteractions(spiedProducts, spiedProductEditing, spiedStockReservations);
   }
 
   @Test
@@ -131,8 +117,8 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
             BigDecimal.TEN);
     var changed = edit.edit(product.id(), "Changed", BigDecimal.ONE, 0L);
     assertThat(changed.name().value()).isEqualTo("Changed");
-    verify(products).save(product);
-    verify(editing).findById(product.id());
+    verify(spiedProducts).save(product);
+    verify(spiedProductEditing).findById(product.id());
   }
 
   @Test
@@ -142,7 +128,7 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
     UUID id = UUID.randomUUID();
     jdbc.update("insert into stock(product_id, available) values (?, 2)", id);
     assertThat(reserve.reserve(id, 1).available()).isEqualTo(1);
-    verify(stock).findForUpdateById(id);
+    verify(spiedStockReservations).findForUpdateById(id);
     assertThat(
             jdbc.queryForObject(
                 "select available from stock where product_id=?", Integer.class, id))
@@ -177,7 +163,7 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
                     null,
                     com.codeja.master_acdc.ordering.domain.model.OrderReadScope.Global.INSTANCE))
         .isInstanceOf(AccessDeniedException.class);
-    verifyNoInteractions(orderActor, orders);
+    verifyNoInteractions(spiedOrderActor, spiedOrders);
   }
 
   @Test
@@ -185,7 +171,7 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
   void should_deny_listing_before_identity_lookup_when_permission_is_absent() {
     assertThatThrownBy(() -> listOrders.list(globalPaid()))
         .isInstanceOf(AccessDeniedException.class);
-    verifyNoInteractions(orderActor, summaries);
+    verifyNoInteractions(spiedOrderActor, spiedOrderSummaries);
   }
 
   @Test
@@ -201,13 +187,13 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
             java.util.Optional.of(
                 new com.codeja.master_acdc.ordering.api.CurrentOrderActor.Actor(
                     UUID.randomUUID(), customer)))
-        .when(orderActor)
+        .when(spiedOrderActor)
         .current();
-    org.mockito.Mockito.doReturn(java.util.List.of()).when(summaries).findByStatus(own);
+    org.mockito.Mockito.doReturn(java.util.List.of()).when(spiedOrderSummaries).findByStatus(own);
     assertThat(AopUtils.isAopProxy(listOrders)).isTrue();
     assertThat(listOrders.list(globalPaid())).isEmpty();
-    verify(orderActor).current();
-    verify(summaries).findByStatus(own);
+    verify(spiedOrderActor).current();
+    verify(spiedOrderSummaries).findByStatus(own);
   }
 
   private com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria globalPaid() {
@@ -230,7 +216,7 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.type").value("https://api.master-acdc.dev/problems/forbidden"));
     mvc.perform(get("/api/admin/users").param("size", "invalid")).andExpect(status().isForbidden());
-    verifyNoInteractions(users);
+    verifyNoInteractions(spiedUserSummaries);
   }
 
   @Test
@@ -239,7 +225,7 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
     mvc.perform(get("/api/admin/users"))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.type").value("https://api.master-acdc.dev/problems/forbidden"));
-    verifyNoInteractions(users);
+    verifyNoInteractions(spiedUserSummaries);
   }
 
   @Test
@@ -247,6 +233,6 @@ class MethodAuthorizationTest extends IdentityIntegrationSupport {
   void should_deny_refund_before_identity_lookup_when_refund_permission_is_absent() {
     assertThat(AopUtils.isAopProxy(refund)).isTrue();
     assertThatThrownBy(() -> refund.refund(null)).isInstanceOf(AccessDeniedException.class);
-    verifyNoInteractions(orderActor, orders);
+    verifyNoInteractions(spiedOrderActor, spiedOrders);
   }
 }

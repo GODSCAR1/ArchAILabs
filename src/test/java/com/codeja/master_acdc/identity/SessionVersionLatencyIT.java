@@ -34,11 +34,9 @@ import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.test.context.TestPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-@TestPropertySource(properties = "catalog.cache.enabled=false")
 class SessionVersionLatencyIT extends IdentityIntegrationSupport {
   @Autowired JwtDecoder decoder;
   @Autowired AccessTokenIssuer issuer;

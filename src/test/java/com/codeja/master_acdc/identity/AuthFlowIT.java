@@ -14,9 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MvcResult;
 
 class AuthFlowIT extends AuthUserManagementScenarios {
-  @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
-  private java.time.Clock identityClock;
-
   @Test
   @DisplayName("Registro seguido de login y llamada autenticada")
   void should_call_orders_when_registered_user_presents_real_bearer() throws Exception {
@@ -90,7 +87,7 @@ class AuthFlowIT extends AuthUserManagementScenarios {
     problem(cookiePost("/api/auth/refresh", unknown), 401, "invalid-refresh-token");
     var expiration =
         ((java.sql.Timestamp) tokens(browser.user()).getFirst().get("expires_at")).toInstant();
-    org.mockito.Mockito.doReturn(expiration).when(identityClock).instant();
+    org.mockito.Mockito.doReturn(expiration).when(spiedClock).instant();
     problem(cookiePost("/api/auth/refresh", browser), 401, "invalid-refresh-token");
     assertThat(tokens(browser.user())).hasSize(1);
     assertThat(tokens(browser.user()).getFirst().get("rotated_at")).isNull();
@@ -104,14 +101,14 @@ class AuthFlowIT extends AuthUserManagementScenarios {
         ((java.sql.Timestamp) tokens(browser.user()).getFirst().get("created_at")).toInstant();
     for (int day : new int[] {6, 12, 18, 24, 29}) {
       org.mockito.Mockito.doReturn(created.plus(java.time.Duration.ofDays(day)))
-          .when(identityClock)
+          .when(spiedClock)
           .instant();
       browser = rotate(browser);
     }
     var last = tokens(browser.user()).getLast();
     assertThat(last.get("expires_at")).isEqualTo(last.get("family_expires_at"));
     org.mockito.Mockito.doReturn(created.plus(java.time.Duration.ofDays(30)))
-        .when(identityClock)
+        .when(spiedClock)
         .instant();
     problem(cookiePost("/api/auth/refresh", browser), 401, "invalid-refresh-token");
   }

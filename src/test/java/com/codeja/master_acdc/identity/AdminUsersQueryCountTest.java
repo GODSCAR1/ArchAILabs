@@ -7,20 +7,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
-import java.util.ArrayList;
-import java.util.List;
 import org.hibernate.SessionFactory;
-import org.hibernate.resource.jdbc.spi.StatementInspector;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.test.context.TestPropertySource;
 
-@TestPropertySource(
-    properties = {
-      "spring.jpa.properties.hibernate.generate_statistics=true",
-      "spring.jpa.properties.hibernate.session_factory.statement_inspector=com.codeja.master_acdc.identity.AdminUsersQueryCountTest$SqlCapture"
-    })
 class AdminUsersQueryCountTest extends AdminUsersSupport {
   @Autowired EntityManager entityManager;
   @Autowired EntityManagerFactory factory;
@@ -34,7 +25,7 @@ class AdminUsersQueryCountTest extends AdminUsersSupport {
     entityManager.clear();
     var statistics = factory.unwrap(SessionFactory.class).getStatistics();
     statistics.clear();
-    SqlCapture.SQL.get().clear();
+    SqlCapture.start();
     mvc.perform(
             get("/api/admin/users")
                 .param("page", Integer.toString(page))
@@ -48,7 +39,7 @@ class AdminUsersQueryCountTest extends AdminUsersSupport {
         .andExpect(jsonPath("$.totalPages").value(totalPages));
     assertThat(statistics.getPrepareStatementCount()).isBetween(1L, 2L);
     assertThat(statistics.getEntityLoadCount()).isZero();
-    assertThat(SqlCapture.SQL.get())
+    assertThat(SqlCapture.statements())
         .hasSize(count == 0 ? 1 : 2)
         .allSatisfy(
             sql ->
@@ -56,20 +47,10 @@ class AdminUsersQueryCountTest extends AdminUsersSupport {
                     .doesNotContain(
                         "password_hash", "session_version", "customer_id", "refresh_token"));
     if (count > 0) {
-      assertThat(SqlCapture.SQL.get().get(1))
+      assertThat(SqlCapture.statements().get(1))
           .containsPattern(
               "select \\w+\\.id,\\w+\\.email,\\w+\\.roles,\\w+\\.enabled from user_account")
           .containsPattern("order by \\w+\\.id");
-    }
-  }
-
-  public static class SqlCapture implements StatementInspector {
-    static final ThreadLocal<List<String>> SQL = ThreadLocal.withInitial(ArrayList::new);
-
-    @Override
-    public String inspect(String sql) {
-      SQL.get().add(sql);
-      return sql;
     }
   }
 }

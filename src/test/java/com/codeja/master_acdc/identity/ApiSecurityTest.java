@@ -23,7 +23,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-@org.springframework.test.context.TestPropertySource(properties = "catalog.cache.enabled=true")
 class ApiSecurityTest extends AuthHttpSupport {
   @Autowired private MongoTemplate mongo;
   @Autowired private org.springframework.cache.CacheManager caches;

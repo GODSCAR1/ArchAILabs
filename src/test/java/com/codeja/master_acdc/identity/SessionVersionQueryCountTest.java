@@ -9,12 +9,9 @@ import com.codeja.master_acdc.OrderBearer;
 import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
 import org.hibernate.SessionFactory;
-import org.hibernate.resource.jdbc.spi.StatementInspector;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,17 +19,10 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
-@TestPropertySource(
-    properties = {
-      "catalog.cache.enabled=false",
-      "spring.jpa.properties.hibernate.generate_statistics=true",
-      "spring.jpa.properties.hibernate.session_factory.statement_inspector=com.codeja.master_acdc.identity.SessionVersionQueryCountTest$SqlCapture"
-    })
 class SessionVersionQueryCountTest extends IdentityIntegrationSupport {
   @Autowired JdbcTemplate jdbc;
   @Autowired AccessTokenIssuer issuer;
@@ -69,7 +59,7 @@ class SessionVersionQueryCountTest extends IdentityIntegrationSupport {
         var statistics = factory.unwrap(SessionFactory.class).getStatistics();
         assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(2);
         assertThat(statistics.getEntityLoadCount()).isZero();
-        assertThat(SqlCapture.SQL.get()).noneMatch(sql -> sql.contains("session_version"));
+        assertThat(SqlCapture.statements()).noneMatch(sql -> sql.contains("session_version"));
       }
       assertThat(counter.gets()).isEqualTo(8);
       assertThat(counter.writes()).isZero();
@@ -86,9 +76,9 @@ class SessionVersionQueryCountTest extends IdentityIntegrationSupport {
       clearStatistics();
       decoder.decode(token);
       // Existing account locking refreshes the entity after the locked SELECT for login races.
-      assertThat(SqlCapture.SQL.get().stream().filter(sql -> sql.contains("session_version")))
+      assertThat(SqlCapture.statements().stream().filter(sql -> sql.contains("session_version")))
           .hasSize(2);
-      assertThat(SqlCapture.SQL.get().stream().filter(sql -> sql.contains("for no key update")))
+      assertThat(SqlCapture.statements().stream().filter(sql -> sql.contains("for no key update")))
           .hasSize(1);
       assertThat(counter.gets()).isEqualTo(2);
       assertThat(counter.writes()).isEqualTo(1);
@@ -99,7 +89,7 @@ class SessionVersionQueryCountTest extends IdentityIntegrationSupport {
       }
       assertThat(counter.gets()).isEqualTo(8);
       assertThat(counter.writes()).isZero();
-      assertThat(SqlCapture.SQL.get()).isEmpty();
+      assertThat(SqlCapture.statements()).isEmpty();
       assertThat(factory.unwrap(SessionFactory.class).getStatistics().getPrepareStatementCount())
           .isZero();
     }
@@ -109,16 +99,6 @@ class SessionVersionQueryCountTest extends IdentityIntegrationSupport {
     entityManager.flush();
     entityManager.clear();
     factory.unwrap(SessionFactory.class).getStatistics().clear();
-    SqlCapture.SQL.get().clear();
-  }
-
-  public static class SqlCapture implements StatementInspector {
-    static final ThreadLocal<List<String>> SQL = ThreadLocal.withInitial(ArrayList::new);
-
-    @Override
-    public String inspect(String sql) {
-      SQL.get().add(sql);
-      return sql;
-    }
+    SqlCapture.start();
   }
 }

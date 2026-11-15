@@ -16,12 +16,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class SessionVersionRevocationIT extends SessionIntegrationSupport {
-  @MockitoSpyBean RedisSessionVersions barrier;
   @Autowired StringRedisTemplate redis;
   @Autowired com.codeja.master_acdc.identity.domain.port.SessionVersions versions;
   @Autowired com.codeja.master_acdc.identity.application.port.BlockUserUseCase blockUser;
@@ -37,7 +35,7 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
     assertThat(accounts.findByEmail(user.email()).orElseThrow().profile().enabled()).isFalse();
     assertThat(accounts.findByEmail(user.email()).orElseThrow().profile().sessionVersion())
         .isEqualTo(2);
-    assertThat(barrier.find(user.id())).contains(new SessionVersion(2));
+    assertThat(spiedSessionVersions.find(user.id())).contains(new SessionVersion(2));
     var revoked = rows(user.id());
     assertThat(revoked).hasSize(2).allSatisfy(row -> assertThat(row.get("revoked_at")).isNotNull());
     unblock(user.id());
@@ -72,14 +70,14 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
               }
               throw new IdentityException("session-version-unavailable");
             })
-        .when(barrier)
+        .when(spiedSessionVersions)
         .publish(eq(user.id()), any());
     assertThatThrownBy(() -> block(user.id())).hasMessage("session-version-unavailable");
     assertUnchanged(user, before);
     if ("before".equals(failure)) {
-      assertThat(barrier.find(user.id())).isEmpty();
+      assertThat(spiedSessionVersions.find(user.id())).isEmpty();
     } else {
-      assertThat(barrier.find(user.id())).contains(new SessionVersion(1));
+      assertThat(spiedSessionVersions.find(user.id())).contains(new SessionVersion(1));
     }
   }
 
@@ -173,7 +171,7 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
               await(release);
               return invocation.callRealMethod();
             })
-        .when(barrier)
+        .when(spiedSessionVersions)
         .publish(eq(user.id()), any());
     try (var executor = java.util.concurrent.Executors.newFixedThreadPool(2)) {
       var writer = executor.submit(() -> change.changePassword(command(user)));
@@ -197,7 +195,7 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
     change.changePassword(command(user));
     assertThat(accounts.findByEmail(user.email()).orElseThrow().profile().sessionVersion())
         .isEqualTo(1);
-    assertThat(barrier.find(user.id())).contains(new SessionVersion(1));
+    assertThat(spiedSessionVersions.find(user.id())).contains(new SessionVersion(1));
     assertThat(rows(user.id())).allSatisfy(row -> assertThat(row.get("revoked_at")).isNotNull());
   }
 
@@ -223,12 +221,12 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
               invocation.callRealMethod();
               throw new IdentityException("session-version-unavailable");
             })
-        .when(barrier)
+        .when(spiedSessionVersions)
         .publish(eq(user.id()), any());
     assertThatThrownBy(() -> change.changePassword(command(user)))
         .hasMessage("session-version-unavailable");
     assertUnchanged(user, before);
-    assertThat(barrier.find(user.id())).contains(new SessionVersion(1));
+    assertThat(spiedSessionVersions.find(user.id())).contains(new SessionVersion(1));
   }
 
   @Test
@@ -250,12 +248,12 @@ class SessionVersionRevocationIT extends SessionIntegrationSupport {
                   });
               return null;
             })
-        .when(barrier)
+        .when(spiedSessionVersions)
         .publish(eq(user.id()), any());
     assertThatThrownBy(() -> change.changePassword(command(user)))
         .hasMessage("session-version-unavailable");
     assertUnchanged(user, before);
-    assertThat(barrier.find(user.id())).contains(new SessionVersion(1));
+    assertThat(spiedSessionVersions.find(user.id())).contains(new SessionVersion(1));
   }
 
   private void assertUnchanged(

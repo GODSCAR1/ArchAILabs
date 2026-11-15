@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-@org.springframework.test.context.TestPropertySource(properties = "catalog.cache.enabled=false")
 class SessionVersionRedisIT extends SessionIntegrationSupport {
   @Autowired SessionVersions versions;
   @Autowired RedisSessionVersions barrier;
