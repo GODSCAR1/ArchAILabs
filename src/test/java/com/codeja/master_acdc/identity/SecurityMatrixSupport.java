@@ -18,11 +18,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.cache.CacheManager;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -31,20 +27,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import tools.jackson.databind.ObjectMapper;
 
-@Import(SecurityMatrixSupport.MatrixExports.class)
+// Lab S14: sin @Import propio; el directorio de exports temporal viene de IdentityTestBeans.
 abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
   // Lab S13 (H2): recuperación y exports en la matriz.
   static final String RECOVERED_PASSWORD = "Unique!67890Z";
   static final byte[] EXPORT_BYTES = "id,total\n1,2\n".getBytes(StandardCharsets.UTF_8);
-
-  @TestConfiguration
-  static class MatrixExports {
-    @Bean
-    @Primary
-    Path matrixExportDirectory() throws IOException {
-      return Files.createTempDirectory("exports-matrix-");
-    }
-  }
 
   @Autowired Path exportDirectory;
   @Autowired InMemoryPasswordResetNotifier notifier;

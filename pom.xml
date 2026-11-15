@@ -38,6 +38,8 @@
     <pmd-plugin.version>3.28.0</pmd-plugin.version>
     <errorprone.version>2.50.0</errorprone.version>
     <nullaway.version>0.14.2</nullaway.version>
+    <!-- Cobertura (lab S14): 0.8.15 es la primera con soporte oficial de Java 26; Java 25 desde 0.8.14 -->
+    <jacoco.version>0.8.15</jacoco.version>
   </properties>
   <dependencies>
     <dependency>
@@ -337,6 +339,36 @@
           <execution>
             <goals>
               <goal>check</goal>
+            </goals>
+            <phase>verify</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <!-- Lab S14 (docs/lab-s14.md). prepare-agent rellena la propiedad argLine, que Surefire y
+             Failsafe usan por defecto: unitarios e integración escriben en el mismo target/jacoco.exec
+             y el informe (fase verify, después de Failsafe) los junta. Si algún día se define argLine
+             a mano en Surefire o Failsafe, debe incluir @{argLine} o la cobertura sale al 0 %. -->
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <configuration>
+          <excludes>
+            <!-- metamodelo JPA generado por hibernate-processor -->
+            <exclude>**/*_.class</exclude>
+          </excludes>
+        </configuration>
+        <executions>
+          <execution>
+            <id>prepare</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <goals>
+              <goal>report</goal>
             </goals>
             <phase>verify</phase>
           </execution>

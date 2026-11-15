@@ -26,6 +26,13 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 - Todo método público de un caso de uso en `application/` tiene test unitario.
 - Integración con Testcontainers; NUNCA mocks de base de datos para verificar queries.
 
+### Niveles de test (lab S14, `docs/lab-s14.md`)
+- Elige el nivel más bajo que pruebe la regla. Unitario SIN Spring (`new` + fakes o mocks de los puertos): dominio, `application`, validadores, conversores y el emisor de tokens. `@WebMvcTest`: un controlador aislado. `@SpringBootTest` + Testcontainers: solo lo que necesita la cadena real (filtros de seguridad, BD, Redis, locks).
+- Los `@SpringBootTest` de seguridad (`identity` y los que ya heredan de él en `ordering` y `exports`) extienden `IdentityIntegrationSupport` y NO añaden configuración: ni `@MockitoBean`/`@MockitoSpyBean`, ni `@TestPropertySource`/`properties`, ni `@Import`, ni `@ActiveProfiles`, ni `@DirtiesContext`. Usa los spies de la base (`spiedClock`, `spiedSessionVersions`, `spiedAccounts`…) para fijar la hora o inyectar fallos. Si falta uno, añádelo A LA BASE, para todos. Motivo: cada diferencia arranca otro contexto completo (Postgres, Redis, Mongo); en el lab S14 había 11.
+- NUNCA mockees el emisor ni el verificador de tokens (`JwtEncoder`, `AccessTokenIssuer`, `JwtTokenAdapter`, `JwtDecoder`) en un test de seguridad: los tests usan la clave RSA efímera de `GlobalIdentityTestExtension`. Motivo: mockear el emisor es mockear justo lo que quieres probar.
+- El tiempo se inyecta (`Clock`). En unitarios usa `Clock.fixed` (`FixedClockExtension`), nunca `Instant.now()` ni `Thread.sleep` para probar caducidades. Motivo: un test cerca de la caducidad con el reloj real falla de forma intermitente.
+- Cada test verifica comportamiento observable con AssertJ: estado (filas, tokens revocados), respuesta (status, `ProblemDetail`) o excepción concreta. Un test sin aserción, o que solo comprueba que "no lanza", no cuenta como cobertura. Para refresh tokens usa `RefreshTokenAssert` (`isRevoked()`, `isUsed()`, `belongsToFamily(...)`).
+
 ## Estilo (Checkstyle: `config/checkstyle.xml`, todas las reglas rompen el build)
 El formato NO se discute ni se hace a mano: Spotless lo aplica al final de tu turno y en el pre-commit. Checkstyle comprueba el estilo tras cada edición y te devuelve archivo, línea y qué hacer.
 - Inyección por constructor (campo `private final` + constructor); NUNCA `@Autowired` en campos de `src/main`. Motivo: dependencias explícitas, clases testeables sin Spring. (En tests de Spring sí se permite.)

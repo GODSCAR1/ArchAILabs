@@ -20,15 +20,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-@TestPropertySource(
-    properties = {
-      "catalog.cache.enabled=true",
-      "spring.jpa.properties.hibernate.generate_statistics=true"
-    })
+// Lab S14: sin propiedades propias; cache del catálogo y estadísticas vienen de la base común.
 // Supresión aprobada (lab S16b): la matriz de seguridad concentra a propósito todos los endpoints
 // y roles en una clase (ADR 0011); dividirla rompería la lectura de la matriz.
 @SuppressWarnings("PMD.GodClass")
