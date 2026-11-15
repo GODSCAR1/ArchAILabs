@@ -2,6 +2,7 @@ package com.codeja.master_acdc.identity.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.description;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -117,7 +118,11 @@ class RefreshServiceTest extends SessionServiceTestSupport {
                     token.lifetime(),
                     new RefreshToken.State(now.minusSeconds(1), null))));
     assertThat(service.refresh(SECRET).accepted()).isFalse();
-    verify(tokens).revokeFamily(token.family().id(), now);
+    verify(
+            tokens,
+            description(
+                "reutilizar un refresh token ya rotado debe revocar TODA la familia (ADR 0011)"))
+        .revokeFamily(token.family().id(), now);
     verify(tokens, never()).save(any());
     verify(issuer, never()).issue(any());
   }

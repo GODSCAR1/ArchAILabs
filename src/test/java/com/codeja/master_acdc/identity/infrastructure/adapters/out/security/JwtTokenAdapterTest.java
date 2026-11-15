@@ -139,6 +139,7 @@ class JwtTokenAdapterTest {
     var token = adapter.issue(account);
     var jwt = JwtDecoderFactory.create(source, settings, clock, versions).decode(token.value());
     assertThat(jwt.getClaims())
+        .as("claims del access token (ADR 0011): exactamente estos ocho, ningún dato personal")
         .containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles", "sv");
     assertThat(((Number) jwt.getClaims().get("sv")).longValue())
         .isEqualTo(account.profile().sessionVersion());
@@ -220,6 +221,7 @@ class JwtTokenAdapterTest {
         JwtDecoderFactory.create(source, settings, clock, versions)
             .decode(adapter.issue(user).value());
     assertThat(jwt.getClaims())
+        .as("claims del access token (ADR 0011): exactamente estos ocho, ningún dato personal")
         .containsOnlyKeys("iss", "sub", "aud", "iat", "exp", "jti", "roles", "sv");
     assertThat(jwt.getClaimAsStringList("roles"))
         .containsExactlyElementsOf(roles.stream().sorted().toList());
