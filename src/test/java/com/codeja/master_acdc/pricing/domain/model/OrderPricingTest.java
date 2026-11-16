@@ -28,6 +28,22 @@ class OrderPricingTest {
   }
 
   @Test
+  @DisplayName("Una tasa de impuestos cero es válida y no incrementa el total")
+  void should_leave_total_unchanged_when_tax_rate_is_zero(Clock clock) {
+    OrderPricing withoutTax = new OrderPricing(clock, BigDecimal.ZERO);
+
+    assertThat(withoutTax.total(orderWithSubtotal("100.00"))).isEqualByComparingTo("100.00");
+  }
+
+  @Test
+  @DisplayName("Un cupón fijo puede superar 100 unidades monetarias")
+  void should_apply_fixed_coupon_over_one_hundred_when_order_is_large_enough() {
+    Coupon coupon = Coupon.fixed("FIXED", new BigDecimal("150"), today);
+
+    assertThat(pricing.total(orderWithSubtotal("200.00"), coupon)).isEqualByComparingTo("59.50");
+  }
+
+  @Test
   @DisplayName("El cupón se aplica antes de impuestos")
   void should_apply_coupon_before_tax_when_order_has_a_fixed_coupon() {
     Coupon tenOff = Coupon.fixed("TEN", new BigDecimal("10.00"), today);

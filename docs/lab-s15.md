@@ -130,3 +130,9 @@ Ningún test tenía `isNotNull`, ni le faltaban aserciones, ni comprobaba un val
 - `scripts/pit-survivors.sh` → `.acdc/pit-survivors.md` (ignorado en git).
 - `verify-quality.sh`, capa 3: `--full` siempre; `--fast` (hook Stop de Claude Code y plugin de OpenCode) solo si la rama toca pricing. Suelo de 80, sin overrides por entorno; si falla, regenera `.acdc/pit-survivors.md` y lo cita.
 - `guide-context.sh`: el contexto de sesión muestra el umbral real de PIT (leía un `mutationThreshold>` que ya no existía).
+
+## 5. Sesión dirigida (OpenCode)
+
+El superviviente `Money:37` (`CONDITIONALS_BOUNDARY`, de `< 0` a `<= 0`) es **equivalente** respecto de su único uso en el cálculo del pedido: con importe exactamente cero, tanto devolver el importe como sustituirlo por `Money.ZERO` produce el mismo total. Los casos negativo, cero y positivo están cubiertos por la regla del suelo a cero; un test de `isNegative` aislado distinguiría la implementación sin proteger otra regla de negocio. Debe reevaluarse si aparece otro uso.
+
+El superviviente `CouponService:29` (`REMOVE_CONDITIONALS_EQUAL_IF`) marca también como usado un cupón reutilizable. Es **equivalente para el comportamiento de checkout**: el servicio ignora ese estado para cupones reutilizables y los sigue aplicando; para los de un solo uso se conserva el rechazo posterior. El registro interno sí cambia, pero no hay una regla especificada que prohíba registrar el uso de un cupón reutilizable. Debe reevaluarse si otro consumidor interpreta ese registro.
