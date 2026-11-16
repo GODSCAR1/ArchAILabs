@@ -1,0 +1,7 @@
+# Supervivientes de PIT clasificados por una persona (lab S15, docs/lab-s15.md, paso 9).
+# El gate de la capa 3 (scripts/mutation-gate.sh) falla con CUALQUIER superviviente que no esté aquí,
+# aunque el porcentaje supere el umbral: una regla nueva puede valer un solo mutante.
+# Formato: Clase|método|mutador|línea   # clasificación: motivo
+# Si el código se mueve y el mismo mutante cambia de línea, una persona actualiza la línea en el PR.
+Money|isNegative|ConditionalsBoundaryMutator|37   # equivalente: en el límite (0,00) las dos ramas del suelo devuelven 0,00
+CouponService|checkout|RemoveConditionalMutator_EQUAL_IF|29   # no especificado: marcar como usado un cupón reutilizable; ninguna regla lee ese estado

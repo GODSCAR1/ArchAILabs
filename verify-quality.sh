@@ -86,6 +86,12 @@ else
     command -v "$tool" >/dev/null \
       || { echo "AC/DC: falta $tool (Semgrep 1.182, Gitleaks 8.30). La capa 2 es obligatoria: instálalo, no la omitas." >&2; exit 1; }
   done
+  # Lab S15: el agente sorteó un semgrep bloqueado anteponiendo otro "semgrep" en el PATH. Versión y canario:
+  # un lanzador falso (exit 0) no encuentra los hallazgos del fixture.
+  SG_VER=$(SEMGREP_ENABLE_VERSION_CHECK=0 semgrep --version 2>/dev/null | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 || true)
+  GL_VER=$(gitleaks version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+  [[ "$SG_VER" == 1.182.* && "$GL_VER" == 8.30.* ]] \
+    || { echo "AC/DC: Semgrep ${SG_VER:-?} / Gitleaks ${GL_VER:-?}; se esperan 1.182.x y 8.30.x. Instala esas versiones; no sustituyas las herramientas por otras en el PATH." >&2; exit 1; }
   for rule in shop-order-sort-injection shop-no-weak-password-reset-random shop-export-path-traversal \
               shop-sql-concatenation shop-sql-injection-taint shop-no-customer-id-param shop-no-log-tokens; do
     [[ -f "semgrep-rules/$rule.yaml" && -f "semgrep-rules/$rule.java" ]] \
@@ -102,6 +108,15 @@ else
 # Ajustes de Semgrep propios de esta ejecución, en ruta nativa (Semgrep es Python de Windows en Git Bash).
   sg_settings() { local f; f="$(mktemp -d)/settings.yml"; command -v cygpath >/dev/null && f=$(cygpath -w "$f"); echo "$f"; }
   SG=(env SEMGREP_SETTINGS_FILE="$(sg_settings)" SEMGREP_ENABLE_VERSION_CHECK=0 semgrep)
+  # El fixture se copia fuera del repo (.semgrepignore excluye semgrep-rules/) y la salida va a un fichero (no a NUL).
+  CANARY=$(mktemp -d)/Canary.java
+  cp semgrep-rules/shop-sql-concatenation.java "$CANARY"
+  command -v cygpath >/dev/null && CANARY=$(cygpath -w "$CANARY")
+  CANARY_RC=0; CANARY_OUT=$(mktemp)
+  "${SG[@]}" scan --config semgrep-rules/shop-sql-concatenation.yaml --metrics=off --disable-version-check --quiet --error \
+    "$CANARY" >"$CANARY_OUT" 2>&1 || CANARY_RC=$?
+  (( CANARY_RC == 1 )) \
+    || { tail -n 15 "$CANARY_OUT" >&2; echo "AC/DC: Semgrep no detecta los hallazgos de semgrep-rules/shop-sql-concatenation.java (código $CANARY_RC): el 'semgrep' del PATH no analiza. No sortees la capa 2." >&2; exit 1; }
   "${SG[@]}" scan --config semgrep-rules/ --metrics=off --disable-version-check --quiet --error src/main/java \
     || { echo "AC/DC: Semgrep (reglas del proyecto) encontró hallazgos en src/main/java. Corrige la causa; no añadas supresiones." >&2; exit 1; }
   gitleaks git . --config .gitleaks.toml --redact --no-banner --log-level warn \
@@ -110,9 +125,12 @@ else
     || { echo "AC/DC: Gitleaks encontró un secreto en src/. Sustitúyelo por una variable de entorno o un valor generado en el test." >&2; exit 1; }
   if [[ "${1:---fast}" == "--full" ]]; then
     # Tests de las reglas, de uno en uno: en paralelo chocan con ~/.semgrep/settings.yml en Windows.
+    # Lab S15: la salida va a un fichero, no a /dev/null: con el lanzador vía python.exe, Semgrep
+    # termina con código 2 si escribe en NUL (lo que Git Bash pone en lugar de /dev/null).
+    SG_TEST_OUT=$(mktemp)
     for r in semgrep-rules/*.yaml; do
-      "${SG[@]}" --test --config "$r" "${r%.yaml}.java" >/dev/null \
-        || { echo "AC/DC: el test de la regla $r falla (semgrep --test). Las reglas solo las cambia una persona." >&2; exit 1; }
+      "${SG[@]}" --test --config "$r" "${r%.yaml}.java" >"$SG_TEST_OUT" 2>&1 \
+        || { tail -n 15 "$SG_TEST_OUT" >&2; echo "AC/DC: el test de la regla $r falla (semgrep --test). Las reglas solo las cambia una persona." >&2; exit 1; }
     done
     mkdir -p target
     "${SG[@]}" scan --config semgrep-rules/ --config p/java --config p/owasp-top-ten --metrics=off \
@@ -169,6 +187,19 @@ MATRIX_REPORT=target/surefire-reports/TEST-com.codeja.master_acdc.identity.Secur
 MATRIX_RUN=$(grep -o 'tests="[0-9]*"' "$MATRIX_REPORT" 2>/dev/null | head -1 | tr -dc '0-9')
 (( ${MATRIX_RUN:-0} >= 90 )) \
   || { echo "AC/DC: SecurityMatrixTest no se ejecutó completo (${MATRIX_RUN:-0} casos, mínimo 90). No la excluyas ni la recortes." >&2; exit 1; }
+echo "▶ Capa 3: mutation testing de pricing (lab S15, docs/lab-s15.md)"
+# --full siempre; --fast solo si la rama toca pricing (PIT tarda < 1 min con targetTests, pero no se paga en cada turno).
+PIT_DIRS=(src/main/java/com/codeja/master_acdc/pricing src/test/java/com/codeja/master_acdc/pricing)
+PIT_BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD)
+PIT_TOUCHED=$( { git diff --name-only "$PIT_BASE" -- "${PIT_DIRS[@]}"; git ls-files -o --exclude-standard -- "${PIT_DIRS[@]}"; } 2>/dev/null)
+if [[ "${GITHUB_ACTIONS:-}" == "true" && "${ACDC_LAYER3_IN_OWN_JOB:-}" == "true" ]]; then
+  echo "  (CI: la capa 3 se ejecuta en el job mutation-testing)"
+elif [[ "${1:---fast}" == "--full" || -n "$PIT_TOUCHED" ]]; then
+  [[ -f scripts/mutation-gate.sh ]] || { echo "AC/DC: falta scripts/mutation-gate.sh (capa 3). Restáuralo; solo una persona lo retira." >&2; exit 1; }
+  bash scripts/mutation-gate.sh
+else
+  echo "  (sin cambios en pricing respecto a origin/main: se ejecuta en --full)"
+fi
 # S13: + gitleaks + semgrep (capa 2)
-# S14: + PIT (--full)
+# S14: + PIT (--full) → S15: capa 3 de pricing
 # S17: + ArchUnit

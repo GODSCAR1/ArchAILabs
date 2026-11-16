@@ -45,6 +45,9 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
         const cmd = String(output.args?.command ?? "")
         // Lab S14: el umbral de cobertura no se sortea pasando la propiedad (-D, MAVEN_OPTS) a Maven.
         if (/acdc\.coverage/.test(cmd)) throw new Error("AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiva desde la línea de comandos. Cubre las ramas de regla con tests o explica a la persona por qué una rama no merece test y detente.")
+        // Lab S15: ni el umbral de PIT ni sus mutadores por la línea de comandos; nadie antepone otro PATH a verify-quality.sh.
+        if (/mutationThreshold|-Dmutators/.test(cmd)) throw new Error("AC/DC: el umbral de mutation testing (pit.mutationThreshold en pom.xml) y los mutadores no se cambian desde la línea de comandos. Mide con la execution pit-pricing; si un superviviente no es una regla, clasifícalo en docs/lab-s15.md y detente.")
+        if (/(^|[^\w])PATH=.*verify-quality\.sh/.test(cmd)) throw new Error("AC/DC: verify-quality.sh se ejecuta con el PATH de la persona. Si una herramienta (semgrep, gitleaks) no arranca, explícalo a la persona y detente; no la sustituyas.")
         if (WRITES.test(cmd)) {
           const hit = guards.find(g => cmd.includes(path.basename(g)))
           if (hit) throw new Error(guardMessage(hit))
@@ -53,6 +56,8 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
           if (/semgrep-rules|\.semgrepignore|\.gitleaks(\.toml|ignore)|gitleaks-baseline|open-findings\.md/.test(cmd)) throw new Error("AC/DC: la configuración de la capa 2 (semgrep-rules/, .semgrepignore, .gitleaks.toml, baseline, open-findings.md) es zona protegida. No se edita ni se sortea desde la shell: explica el cambio a la persona y detente.")
           if (/spotbugs-exclude|pmd[\\/]+ruleset|checkstyle\S*\.xml|jvm\.config/.test(cmd)) throw new Error("AC/DC: la configuración de la capa 1 (config/spotbugs-exclude.xml, config/pmd/ruleset.xml, config/checkstyle*.xml, .mvn/jvm.config) es zona protegida. No se edita ni se sortea desde la shell: corrige el código o explica a la persona por qué la regla no aplica y detente.")
           // Lab S14 (prueba 4): el build y el loop (umbral de JaCoCo, gate de verify-quality.sh) tampoco se editan desde la shell.
+          // Lab S15 (prueba 2): el gate de la capa 3 y la lista de supervivientes aceptados viven en scripts/.
+          if (/(^|[^\w.-])scripts[\\/]/.test(cmd)) throw new Error("AC/DC: scripts/ es zona protegida (gates de Verify: mutation-gate.sh, pit-accepted-survivors.txt, tests guardianes, supresiones). No se edita ni se sortea desde la shell: explica el cambio a la persona y detente.")
           if (/(^|[^\w.-])(pom\.xml|verify-quality\.sh|lefthook\.yml)|\.mvn[\\/]/.test(cmd)) throw new Error("AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbral de JaCoCo). No se editan ni se sortean desde la shell: explica el cambio a la persona y detente.")
           if (/CacheTtlPolicy|ProductDetailCache\.java/.test(cmd)) throw new Error("AC/DC: los TTL y la cache compuesta están en la zona protegida (ADR 0010, docs/caching.md). No se editan ni se sortean: explica el cambio a la persona y detente.")
         }

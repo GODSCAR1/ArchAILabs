@@ -1,0 +1,171 @@
+diff --git a/src/main/java/com/codeja/master_acdc/pricing/domain/model/OrderPricing.java b/src/main/java/com/codeja/master_acdc/pricing/domain/model/OrderPricing.java
+index f918bc9..590af4c 100644
+--- a/src/main/java/com/codeja/master_acdc/pricing/domain/model/OrderPricing.java
++++ b/src/main/java/com/codeja/master_acdc/pricing/domain/model/OrderPricing.java
+@@ -29,7 +29,10 @@ public final class OrderPricing {
+   }
+ 
+   public BigDecimal total(PricingOrder order, @Nullable Coupon coupon) {
+-    Money taxable = applyCoupon(subtotalOf(order), coupon);
++    Money subtotal = subtotalOf(order);
++    Money discounted =
++        order.vip() ? subtotal.minus(subtotal.times(new BigDecimal("0.05"))) : subtotal;
++    Money taxable = applyCoupon(discounted, coupon);
+     return taxable.plus(taxable.times(taxRate)).amount();
+   }
+ 
+diff --git a/src/main/java/com/codeja/master_acdc/pricing/domain/model/PricingOrder.java b/src/main/java/com/codeja/master_acdc/pricing/domain/model/PricingOrder.java
+index 2eafe7b..9febaad 100644
+--- a/src/main/java/com/codeja/master_acdc/pricing/domain/model/PricingOrder.java
++++ b/src/main/java/com/codeja/master_acdc/pricing/domain/model/PricingOrder.java
+@@ -4,7 +4,7 @@ import com.codeja.master_acdc.pricing.domain.exception.InvalidPricingException;
+ import java.util.List;
+ 
+ /** Pedido a valorar: al menos una línea. */
+-public record PricingOrder(List<PricingLine> lines) {
++public record PricingOrder(List<PricingLine> lines, boolean vip) {
+ 
+   public PricingOrder {
+     if (lines.isEmpty()) {
+@@ -13,7 +13,7 @@ public record PricingOrder(List<PricingLine> lines) {
+     lines = List.copyOf(lines);
+   }
+ 
+-  public static PricingOrder of(PricingLine... lines) {
+-    return new PricingOrder(List.of(lines));
++  public static PricingOrder of(boolean vip, PricingLine... lines) {
++    return new PricingOrder(List.of(lines), vip);
+   }
+ }
+diff --git a/src/test/java/com/codeja/master_acdc/pricing/application/CouponServiceTest.java b/src/test/java/com/codeja/master_acdc/pricing/application/CouponServiceTest.java
+index 690bbfe..d7eb05a 100644
+--- a/src/test/java/com/codeja/master_acdc/pricing/application/CouponServiceTest.java
++++ b/src/test/java/com/codeja/master_acdc/pricing/application/CouponServiceTest.java
+@@ -28,7 +28,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
+ class CouponServiceTest {
+   private final InMemoryCoupons coupons = new InMemoryCoupons();
+   private final PricingOrder order =
+-      PricingOrder.of(new PricingLine("SKU", 1, new BigDecimal("100")));
++      PricingOrder.of(false, new PricingLine("SKU", 1, new BigDecimal("100")));
+   private CouponService service;
+   private LocalDate today;
+ 
+@@ -55,6 +55,16 @@ class CouponServiceTest {
+         .isInstanceOf(CouponAlreadyUsedException.class);
+   }
+ 
++  @Test
++  @DisplayName("Un pedido VIP aplica el cupón y marca su único uso")
++  void should_apply_vip_discount_and_mark_coupon_when_coupon_is_single_use() {
++    PricingOrder vipOrder = PricingOrder.of(true, new PricingLine("SKU", 1, new BigDecimal("100")));
++    coupons.add(Coupon.fixed("VIP", BigDecimal.TEN, today.plusDays(1)).asSingleUse());
++
++    assertThat(service.checkout(vipOrder, "VIP")).isEqualByComparingTo("101.15");
++    assertThat(coupons.isUsed("VIP")).isTrue();
++  }
++
+   @Test
+   @DisplayName("Un cupón reutilizable se aplica aunque conste como usado")
+   void should_apply_coupon_again_when_coupon_is_not_single_use() {
+diff --git a/src/test/java/com/codeja/master_acdc/pricing/domain/model/OrderPricingTest.java b/src/test/java/com/codeja/master_acdc/pricing/domain/model/OrderPricingTest.java
+index b03289c..1d04013 100644
+--- a/src/test/java/com/codeja/master_acdc/pricing/domain/model/OrderPricingTest.java
++++ b/src/test/java/com/codeja/master_acdc/pricing/domain/model/OrderPricingTest.java
+@@ -23,6 +23,50 @@ class OrderPricingTest {
+   private OrderPricing pricingWithoutTax;
+   private LocalDate today;
+ 
++  @Test
++  @DisplayName("Descuento VIP después del volumen y antes del cupón y los impuestos")
++  void should_apply_vip_before_coupon_and_tax_when_volume_discount_applies() {
++    PricingOrder order = PricingOrder.of(true, new PricingLine("SKU", 10, new BigDecimal("10")));
++    Coupon coupon = Coupon.fixed("TEN", BigDecimal.TEN, today.plusDays(1));
++
++    assertThat(pricing.subtotal(order)).isEqualByComparingTo("90.00");
++    assertThat(pricing.total(order, coupon)).isEqualByComparingTo("89.84");
++  }
++
++  @Test
++  @DisplayName("Pedido sin cliente VIP")
++  void should_keep_existing_total_when_customer_is_not_vip() {
++    PricingOrder order = PricingOrder.of(false, new PricingLine("SKU", 10, new BigDecimal("10")));
++    Coupon coupon = Coupon.fixed("TEN", BigDecimal.TEN, today.plusDays(1));
++
++    assertThat(pricing.total(order, coupon)).isEqualByComparingTo("95.20");
++  }
++
++  @Test
++  @DisplayName("Descuento VIP sin cupón")
++  void should_apply_vip_discount_when_order_has_no_coupon() {
++    PricingOrder order = PricingOrder.of(true, new PricingLine("SKU", 1, new BigDecimal("100")));
++
++    assertThat(pricingWithoutTax.total(order)).isEqualByComparingTo("95.00");
++  }
++
++  @Test
++  @DisplayName("Redondeo bancario del descuento VIP")
++  void should_round_vip_discount_half_even_when_discount_is_half_a_cent() {
++    PricingOrder order = PricingOrder.of(true, new PricingLine("SKU", 1, new BigDecimal("0.50")));
++
++    assertThat(pricingWithoutTax.total(order)).isEqualByComparingTo("0.48");
++  }
++
++  @Test
++  @DisplayName("Cupón superior al subtotal con descuento VIP")
++  void should_keep_total_zero_when_coupon_exceeds_vip_discounted_subtotal() {
++    PricingOrder order = PricingOrder.of(true, new PricingLine("SKU", 1, new BigDecimal("100")));
++    Coupon coupon = Coupon.fixed("BIG", new BigDecimal("100"), today.plusDays(1));
++
++    assertThat(pricing.total(order, coupon)).isEqualByComparingTo("0.00");
++  }
++
+   @BeforeEach
+   void setUp(Clock clock) {
+     pricing = new OrderPricing(clock, IVA);
+@@ -86,6 +130,6 @@ class OrderPricingTest {
+   }
+ 
+   private static PricingOrder orderWithSubtotal(String amount) {
+-    return PricingOrder.of(new PricingLine("SKU-1", 1, new BigDecimal(amount)));
++    return PricingOrder.of(false, new PricingLine("SKU-1", 1, new BigDecimal(amount)));
+   }
+ }
+diff --git a/src/test/java/com/codeja/master_acdc/pricing/domain/model/PricingTest.java b/src/test/java/com/codeja/master_acdc/pricing/domain/model/PricingTest.java
+index b8ffa29..15a3dc7 100644
+--- a/src/test/java/com/codeja/master_acdc/pricing/domain/model/PricingTest.java
++++ b/src/test/java/com/codeja/master_acdc/pricing/domain/model/PricingTest.java
+@@ -22,7 +22,7 @@ class PricingTest {
+   @Test
+   @DisplayName("El descuento por volumen se aplica por línea antes del cupón y los impuestos")
+   void should_apply_volume_coupon_and_tax_when_calculating_total() {
+-    PricingOrder order = PricingOrder.of(line(9, "10"), line(10, "10"));
++    PricingOrder order = PricingOrder.of(false, line(9, "10"), line(10, "10"));
+     Coupon coupon = Coupon.percent("SALE", new BigDecimal("10"), TODAY);
+ 
+     assertThat(pricing.subtotal(order)).isEqualByComparingTo("180.00");
+@@ -33,13 +33,14 @@ class PricingTest {
+   @Test
+   @DisplayName("El cupón caducado no se aplica y el vigente nunca reduce el total bajo cero")
+   void should_respect_expiry_and_zero_floor_when_applying_fixed_coupon() {
+-    PricingOrder order = PricingOrder.of(line(1, "10"));
++    PricingOrder order = PricingOrder.of(false, line(1, "10"));
+     Coupon expired = Coupon.fixed("OLD", new BigDecimal("20"), TODAY.minusDays(1));
+     Coupon valid = Coupon.fixed("NOW", new BigDecimal("20"), TODAY);
+ 
+     assertThat(pricing.total(order, expired)).isEqualByComparingTo("12.10");
+     assertThat(pricing.total(order, valid)).isEqualByComparingTo("0.00");
+-    assertThat(pricing.total(PricingOrder.of(line(1, "0")), valid)).isEqualByComparingTo("0.00");
++    assertThat(pricing.total(PricingOrder.of(false, line(1, "0")), valid))
++        .isEqualByComparingTo("0.00");
+   }
+ 
+   @Test
+@@ -61,7 +62,7 @@ class PricingTest {
+     assertThatThrownBy(() -> line(1, "-1"))
+         .isInstanceOf(InvalidPricingException.class)
+         .hasMessage("unit price must not be negative");
+-    assertThatThrownBy(() -> PricingOrder.of())
++    assertThatThrownBy(() -> PricingOrder.of(false))
+         .isInstanceOf(InvalidPricingException.class)
+         .hasMessage("order must have at least one line");
+     assertThatThrownBy(() -> new OrderPricing(Clock.systemUTC(), new BigDecimal("-0.01")))

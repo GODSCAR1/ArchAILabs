@@ -1,0 +1,171 @@
+# Mutación 2: el cupón deja de valer el último día (validUntil pasa a ser exclusivo)
+diff --git a/src/main/java/com/codeja/master_acdc/pricing/domain/model/Coupon.java b/src/main/java/com/codeja/master_acdc/pricing/domain/model/Coupon.java
+index fbb4cba..830dbf8 100644
+--- a/src/main/java/com/codeja/master_acdc/pricing/domain/model/Coupon.java
++++ b/src/main/java/com/codeja/master_acdc/pricing/domain/model/Coupon.java
+@@ -47 +47 @@ public record Coupon(
+-    return !today.isAfter(validUntil);
++    return today.isBefore(validUntil); // MUTACION S15
+[INFO] Scanning for projects...
+[INFO] Loaded 24504 auto-discovered prefixes for remote repository central (prefixes-central.txt)
+[INFO] 
+[INFO] -----------------------< com.codeja:master-acdc >-----------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] Loaded 64 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[INFO] Loaded 24504 auto-discovered prefixes for remote repository maven-central (prefixes-maven-central.txt)
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to flyway-community-db-support (https://maven.pkg.github.com/flyway/flyway-community-db-support): HTTP Status: 401
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to MavenFeed (https://red-gate.pkgs.visualstudio.com/MavenFeed/_packaging/MavenFeed/maven/v1/): HTTP Status: 401
+[INFO] 
+[INFO] --- spotless:3.10.4:check (default) @ master-acdc ---
+[INFO] Spotless check skipped
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (default) @ master-acdc ---
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to jvnet-nexus-releases (https://maven.java.net/content/repositories/releases/): (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+[INFO] 
+[INFO] --- jacoco:0.8.15:prepare-agent (prepare) @ master-acdc ---
+[INFO] Skipping JaCoCo execution because property jacoco.skip is set.
+[INFO] argLine set to empty
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ master-acdc ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 10 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ master-acdc ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 394 source files with javac [debug parameters release 25] to target\classes
+[INFO] Hibernate compile-time tooling 7.4.5.Final
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogIndexInitializer.java:[21,20] ensureIndex(org.springframework.data.mongodb.core.index.IndexDefinition) in org.springframework.data.mongodb.core.index.IndexOperations has been deprecated and marked for removal
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogIndexInitializer.java:[23,20] ensureIndex(org.springframework.data.mongodb.core.index.IndexDefinition) in org.springframework.data.mongodb.core.index.IndexOperations has been deprecated and marked for removal
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/exports/domain/model/ExportContent.java:[6,36] [ArrayRecordComponent] Record components should not be arrays.
+    (see https://errorprone.info/bugpattern/ArrayRecordComponent)
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/identity/domain/model/Role.java:[18,29] [ImmutableEnumChecker] enums should be immutable: 'Role' has field 'permissions' of type 'java.util.Set<java.lang.String>', 'Set' is mutable
+    (see https://errorprone.info/bugpattern/ImmutableEnumChecker)
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/persistence/UserSummaryRow.java:[5,62] [ArrayRecordComponent] Record components should not be arrays.
+    (see https://errorprone.info/bugpattern/ArrayRecordComponent)
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapter.java:[40,43] [StringSplitter] String.split(String) has surprising behavior
+    (see https://errorprone.info/bugpattern/StringSplitter)
+  Did you mean 'List<String> parts = Splitter.on(Pattern.compile("\\s+")).splitToList(criteria.sort());'?
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/RedisProductDetailCache.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/RedisProductDetailCache.java: Recompile with -Xlint:deprecation for details.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductDetailCache.java: C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\main\java\com\codeja\master_acdc\catalog\infrastructure\adapters\out\cache\ProductDetailCache.java uses unchecked or unsafe operations.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductDetailCache.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ master-acdc ---
+[INFO] Copying 8 resources from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ master-acdc ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 194 source files with javac [debug parameters release 25] to target\test-classes
+[INFO] Hibernate compile-time tooling 7.4.5.Final
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/test/java/com/codeja/master_acdc/MasterAcdcApplicationIT.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/test/java/com/codeja/master_acdc/MasterAcdcApplicationIT.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ master-acdc ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+02:07:34.804 [main] INFO com.tngtech.archunit.ArchConfiguration -- Reading ArchUnit properties from file:/C:/Users/oscar/Desktop/Master%20Arquitecto%20IA/master-acdc/target/test-classes/archunit.properties
+02:07:34.917 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+02:07:34.919 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+[INFO] Running com.codeja.master_acdc.pricing.application.CouponServiceTest
+02:07:35.336 [main] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+02:07:35.588 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+02:07:35.953 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+02:07:35.954 [main] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+02:07:35.980 [main] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 29.4.0
+  API Version: 1.54
+  Operating System: Docker Desktop
+  Total Memory: 15888 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+02:07:36.101 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Creating container for image: testcontainers/ryuk:0.14.0
+02:07:36.213 [main] INFO org.testcontainers.utility.RegistryAuthLocator -- Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+02:07:36.419 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 is starting: 96588835b5c06f47489e0fc0786d963f871a00f7c029b4d78db7452012acc905
+02:07:37.035 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 started in PT0.9333794S
+02:07:37.045 [main] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+02:07:37.046 [main] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+02:07:37.046 [main] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+02:07:37.047 [main] INFO tc.mongo:7.0 -- Creating container for image: mongo:7.0
+02:07:37.227 [main] INFO tc.mongo:7.0 -- Container mongo:7.0 is starting: c96dc21dbb4fe64aa9b135b73c8d5b8d5bad8491ef2a7731da6b3d0d0a0673eb
+02:07:38.590 [main] INFO tc.mongo:7.0 -- Container mongo:7.0 started in PT1.5434355S
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.396 s -- in com.codeja.master_acdc.pricing.application.CouponServiceTest
+[INFO] Running com.codeja.master_acdc.pricing.domain.model.MoneyTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.133 s -- in com.codeja.master_acdc.pricing.domain.model.MoneyTest
+[INFO] Running com.codeja.master_acdc.pricing.domain.model.OrderPricingTest
+[ERROR] Tests run: 9, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.076 s <<< FAILURE! -- in com.codeja.master_acdc.pricing.domain.model.OrderPricingTest
+[ERROR] com.codeja.master_acdc.pricing.domain.model.OrderPricingTest.should_ignore_coupon_when_it_has_expired(int, BigDecimal)[2] -- Time elapsed: 0.014 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[regla: un cup�n caducado no se aplica; vale hasta su fecha incluida (caduca hoy +0 d�as)] 
+expected: 90.00
+ but was: 100.00
+	at com.codeja.master_acdc.pricing.domain.model.OrderPricingTest.should_ignore_coupon_when_it_has_expired(OrderPricingTest.java:73)
+
+[INFO] Running com.codeja.master_acdc.pricing.domain.model.PricingTest
+[ERROR] Tests run: 5, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.033 s <<< FAILURE! -- in com.codeja.master_acdc.pricing.domain.model.PricingTest
+[ERROR] com.codeja.master_acdc.pricing.domain.model.PricingTest.should_apply_volume_coupon_and_tax_when_calculating_total -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 196.02
+ but was: 217.80
+	at com.codeja.master_acdc.pricing.domain.model.PricingTest.should_apply_volume_coupon_and_tax_when_calculating_total(PricingTest.java:29)
+
+[ERROR] com.codeja.master_acdc.pricing.domain.model.PricingTest.should_respect_expiry_and_zero_floor_when_applying_fixed_coupon -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 0.00
+ but was: 12.10
+	at com.codeja.master_acdc.pricing.domain.model.PricingTest.should_respect_expiry_and_zero_floor_when_applying_fixed_coupon(PricingTest.java:41)
+
+[INFO] Running com.codeja.master_acdc.pricing.domain.model.VolumeDiscountTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.030 s -- in com.codeja.master_acdc.pricing.domain.model.VolumeDiscountTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Failures: 
+[ERROR]   OrderPricingTest.should_ignore_coupon_when_it_has_expired:73 [regla: un cup�n caducado no se aplica; vale hasta su fecha incluida (caduca hoy +0 d�as)] 
+expected: 90.00
+ but was: 100.00
+[ERROR]   PricingTest.should_apply_volume_coupon_and_tax_when_calculating_total:29 
+expected: 196.02
+ but was: 217.80
+[ERROR]   PricingTest.should_respect_expiry_and_zero_floor_when_applying_fixed_coupon:41 
+expected: 0.00
+ but was: 12.10
+[INFO] 
+[ERROR] Tests run: 25, Failures: 3, Errors: 0, Skipped: 0
+[INFO] 
+[ERROR] There are test failures.
+
+See C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\target\surefire-reports for the individual test results.
+See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  24.917 s
+[INFO] Finished at: 2026-11-16T02:07:39-05:00
+[INFO] ------------------------------------------------------------------------
+## Tests que fallan
+Tests run: 9, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.076 s <<< FAILURE! -- in com.codeja.master_acdc.pricing.domain.model.OrderPricingTest
+com.codeja.master_acdc.pricing.domain.model.OrderPricingTest.should_ignore_coupon_when_it_has_expired(int, BigDecimal)[2] -- Time elapsed: 0.014 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+[regla: un cupón caducado no se aplica; vale hasta su fecha incluida (caduca hoy +0 días)] 
+expected: 90.00
+ but was: 100.00
+--
+Tests run: 5, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.033 s <<< FAILURE! -- in com.codeja.master_acdc.pricing.domain.model.PricingTest
+com.codeja.master_acdc.pricing.domain.model.PricingTest.should_apply_volume_coupon_and_tax_when_calculating_total -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 196.02
+ but was: 217.80
+--
+com.codeja.master_acdc.pricing.domain.model.PricingTest.should_respect_expiry_and_zero_floor_when_applying_fixed_coupon -- Time elapsed: 0.003 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: 0.00
+ but was: 12.10

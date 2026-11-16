@@ -45,3 +45,4 @@ bench/results/
 .env
 .env.*
 !.env.example
+.acdc/pit-survivors.md
