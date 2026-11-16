@@ -196,3 +196,30 @@ Cierre del hallazgo de la sesión base (Semgrep en el `PATH`):
 
 - `verify-quality.sh` exige Semgrep 1.182.x y Gitleaks 8.30.x, y pasa un **canario**: Semgrep tiene que encontrar los hallazgos de `semgrep-rules/shop-sql-concatenation.java` (código 1). Un lanzador falso con `exit 0` no pasa.
 - El lanzador de la persona (`~/bin/semgrep`, vía `python.exe` firmado por Smart App Control) entra por `semgrep.console_scripts.entrypoint`, como `semgrep.exe`: con `semgrep.cli` no entendía `--experimental` y el hook `security-scan.sh` fallaba en silencio (código 2).
+
+Validación (`verify-quality.sh --full`, `docs/evidencias/s15-paso8/verify-full-resumen.log`): **verde en 8 min 57 s**, capa 3 `Generated 53 mutations Killed 51 (96%)`. Por el camino aparecieron dos fallos del propio arnés en Windows, corregidos:
+
+- El canario escaneaba `semgrep-rules/`, que `.semgrepignore` excluye (código 2): ahora copia el fixture a una carpeta temporal.
+- Con el lanzador vía `python.exe`, Semgrep devuelve código 2 si su salida va a `/dev/null` (Git Bash lo traduce a `NUL`): el canario y el bucle `semgrep --test` de `--full` escriben en un fichero temporal y muestran sus últimas líneas si fallan.
+
+## 8. Resultado
+
+| Medida | Inicial | Tras el paso 3 | Final |
+|---|---|---|---|
+| Cobertura de líneas (JaCoCo) | 100 % (92/92) | 100 % | **100 % (89/89)**; ramas 100 % (38/38) |
+| Mutation score | 96 % por defecto (27/28) · **95 %** con `STRONGER` + `BIG_DECIMAL` (52/55) | 96 % (51/53) | **96 % (51/53)**, umbral 93 |
+| Test strength | 95 % | 96 % | 96 % |
+| Tests del módulo | 10 (2 clases) | 17 | **25** (15 métodos, 5 clases) |
+| Tests eliminados por no verificar nada | — | — | **1** (`List.copyOf`) + 4 reescritos sin Mockito (`CouponServiceTest`) |
+| Tiempo de PIT sobre el módulo | 7 min 9 s sin `targetTests` (501 tests, ITs incluidos) · 49 s con `targetTests` | 53 s | ≈ 1 min (1 min 14 s en el paso 6) |
+| Reglas cuya mutación manual rompe un test que la nombra | — | — | **6/6** (4/6 en la 1.ª pasada del paso 6) |
+
+**Lectura.** El criterio del enunciado ("si el número de tests baja y el score sube, has hecho el laboratorio bien") no aplica tal cual: la suite de partida no era la del 40 % — OpenCode, con el `AGENTS.md` del S14, ya escribió tests con valores exactos y límites —, así que el score no tenía de dónde subir y los tests aumentan (10 → 25) porque dos reglas no tenían test propio (caducidad y redondeo) y una no tenía ninguno que la detectara ("antes de impuestos"). Lo que mide el lab se movió en otro eje: **el mismo 96 % protege ahora las seis reglas**. Al principio, "antes de impuestos" estaba al 100 % de cobertura y "matada" sin que nada fallara al cambiar el orden, "un solo uso" se comprobaba con `verify` sobre un mock, el IVA 0 solo lo mataba un test de rebote y la caducidad la detectaban tests de otras reglas con mensajes que apuntaban a la regla equivocada.
+
+Lecciones para el harness:
+
+1. Los mutadores por defecto de PIT casi no tocan un dominio de `BigDecimal` (28 mutantes, ninguno aritmético): para dinero, `STRONGER` + `EXPERIMENTAL_BIG_DECIMAL`.
+2. PIT no tiene mutador de orden de operaciones: las reglas de secuencia ("antes de impuestos") solo las verifica un test diseñado con datos donde el orden importa (cupón fijo, no porcentaje).
+3. "Killed" ≠ protegida: un mutante que revienta un constructor de la fixture lo mata cualquier test. Las mutaciones manuales del paso 6 son las que miden si el test es de la regla.
+4. Un test de una regla no se apoya en el límite de otra (fechas en el límite de caducidad, totales con IVA en tests de cupón).
+5. Sin `targetTests`, PIT ejecuta la suite entera: 7 min frente a 49 s.

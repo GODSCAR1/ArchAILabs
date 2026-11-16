@@ -1,0 +1,12 @@
+▶ Specs
+▶ Configuración JPA (ADR docs/decisiones/listado-de-pedidos.md)
+▶ Catálogo Mongo (ADR docs/adr/0009-catalogo-en-mongodb.md)
+▶ Cache multinivel (ADR docs/adr/0010-cache-multinivel.md)
+▶ Seguridad (ADR docs/adr/0011-autenticacion-refresh-y-version-de-sesion.md)
+▶ Tests guardianes (lab S09: scripts/protected-tests.txt)
+▶ Capa 2: SAST y secretos (lab S13, docs/lab-s13.md)
+▶ Capa 1: formato, estilo, bugs y malas prácticas (lab S16b, docs/lab-s16b.md)
+▶ Tests y cobertura de ramas de identity (lab S14, docs/lab-s14.md)
+▶ Capa 3: mutation testing de pricing (lab S15, docs/lab-s15.md)
+  pricing: >> Generated 53 mutations Killed 51 (96%)
+real	8m56.585s
