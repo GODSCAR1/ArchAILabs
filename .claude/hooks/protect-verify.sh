@@ -53,6 +53,10 @@ if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
       echo "AC/DC: la configuración de la capa 1 (config/spotbugs-exclude.xml, config/pmd/ruleset.xml, config/checkstyle*.xml, .mvn/jvm.config) es zona protegida. No se edita ni se sortea desde la shell: corrige el código o explica a la persona por qué la regla no aplica y detente." >&2; exit 2
     fi
     # Lab S14 (prueba 4): el build y el loop (umbral de JaCoCo, gate de verify-quality.sh) tampoco se editan desde la shell.
+    # Lab S15 (prueba 2): el gate de la capa 3 y la lista de supervivientes aceptados viven en scripts/.
+    if grep -qE '(^|[^[:alnum:]_.-])scripts[\\/]' <<<"$CMD"; then
+      echo "AC/DC: scripts/ es zona protegida (gates de Verify: mutation-gate.sh, pit-accepted-survivors.txt, tests guardianes, supresiones). No se edita ni se sortea desde la shell: explica el cambio a la persona y detente." >&2; exit 2
+    fi
     if grep -qE '(^|[^[:alnum:]_.-])(pom\.xml|verify-quality\.sh|lefthook\.yml)|\.mvn[\\/]' <<<"$CMD"; then
       echo "AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbral de JaCoCo). No se editan ni se sortean desde la shell: explica el cambio a la persona y detente." >&2; exit 2
     fi
