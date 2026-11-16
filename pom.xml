@@ -32,6 +32,10 @@
     <checkstyle-plugin.version>3.6.0</checkstyle-plugin.version>
     <checkstyle.version>14.3.0</checkstyle.version>
     <pit.mutationThreshold>75</pit.mutationThreshold>
+    <!-- Capa 3 (lab S15): 1.25.8 corrige los mutadores de BigDecimal en Java 25. El plugin de JUnit 5
+         elige el junit-platform-launcher compatible con el JUnit del proyecto. -->
+    <pitest.version>1.30.2</pitest.version>
+    <pitest-junit5.version>1.2.3</pitest-junit5.version>
     <!-- Capa 1 (lab S16b): al subir de JDK se suben también estas versiones -->
     <spotbugs-plugin.version>4.10.5.0</spotbugs-plugin.version>
     <findsecbugs.version>1.14.0</findsecbugs.version>
@@ -404,6 +408,29 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <!-- Capa 3 (lab S15, docs/lab-s15.md): mutation testing. No va atado a ninguna fase: se ejecuta
+           con org.pitest:pitest-maven:mutationCoverage. Sin pitest-junit5-plugin, todos los mutantes
+           salen "sin cobertura". -->
+      <plugin>
+        <groupId>org.pitest</groupId>
+        <artifactId>pitest-maven</artifactId>
+        <version>${pitest.version}</version>
+        <configuration>
+          <outputFormats>
+            <outputFormat>XML</outputFormat>
+            <outputFormat>HTML</outputFormat>
+          </outputFormats>
+          <timestampedReports>false</timestampedReports>
+          <exportLineCoverage>true</exportLineCoverage>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-junit5-plugin</artifactId>
+            <version>${pitest-junit5.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
     </plugins>
   </build>
