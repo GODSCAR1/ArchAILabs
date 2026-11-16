@@ -94,3 +94,39 @@ Además se borra el atajo `subtotal == 0 → 0` de `OrderPricing.total` (supervi
 | Tests del módulo | 10 | 17 (10 + 7 casos nuevos) |
 
 El score apenas se mueve, y es lo esperado: estas reglas ya estaban "matadas" por los tests de varias reglas. Lo que cambia es *qué* las protege, y se ve en el paso 6: "antes de impuestos" no tenía ningún test que fallara al cambiar el orden; ahora tiene uno.
+
+## 4. Tests que no verifican nada
+
+Prueba de la lección 1 sobre los 10 tests de la suite base (¿falla si comentas la línea clave?):
+
+| Test | Resultado | Decisión |
+|---|---|---|
+| `PricingTest.should_keep_lines_immutable_when_input_list_changes` | Prueba `List.copyOf` (biblioteca), no una regla; al borrarlo **ningún mutante cambia de estado** | **Borrado** |
+| `CouponServiceTest` (4 tests) | Sí verificaba, pero con Mockito sobre el puerto del módulo y `verify(…).markUsed` en lugar del resultado | **Borrado para reescribir** sin mocks en el paso 5: sus 7 mutantes quedan `NO_COVERAGE` y son la lista del agente |
+| `PricingTest.should_apply_volume_coupon_and_tax_when_calculating_total` | Lo di por redundante con los tests del paso 3 y lo borré: **el score bajó** (3 supervivientes nuevos) | **Restaurado** (ver abajo) |
+| Resto de `PricingTest` (caducidad + suelo, redondeo, validaciones) | Sí: cada uno mata mutantes que ningún otro mata | Se quedan (mezclan reglas: el paso 6 dirá si el mensaje basta) |
+
+Ningún test tenía `isNotNull`, ni le faltaban aserciones, ni comprobaba un valor que él mismo había puesto con un mock: de los patrones de la lección 1, la suite base solo tenía el de Mockito.
+
+**El error que el paso 4 está para detectar.** Borrar `should_apply_volume_coupon_and_tax…` dejó vivos tres mutantes que solo él mataba, todos de reglas que mis tests del paso 3 no tocan:
+
+| Mutante | Regla que verificaba |
+|---|---|
+| `OrderPricing:45` `subtract` → `add` | El descuento por volumen **se resta** del subtotal del pedido (`VolumeDiscountTest` prueba el importe del descuento, no su uso) |
+| `PricingLine:19` `multiply` → `divide` | Importe de línea = unidades × precio (mis tests usan 1 unidad, y con 1 multiplicar y dividir dan lo mismo) |
+| `OrderPricing:51` sin `coupon == null` | Un pedido **sin cupón** paga subtotal + IVA (nadie más llama a `total(order)`) |
+
+| Medida | Tras el paso 3 | Tras el paso 4 |
+|---|---|---|
+| Tests del módulo | 17 | **12** |
+| Tests eliminados por no verificar nada | — | **1** (+ 4 de `CouponServiceTest`, reescritos en el paso 5) |
+| Mutation score (`@pit-pricing`) | 96 % (51/53) | **81 % (43/53)**: 7 `NO_COVERAGE` en `CouponService`, `Coupon:29`, `OrderPricing:20`, `Money:37` |
+
+`OrderPricing:20` (IVA 0 permitido: `< 0` → `<= 0`) aparece ahora porque solo lo mataba de rebote `CouponServiceTest`, que construía el servicio con IVA 0: era una regla protegida por accidente.
+
+### Arnés para el paso 5
+
+- `pom.xml`: execution `pit-pricing` (targetClasses y targetTests de pricing, `STRONGER` + `EXPERIMENTAL_BIG_DECIMAL`, `mutationThreshold=${pit.mutationThreshold}` = 80). `-DmutationThreshold` de la línea de comandos no la afecta.
+- `scripts/pit-survivors.sh` → `.acdc/pit-survivors.md` (ignorado en git).
+- `verify-quality.sh`, capa 3: `--full` siempre; `--fast` (hook Stop de Claude Code y plugin de OpenCode) solo si la rama toca pricing. Suelo de 80, sin overrides por entorno; si falla, regenera `.acdc/pit-survivors.md` y lo cita.
+- `guide-context.sh`: el contexto de sesión muestra el umbral real de PIT (leía un `mutationThreshold>` que ya no existía).

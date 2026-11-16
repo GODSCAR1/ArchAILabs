@@ -31,7 +31,9 @@
     <spotless.version>3.10.4</spotless.version>
     <checkstyle-plugin.version>3.6.0</checkstyle-plugin.version>
     <checkstyle.version>14.3.0</checkstyle.version>
-    <pit.mutationThreshold>75</pit.mutationThreshold>
+    <!-- Umbral de la capa 3 para pricing (lab S15, docs/lab-s15.md). Durante la sesión dirigida es
+         el objetivo del enunciado (80); en el paso 7 se fija ligeramente por debajo del score final. -->
+    <pit.mutationThreshold>80</pit.mutationThreshold>
     <!-- Capa 3 (lab S15): 1.25.8 corrige los mutadores de BigDecimal en Java 25. El plugin de JUnit 5
          elige el junit-platform-launcher compatible con el JUnit del proyecto. -->
     <pitest.version>1.30.2</pitest.version>
@@ -431,6 +433,27 @@
             <version>${pitest-junit5.version}</version>
           </dependency>
         </dependencies>
+        <executions>
+          <!-- Capa 3 del módulo de precios: solo sus clases y sus tests (sin targetTests, PIT analiza la
+               suite entera, ITs incluidos: 7 min en lugar de < 1). Se invoca con
+               org.pitest:pitest-maven:mutationCoverage@pit-pricing. -->
+          <execution>
+            <id>pit-pricing</id>
+            <configuration>
+              <targetClasses>
+                <param>com.codeja.master_acdc.pricing.*</param>
+              </targetClasses>
+              <targetTests>
+                <param>com.codeja.master_acdc.pricing.*</param>
+              </targetTests>
+              <mutators>
+                <mutator>STRONGER</mutator>
+                <mutator>EXPERIMENTAL_BIG_DECIMAL</mutator>
+              </mutators>
+              <mutationThreshold>${pit.mutationThreshold}</mutationThreshold>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

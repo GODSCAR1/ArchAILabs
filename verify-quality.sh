@@ -169,6 +169,32 @@ MATRIX_REPORT=target/surefire-reports/TEST-com.codeja.master_acdc.identity.Secur
 MATRIX_RUN=$(grep -o 'tests="[0-9]*"' "$MATRIX_REPORT" 2>/dev/null | head -1 | tr -dc '0-9')
 (( ${MATRIX_RUN:-0} >= 90 )) \
   || { echo "AC/DC: SecurityMatrixTest no se ejecutó completo (${MATRIX_RUN:-0} casos, mínimo 90). No la excluyas ni la recortes." >&2; exit 1; }
+echo "▶ Capa 3: mutation testing de pricing (lab S15, docs/lab-s15.md)"
+# --full siempre; --fast solo si la rama toca pricing (PIT tarda < 1 min con targetTests, pero no se paga en cada turno).
+PIT_DIRS=(src/main/java/com/codeja/master_acdc/pricing src/test/java/com/codeja/master_acdc/pricing)
+PIT_BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD)
+PIT_TOUCHED=$( { git diff --name-only "$PIT_BASE" -- "${PIT_DIRS[@]}"; git ls-files -o --exclude-standard -- "${PIT_DIRS[@]}"; } 2>/dev/null)
+if [[ "${1:---fast}" == "--full" || -n "$PIT_TOUCHED" ]]; then
+  # Segunda capa: el umbral no baja del suelo acordado ni se sobrescribe por entorno.
+  PIT_FLOOR=80
+  PIT_MIN=$(tr -d '\r' < pom.xml | sed -n 's:.*<pit.mutationThreshold>\([0-9]*\)</pit.mutationThreshold>.*:\1:p' | head -1)
+  (( ${PIT_MIN:-0} >= PIT_FLOOR )) \
+    && tr -d '\r' < pom.xml | grep -q '<mutationThreshold>${pit.mutationThreshold}</mutationThreshold>' \
+    || { echo "AC/DC: el umbral de PIT de pricing en pom.xml (${PIT_MIN:-ausente}) está por debajo de $PIT_FLOOR o desconectado de la execution pit-pricing. No se baja: restáuralo (docs/lab-s15.md)." >&2; exit 1; }
+  if grep -qsE 'mutationThreshold|pitest' <<<"${MAVEN_OPTS:-} ${MAVEN_ARGS:-} $(cat .mvn/maven.config 2>/dev/null)"; then
+    echo "AC/DC: MAVEN_OPTS, MAVEN_ARGS o .mvn/maven.config tocan la configuración de PIT. El umbral de mutation testing no se cambia por entorno." >&2; exit 1
+  fi
+  if ! PIT_OUT=$(./mvnw -B test-compile org.pitest:pitest-maven:mutationCoverage@pit-pricing 2>&1); then
+    bash scripts/pit-survivors.sh >/dev/null 2>&1 || true
+    grep -aE '^>> (Generated|Line Coverage)|did not pass the mutation|threshold' <<<"$PIT_OUT" >&2 || true
+    echo "AC/DC: el mutation score de pricing está por debajo de ${PIT_MIN}% (o PIT falló). Supervivientes en .acdc/pit-survivors.md: escribe tests de la REGLA que revela cada uno (resultado observable, sin Mockito en pricing, sin verify). Si no es una regla, clasifícalo en docs/lab-s15.md (sobrante, equivalente o defensivo). El umbral no se baja." >&2
+    exit 1
+  fi
+  bash scripts/pit-survivors.sh >/dev/null
+  grep -aE '^>> Generated [0-9]+ mutations' <<<"$PIT_OUT" | sed 's/^/  pricing: /' || true
+else
+  echo "  (sin cambios en pricing respecto a origin/main: se ejecuta en --full)"
+fi
 # S13: + gitleaks + semgrep (capa 2)
-# S14: + PIT (--full)
+# S14: + PIT (--full) → S15: capa 3 de pricing
 # S17: + ArchUnit

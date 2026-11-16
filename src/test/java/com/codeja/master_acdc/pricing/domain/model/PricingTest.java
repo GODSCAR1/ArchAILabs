@@ -9,8 +9,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -52,18 +50,6 @@ class PricingTest {
     assertThat(Money.of("2").minus(Money.of("3")).isNegative()).isTrue();
     assertThat(Money.of("2").times(new BigDecimal("1.5")).plus(Money.of("1")).amount())
         .isEqualByComparingTo("4.00");
-  }
-
-  @Test
-  @DisplayName("El pedido conserva una copia inmutable de sus líneas")
-  void should_keep_lines_immutable_when_input_list_changes() {
-    List<PricingLine> lines = new ArrayList<>(List.of(line(1, "10")));
-    PricingOrder order = new PricingOrder(lines);
-    lines.clear();
-
-    assertThat(order.lines()).hasSize(1);
-    assertThatThrownBy(() -> order.lines().clear())
-        .isInstanceOf(UnsupportedOperationException.class);
   }
 
   @Test
