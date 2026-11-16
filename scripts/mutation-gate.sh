@@ -17,5 +17,13 @@ if ! PIT_OUT=$(./mvnw -B -ntp test-compile org.pitest:pitest-maven:mutationCover
   echo "AC/DC: el mutation score de pricing está por debajo de ${PIT_MIN}% (o PIT falló). Supervivientes en .acdc/pit-survivors.md: escribe tests de la REGLA que revela cada uno (resultado observable, sin Mockito en pricing, sin verify). Si no es una regla, clasifícalo en docs/lab-s15.md (sobrante, equivalente o defensivo). El umbral no se baja." >&2
   exit 1
 fi
-bash scripts/pit-survivors.sh >/dev/null
 grep -aE '^>> Generated [0-9]+ mutations' <<<"$PIT_OUT" | sed 's/^/  pricing: /' || true
+# Segundo criterio (lab S15, prueba 1): el porcentaje no basta. Una regla nueva sin tests puede dejar un solo
+# superviviente y seguir por encima del umbral; cualquier superviviente sin clasificar por una persona falla.
+[[ -f scripts/pit-accepted-survivors.txt ]] || { echo "AC/DC: falta scripts/pit-accepted-survivors.txt (capa 3). Restáuralo; solo una persona lo edita." >&2; exit 1; }
+UNCLASSIFIED=$(bash scripts/pit-survivors.sh 2>/dev/null | sed -n 's/^unclassified=//p')
+if (( ${UNCLASSIFIED:-1} > 0 )); then
+  grep -F '**NO**' .acdc/pit-survivors.md >&2 || true
+  echo "AC/DC: ${UNCLASSIFIED:-?} superviviente(s) de PIT sin clasificar en pricing (.acdc/pit-survivors.md, columna Clasificado = NO). Cada superviviente es una regla sin test: escribe el test de ESA regla (resultado observable, sin Mockito, sin verify). Si de verdad no es una regla, explícalo a la persona para que lo clasifique en scripts/pit-accepted-survivors.txt; tú no editas esa lista." >&2
+  exit 1
+fi
