@@ -29,11 +29,7 @@ public final class OrderPricing {
   }
 
   public BigDecimal total(PricingOrder order, @Nullable Coupon coupon) {
-    Money subtotal = subtotalOf(order);
-    if (subtotal.amount().signum() == 0) {
-      return Money.ZERO.amount();
-    }
-    Money taxable = applyCoupon(subtotal, coupon);
+    Money taxable = applyCoupon(subtotalOf(order), coupon);
     return taxable.plus(taxable.times(taxRate)).amount();
   }
 
