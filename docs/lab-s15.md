@@ -136,3 +136,63 @@ Ningún test tenía `isNotNull`, ni le faltaban aserciones, ni comprobaba un val
 El superviviente `Money:37` (`CONDITIONALS_BOUNDARY`, de `< 0` a `<= 0`) es **equivalente** respecto de su único uso en el cálculo del pedido: con importe exactamente cero, tanto devolver el importe como sustituirlo por `Money.ZERO` produce el mismo total. Los casos negativo, cero y positivo están cubiertos por la regla del suelo a cero; un test de `isNegative` aislado distinguiría la implementación sin proteger otra regla de negocio. Debe reevaluarse si aparece otro uso.
 
 El superviviente `CouponService:29` (`REMOVE_CONDITIONALS_EQUAL_IF`) marca también como usado un cupón reutilizable. Es **equivalente para el comportamiento de checkout**: el servicio ignora ese estado para cupones reutilizables y los sigue aplicando; para los de un solo uso se conserva el rechazo posterior. El registro interno sí cambia, pero no hay una regla especificada que prohíba registrar el uso de un cupón reutilizable. Debe reevaluarse si otro consumidor interpreta ese registro.
+
+### Revisión de la sesión de OpenCode (persona)
+
+Sesión `ses_e1d2` (GPT-6.1 Terra, 8 min, `docs/evidencias/s15-paso5/sesion-opencode.md`). Solo OpenCode: la comparación con Claude Code del enunciado se omite por decisión de la persona.
+
+| Medida | OpenCode |
+|---|---|
+| Tests escritos | 5 (3 en `CouponServiceTest` nuevo, 2 en `OrderPricingTest`) |
+| Mutantes matados | 8 (43/53 → 51/53, **81 % → 96 %**) |
+| Supervivientes clasificados sin test | 2 (`Money:37`, `CouponService:29`) |
+| Tests rechazados en la revisión | **0** |
+| Verify | `--fast` en verde con la capa 3 (96 %) |
+
+Señales de alarma de la sección 24, test a test: ninguno tiene más `given` que aserciones, ni `verify`, ni `any()`, ni mocks del dominio. `CouponService` se prueba con un `CouponRepository` en memoria: el cupón de un solo uso se comprueba por su efecto (el segundo checkout lanza `CouponAlreadyUsedException`), no por la llamada a `markUsed`. Único reparo: sin `.as("regla: …")` (se mide en el paso 6).
+
+Clasificaciones: `Money:37` equivalente, coincide con el paso 2. `CouponService:29` (marcar también como usado un cupón reutilizable) lo llama "equivalente"; **no lo es en sentido estricto** — el estado del repositorio cambia —, pero ninguna regla especificada lo lee. Se acepta como **comportamiento no especificado**; si alguna vez se define "un cupón reutilizable no consume usos", pasa a ser regla y su test comprueba el estado del fake.
+
+Comportamiento del agente:
+
+- Volvió a cargar por su cuenta la skill `ponytail`.
+- **Ignoró en su resumen los avisos de la capa 2**: tras cada edición el plugin devolvió `Semgrep no pudo analizar … (código 2)`. Causa: el lanzador de `~/bin/semgrep` entraba por `semgrep.cli` (pysemgrep), que no conoce `--experimental`, la opción que usa `security-scan.sh`. El inner loop de la capa 2 estaba roto y el agente no lo dijo. Arreglo en el lanzador (entra por `semgrep.console_scripts.entrypoint`, como `semgrep.exe`).
+
+## 6. Mutaciones manuales: ¿los tests protegen reglas?
+
+Una mutación por regla, distinta de las de PIT (`docs/evidencias/s15-paso6/s15-mutaciones.sh`; logs en la misma carpeta). Criterio: falla al menos un test **y su mensaje nombra la regla rota**.
+
+| # | Regla | Mutación manual | 1.ª pasada | Final |
+|---|---|---|---|---|
+| 1 | 10 % desde 10 unidades | 5 % en lugar de 10 % | ✅ `VolumeDiscountTest`: `[regla: 10 por ciento … 10 unidades] expected 10.00 but was 5.00` | ✅ igual |
+| 2 | Un cupón caducado no se aplica | `validUntil` exclusivo: el cupón deja de valer su último día | ⚠️ Fallan 6 tests, **ninguno habla de caducidad**; el único con mensaje dice *"el cupón se aplica antes de impuestos"*: señala la regla equivocada | ✅ `should_ignore_coupon_when_it_has_expired[2]`: `[regla: un cupón caducado no se aplica; vale hasta su fecha incluida (caduca hoy +0 días)] expected 90.00 but was 100.00` |
+| 3 | Cupón antes de impuestos | Cupón sobre el total con IVA | ✅ `[regla: el cupón se aplica antes de impuestos …] 107.10 / 109.00` (antes del paso 3 nadie lo detectaba); ⚠️ en la 2.ª pasada fallaba también el test nuevo de caducidad con su mensaje | ✅ Fallan solo los tests con IVA (antes de impuestos, cupón fijo > 100, `CouponService`); ni caducidad ni suelo |
+| 4 | El total nunca es negativo | Se cobra la diferencia en valor absoluto | ✅ `[regla: el total nunca es negativo (subtotal 15.00, cupón 50.00)]` | ✅ `expected 0.00 but was 35.00` |
+| 5 | Redondeo HALF_EVEN | `HALF_UP` | ⚠️ `NINGUNO` — **falso**: error del script (el comentario se tragó el `;` y no compiló) | ✅ `MoneyTest`: `[regla: redondeo a 2 decimales HALF_EVEN; 1.005 debe quedar en 1.00] … but was 1.01` |
+| 6 | Un solo uso se marca como usado | Se marca **antes** de comprobar si ya estaba usado | ✅ `should_reject_second_checkout_when_coupon_is_single_use`: el primer uso lanza `coupon already used: ONCE` | ✅ igual (el nombre del test nombra la regla) |
+
+**Hallazgo: tests de una regla apoyados en el límite de otra.** Los tests de "antes de impuestos", "cupón fijo > 100" y los dos de `CouponService` creaban el cupón con `validUntil = today`, justo en el límite de la caducidad; el de caducidad y el del suelo comparaban totales con IVA, dependiendo de "antes de impuestos". Al romper una regla fallaban tests de otras, con mensajes que mandan a buscar donde no está el fallo. PIT los cuenta igual de "muertos". Reescritura:
+
+- Los tests que no son de caducidad crean el cupón con `today.plusDays(1)`.
+- Caducidad y suelo a cero usan un `OrderPricing` **sin IVA** (90,00 / 100,00 y 0,00 / 0,00 / 0,01).
+- Tests nuevos con mensaje propio: `OrderPricingTest.should_ignore_coupon_when_it_has_expired` (mañana, hoy, ayer) y `MoneyTest.should_round_to_two_decimals_half_even…` (1,005 → 1,00; 1,015 → 1,02; 1,025 → 1,02; −1,005 → −1,00; 2,0049 → 2,00).
+
+Quedan en `PricingTest` los tres tests de varias reglas de la suite base (sin mensaje): siguen matando mutantes que nadie más mata (por ejemplo, `PricingLine:19`, importe de línea con más de 1 unidad), así que no se borran; cuando fallan, el test de la regla falla a la vez con su mensaje.
+
+PIT tras el paso 6: **96 % (51/53)**, 17 tests examinados; sobreviven `CouponService:29` (comportamiento no especificado) y `Money:37` (equivalente).
+
+## 7. Umbral
+
+| Pieza | Dónde | Detalle |
+|---|---|---|
+| Execution `pit-pricing` | `pom.xml` (zona protegida) | targetClasses y targetTests de `pricing`, `STRONGER` + `EXPERIMENTAL_BIG_DECIMAL`, `mutationThreshold=${pit.mutationThreshold}` |
+| Umbral | `pit.mutationThreshold` = **93** | Score alcanzado: 96 % (51/53) con 2 supervivientes clasificados. Con 53 mutantes, cada uno vale ~1,9 puntos: **93 admite un superviviente más sin clasificar (50/53 = 94 %) pero no dos (49/53 = 92 %)**. Margen para un equivalente nuevo al tocar el módulo, no para dejar de escribir tests |
+| Gate | `scripts/mutation-gate.sh` (zona protegida: `scripts/`) | Suelo propio de 93 (segunda capa: aunque se baje el pom, falla), rechaza `MAVEN_OPTS`/`MAVEN_ARGS`/`.mvn/maven.config` que toquen PIT, ejecuta `@pit-pricing`, regenera `.acdc/pit-survivors.md` |
+| Loop local | `verify-quality.sh` | `--full` siempre; `--fast` (hook Stop, plugin de OpenCode) si la rama toca pricing |
+| CI | Job `mutation-testing` en `.github/workflows/acdc.yml` | `bash scripts/mutation-gate.sh`, supervivientes en el resumen del job e informe de PIT como artefacto. `quality` lo salta con `ACDC_LAYER3_IN_OWN_JOB` (no se ejecuta dos veces). Marcar como required status check |
+| PreToolUse | `protect-verify.sh` y plugin de OpenCode | Bloquean comandos con `mutationThreshold` o `-Dmutators` y cualquier `PATH=… verify-quality.sh`. Probado: `-DmutationThreshold=60` → bloqueado (rc 2); `PATH="/tmp:$PATH" bash ./verify-quality.sh` → bloqueado; `…mutationCoverage@pit-pricing` y `verify-quality.sh --fast` → permitidos |
+
+Cierre del hallazgo de la sesión base (Semgrep en el `PATH`):
+
+- `verify-quality.sh` exige Semgrep 1.182.x y Gitleaks 8.30.x, y pasa un **canario**: Semgrep tiene que encontrar los hallazgos de `semgrep-rules/shop-sql-concatenation.java` (código 1). Un lanzador falso con `exit 0` no pasa.
+- El lanzador de la persona (`~/bin/semgrep`, vía `python.exe` firmado por Smart App Control) entra por `semgrep.console_scripts.entrypoint`, como `semgrep.exe`: con `semgrep.cli` no entendía `--experimental` y el hook `security-scan.sh` fallaba en silencio (código 2).

@@ -1,0 +1,139 @@
+# Mutación 6: el cupón de un solo uso se marca como usado antes de comprobar si ya lo estaba
+diff --git a/src/main/java/com/codeja/master_acdc/pricing/application/CouponService.java b/src/main/java/com/codeja/master_acdc/pricing/application/CouponService.java
+index 2680c0d..9a6a394 100644
+--- a/src/main/java/com/codeja/master_acdc/pricing/application/CouponService.java
++++ b/src/main/java/com/codeja/master_acdc/pricing/application/CouponService.java
+@@ -24,0 +25,3 @@ public final class CouponService {
++    if (coupon.singleUse()) {
++      coupons.markUsed(couponCode); // MUTACION S15: se marca antes de comprobar
++    }
+@@ -29,3 +31,0 @@ public final class CouponService {
+-    if (coupon.singleUse()) {
+-      coupons.markUsed(couponCode);
+-    }
+[INFO] Scanning for projects...
+[INFO] Loaded 24504 auto-discovered prefixes for remote repository central (prefixes-central.txt)
+[INFO] 
+[INFO] -----------------------< com.codeja:master-acdc >-----------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] Loaded 64 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[INFO] Loaded 24504 auto-discovered prefixes for remote repository maven-central (prefixes-maven-central.txt)
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to flyway-community-db-support (https://maven.pkg.github.com/flyway/flyway-community-db-support): HTTP Status: 401
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to MavenFeed (https://red-gate.pkgs.visualstudio.com/MavenFeed/_packaging/MavenFeed/maven/v1/): HTTP Status: 401
+[INFO] 
+[INFO] --- spotless:3.10.4:check (default) @ master-acdc ---
+[INFO] Spotless check skipped
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (default) @ master-acdc ---
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to jvnet-nexus-releases (https://maven.java.net/content/repositories/releases/): (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+[INFO] 
+[INFO] --- jacoco:0.8.15:prepare-agent (prepare) @ master-acdc ---
+[INFO] Skipping JaCoCo execution because property jacoco.skip is set.
+[INFO] argLine set to empty
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ master-acdc ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 10 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ master-acdc ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 394 source files with javac [debug parameters release 25] to target\classes
+[INFO] Hibernate compile-time tooling 7.4.5.Final
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogIndexInitializer.java:[21,20] ensureIndex(org.springframework.data.mongodb.core.index.IndexDefinition) in org.springframework.data.mongodb.core.index.IndexOperations has been deprecated and marked for removal
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogIndexInitializer.java:[23,20] ensureIndex(org.springframework.data.mongodb.core.index.IndexDefinition) in org.springframework.data.mongodb.core.index.IndexOperations has been deprecated and marked for removal
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/exports/domain/model/ExportContent.java:[6,36] [ArrayRecordComponent] Record components should not be arrays.
+    (see https://errorprone.info/bugpattern/ArrayRecordComponent)
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/identity/domain/model/Role.java:[18,29] [ImmutableEnumChecker] enums should be immutable: 'Role' has field 'permissions' of type 'java.util.Set<java.lang.String>', 'Set' is mutable
+    (see https://errorprone.info/bugpattern/ImmutableEnumChecker)
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/persistence/UserSummaryRow.java:[5,62] [ArrayRecordComponent] Record components should not be arrays.
+    (see https://errorprone.info/bugpattern/ArrayRecordComponent)
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapter.java:[40,43] [StringSplitter] String.split(String) has surprising behavior
+    (see https://errorprone.info/bugpattern/StringSplitter)
+  Did you mean 'List<String> parts = Splitter.on(Pattern.compile("\\s+")).splitToList(criteria.sort());'?
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/RedisProductDetailCache.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/RedisProductDetailCache.java: Recompile with -Xlint:deprecation for details.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductDetailCache.java: C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\main\java\com\codeja\master_acdc\catalog\infrastructure\adapters\out\cache\ProductDetailCache.java uses unchecked or unsafe operations.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductDetailCache.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ master-acdc ---
+[INFO] Copying 8 resources from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ master-acdc ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 194 source files with javac [debug parameters release 25] to target\test-classes
+[INFO] Hibernate compile-time tooling 7.4.5.Final
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/test/java/com/codeja/master_acdc/MasterAcdcApplicationIT.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/test/java/com/codeja/master_acdc/MasterAcdcApplicationIT.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ master-acdc ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+01:28:45.990 [main] INFO com.tngtech.archunit.ArchConfiguration -- Reading ArchUnit properties from file:/C:/Users/oscar/Desktop/Master%20Arquitecto%20IA/master-acdc/target/test-classes/archunit.properties
+01:28:46.126 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+01:28:46.129 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+[INFO] Running com.codeja.master_acdc.pricing.application.CouponServiceTest
+01:28:46.557 [main] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+01:28:46.824 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.NpipeSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+01:28:47.212 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Npipe socket (npipe:////./pipe/docker_engine)
+01:28:47.213 [main] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+01:28:47.238 [main] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 29.4.0
+  API Version: 1.54
+  Operating System: Docker Desktop
+  Total Memory: 15888 MB
+  Labels: 
+    com.docker.desktop.address=npipe://\\.\pipe\docker_cli
+01:28:47.365 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Creating container for image: testcontainers/ryuk:0.14.0
+01:28:47.467 [main] INFO org.testcontainers.utility.RegistryAuthLocator -- Credential helper/store (docker-credential-desktop) does not have credentials for https://index.docker.io/v1/
+01:28:47.617 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 is starting: 9742cc5ca0fed0dc6f1a05d8d39d94dd49bb28e7e775568f79e9a774b818363b
+01:28:48.089 [main] INFO tc.testcontainers/ryuk:0.14.0 -- Container testcontainers/ryuk:0.14.0 started in PT0.7237335S
+01:28:48.096 [main] INFO org.testcontainers.utility.RyukResourceReaper -- Ryuk started - will monitor and terminate Testcontainers containers on JVM exit
+01:28:48.097 [main] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+01:28:48.098 [main] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+01:28:48.098 [main] INFO tc.mongo:7.0 -- Creating container for image: mongo:7.0
+01:28:48.209 [main] INFO tc.mongo:7.0 -- Container mongo:7.0 is starting: 1f3ce2c7b470831e8193fc917895c96893457072d58e95f158d60a38d1bdfbcd
+01:28:48.953 [main] INFO tc.mongo:7.0 -- Container mongo:7.0 started in PT0.8542415S
+[ERROR] Tests run: 3, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 2.546 s <<< FAILURE! -- in com.codeja.master_acdc.pricing.application.CouponServiceTest
+[ERROR] com.codeja.master_acdc.pricing.application.CouponServiceTest.should_reject_second_checkout_when_coupon_is_single_use -- Time elapsed: 0.005 s <<< ERROR!
+com.codeja.master_acdc.pricing.domain.exception.CouponAlreadyUsedException: coupon already used: ONCE
+	at com.codeja.master_acdc.pricing.application.CouponService.checkout(CouponService.java:29)
+	at com.codeja.master_acdc.pricing.application.CouponServiceTest.should_reject_second_checkout_when_coupon_is_single_use(CouponServiceTest.java:53)
+
+[INFO] Running com.codeja.master_acdc.pricing.domain.model.MoneyTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.083 s -- in com.codeja.master_acdc.pricing.domain.model.MoneyTest
+[INFO] Running com.codeja.master_acdc.pricing.domain.model.OrderPricingTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.074 s -- in com.codeja.master_acdc.pricing.domain.model.OrderPricingTest
+[INFO] Running com.codeja.master_acdc.pricing.domain.model.PricingTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.032 s -- in com.codeja.master_acdc.pricing.domain.model.PricingTest
+[INFO] Running com.codeja.master_acdc.pricing.domain.model.VolumeDiscountTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.026 s -- in com.codeja.master_acdc.pricing.domain.model.VolumeDiscountTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[ERROR] Errors: 
+[ERROR]   CouponServiceTest.should_reject_second_checkout_when_coupon_is_single_use:53 � CouponAlreadyUsed coupon already used: ONCE
+[INFO] 
+[ERROR] Tests run: 25, Failures: 0, Errors: 1, Skipped: 0
+[INFO] 
+[ERROR] 
+
+See C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\target\surefire-reports for the individual test results.
+See dump files (if any exist) [date].dump, [date]-jvmRun[N].dump and [date].dumpstream.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  23.506 s
+[INFO] Finished at: 2026-11-16T01:28:49-05:00
+[INFO] ------------------------------------------------------------------------
+## Tests que fallan
+Tests run: 3, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 2.546 s <<< FAILURE! -- in com.codeja.master_acdc.pricing.application.CouponServiceTest
+com.codeja.master_acdc.pricing.application.CouponServiceTest.should_reject_second_checkout_when_coupon_is_single_use -- Time elapsed: 0.005 s <<< ERROR!
+com.codeja.master_acdc.pricing.domain.exception.CouponAlreadyUsedException: coupon already used: ONCE
+	at com.codeja.master_acdc.pricing.application.CouponService.checkout(CouponService.java:29)
+	at com.codeja.master_acdc.pricing.application.CouponServiceTest.should_reject_second_checkout_when_coupon_is_single_use(CouponServiceTest.java:53)
+

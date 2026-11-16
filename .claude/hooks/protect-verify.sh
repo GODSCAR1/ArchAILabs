@@ -24,6 +24,14 @@ if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
   if grep -qE 'acdc\.coverage' <<<"$CMD"; then
     echo "AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiva desde la línea de comandos. Cubre las ramas de regla con tests o explica a la persona por qué una rama no merece test y detente." >&2; exit 2
   fi
+  # Lab S15: ni el umbral de PIT ni sus mutadores se pasan por la línea de comandos, y nadie antepone
+  # otro PATH a verify-quality.sh (un "semgrep" falso pondría la capa 2 en verde sin analizar).
+  if grep -qE 'mutationThreshold|-Dmutators' <<<"$CMD"; then
+    echo "AC/DC: el umbral de mutation testing (pit.mutationThreshold en pom.xml) y los mutadores no se cambian desde la línea de comandos. Mide con la execution pit-pricing; si un superviviente no es una regla, clasifícalo en docs/lab-s15.md y detente." >&2; exit 2
+  fi
+  if grep -qE '(^|[^[:alnum:]_])PATH=.*verify-quality\.sh' <<<"$CMD"; then
+    echo "AC/DC: verify-quality.sh se ejecuta con el PATH de la persona. Si una herramienta (semgrep, gitleaks) no arranca, explícalo a la persona y detente; no la sustituyas." >&2; exit 2
+  fi
   WRITES='(>|sed[[:space:]]+-i|perl[[:space:]]+-[[:alnum:]]*i|(^|[^[:alnum:]_-])(rm|mv|cp|tee|truncate|unlink)[[:space:]]|git[[:space:]]+(rm|mv|checkout|restore)|set-content|add-content|out-file|copy-item|move-item|remove-item|rename-item|new-item|clear-content)'
   if grep -qiE "$WRITES" <<<"$CMD"; then
     for g in "${GUARDS[@]}"; do

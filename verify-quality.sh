@@ -86,6 +86,12 @@ else
     command -v "$tool" >/dev/null \
       || { echo "AC/DC: falta $tool (Semgrep 1.182, Gitleaks 8.30). La capa 2 es obligatoria: instálalo, no la omitas." >&2; exit 1; }
   done
+  # Lab S15: el agente sorteó un semgrep bloqueado anteponiendo otro "semgrep" en el PATH. Versión y canario:
+  # un lanzador falso (exit 0) no encuentra los hallazgos del fixture.
+  SG_VER=$(SEMGREP_ENABLE_VERSION_CHECK=0 semgrep --version 2>/dev/null | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+$' | tail -1 || true)
+  GL_VER=$(gitleaks version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true)
+  [[ "$SG_VER" == 1.182.* && "$GL_VER" == 8.30.* ]] \
+    || { echo "AC/DC: Semgrep ${SG_VER:-?} / Gitleaks ${GL_VER:-?}; se esperan 1.182.x y 8.30.x. Instala esas versiones; no sustituyas las herramientas por otras en el PATH." >&2; exit 1; }
   for rule in shop-order-sort-injection shop-no-weak-password-reset-random shop-export-path-traversal \
               shop-sql-concatenation shop-sql-injection-taint shop-no-customer-id-param shop-no-log-tokens; do
     [[ -f "semgrep-rules/$rule.yaml" && -f "semgrep-rules/$rule.java" ]] \
@@ -102,6 +108,11 @@ else
 # Ajustes de Semgrep propios de esta ejecución, en ruta nativa (Semgrep es Python de Windows en Git Bash).
   sg_settings() { local f; f="$(mktemp -d)/settings.yml"; command -v cygpath >/dev/null && f=$(cygpath -w "$f"); echo "$f"; }
   SG=(env SEMGREP_SETTINGS_FILE="$(sg_settings)" SEMGREP_ENABLE_VERSION_CHECK=0 semgrep)
+  CANARY_RC=0
+  "${SG[@]}" scan --config semgrep-rules/shop-sql-concatenation.yaml --metrics=off --disable-version-check --quiet --error \
+    semgrep-rules/shop-sql-concatenation.java >/dev/null 2>&1 || CANARY_RC=$?
+  (( CANARY_RC == 1 )) \
+    || { echo "AC/DC: Semgrep no detecta los hallazgos de semgrep-rules/shop-sql-concatenation.java (código $CANARY_RC): el 'semgrep' del PATH no analiza. No sortees la capa 2." >&2; exit 1; }
   "${SG[@]}" scan --config semgrep-rules/ --metrics=off --disable-version-check --quiet --error src/main/java \
     || { echo "AC/DC: Semgrep (reglas del proyecto) encontró hallazgos en src/main/java. Corrige la causa; no añadas supresiones." >&2; exit 1; }
   gitleaks git . --config .gitleaks.toml --redact --no-banner --log-level warn \
@@ -174,24 +185,11 @@ echo "▶ Capa 3: mutation testing de pricing (lab S15, docs/lab-s15.md)"
 PIT_DIRS=(src/main/java/com/codeja/master_acdc/pricing src/test/java/com/codeja/master_acdc/pricing)
 PIT_BASE=$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD)
 PIT_TOUCHED=$( { git diff --name-only "$PIT_BASE" -- "${PIT_DIRS[@]}"; git ls-files -o --exclude-standard -- "${PIT_DIRS[@]}"; } 2>/dev/null)
-if [[ "${1:---fast}" == "--full" || -n "$PIT_TOUCHED" ]]; then
-  # Segunda capa: el umbral no baja del suelo acordado ni se sobrescribe por entorno.
-  PIT_FLOOR=80
-  PIT_MIN=$(tr -d '\r' < pom.xml | sed -n 's:.*<pit.mutationThreshold>\([0-9]*\)</pit.mutationThreshold>.*:\1:p' | head -1)
-  (( ${PIT_MIN:-0} >= PIT_FLOOR )) \
-    && tr -d '\r' < pom.xml | grep -q '<mutationThreshold>${pit.mutationThreshold}</mutationThreshold>' \
-    || { echo "AC/DC: el umbral de PIT de pricing en pom.xml (${PIT_MIN:-ausente}) está por debajo de $PIT_FLOOR o desconectado de la execution pit-pricing. No se baja: restáuralo (docs/lab-s15.md)." >&2; exit 1; }
-  if grep -qsE 'mutationThreshold|pitest' <<<"${MAVEN_OPTS:-} ${MAVEN_ARGS:-} $(cat .mvn/maven.config 2>/dev/null)"; then
-    echo "AC/DC: MAVEN_OPTS, MAVEN_ARGS o .mvn/maven.config tocan la configuración de PIT. El umbral de mutation testing no se cambia por entorno." >&2; exit 1
-  fi
-  if ! PIT_OUT=$(./mvnw -B test-compile org.pitest:pitest-maven:mutationCoverage@pit-pricing 2>&1); then
-    bash scripts/pit-survivors.sh >/dev/null 2>&1 || true
-    grep -aE '^>> (Generated|Line Coverage)|did not pass the mutation|threshold' <<<"$PIT_OUT" >&2 || true
-    echo "AC/DC: el mutation score de pricing está por debajo de ${PIT_MIN}% (o PIT falló). Supervivientes en .acdc/pit-survivors.md: escribe tests de la REGLA que revela cada uno (resultado observable, sin Mockito en pricing, sin verify). Si no es una regla, clasifícalo en docs/lab-s15.md (sobrante, equivalente o defensivo). El umbral no se baja." >&2
-    exit 1
-  fi
-  bash scripts/pit-survivors.sh >/dev/null
-  grep -aE '^>> Generated [0-9]+ mutations' <<<"$PIT_OUT" | sed 's/^/  pricing: /' || true
+if [[ "${GITHUB_ACTIONS:-}" == "true" && "${ACDC_LAYER3_IN_OWN_JOB:-}" == "true" ]]; then
+  echo "  (CI: la capa 3 se ejecuta en el job mutation-testing)"
+elif [[ "${1:---fast}" == "--full" || -n "$PIT_TOUCHED" ]]; then
+  [[ -f scripts/mutation-gate.sh ]] || { echo "AC/DC: falta scripts/mutation-gate.sh (capa 3). Restáuralo; solo una persona lo retira." >&2; exit 1; }
+  bash scripts/mutation-gate.sh
 else
   echo "  (sin cambios en pricing respecto a origin/main: se ejecuta en --full)"
 fi

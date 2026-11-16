@@ -31,9 +31,10 @@
     <spotless.version>3.10.4</spotless.version>
     <checkstyle-plugin.version>3.6.0</checkstyle-plugin.version>
     <checkstyle.version>14.3.0</checkstyle.version>
-    <!-- Umbral de la capa 3 para pricing (lab S15, docs/lab-s15.md). Durante la sesión dirigida es
-         el objetivo del enunciado (80); en el paso 7 se fija ligeramente por debajo del score final. -->
-    <pit.mutationThreshold>80</pit.mutationThreshold>
+    <!-- Umbral de la capa 3 para pricing (lab S15, docs/lab-s15.md, paso 7): score alcanzado 96 % (51/53,
+         2 supervivientes clasificados). 93 admite un superviviente más sin clasificar (50/53 = 94 %) pero no
+         dos (49/53 = 92 %). scripts/mutation-gate.sh tiene el mismo suelo: no se baja. -->
+    <pit.mutationThreshold>93</pit.mutationThreshold>
     <!-- Capa 3 (lab S15): 1.25.8 corrige los mutadores de BigDecimal en Java 25. El plugin de JUnit 5
          elige el junit-platform-launcher compatible con el JUnit del proyecto. -->
     <pitest.version>1.30.2</pitest.version>

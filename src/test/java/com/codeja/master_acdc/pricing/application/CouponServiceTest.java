@@ -48,7 +48,7 @@ class CouponServiceTest {
   @Test
   @DisplayName("Un cupón de un solo uso se aplica una vez y se rechaza al reutilizarlo")
   void should_reject_second_checkout_when_coupon_is_single_use() {
-    coupons.add(Coupon.fixed("ONCE", BigDecimal.TEN, today).asSingleUse());
+    coupons.add(Coupon.fixed("ONCE", BigDecimal.TEN, today.plusDays(1)).asSingleUse());
 
     assertThat(service.checkout(order, "ONCE")).isEqualByComparingTo("107.10");
     assertThatThrownBy(() -> service.checkout(order, "ONCE"))
@@ -58,7 +58,7 @@ class CouponServiceTest {
   @Test
   @DisplayName("Un cupón reutilizable se aplica aunque conste como usado")
   void should_apply_coupon_again_when_coupon_is_not_single_use() {
-    coupons.add(Coupon.fixed("REUSE", BigDecimal.TEN, today));
+    coupons.add(Coupon.fixed("REUSE", BigDecimal.TEN, today.plusDays(1)));
     coupons.markUsed("REUSE");
 
     assertThat(service.checkout(order, "REUSE")).isEqualByComparingTo("107.10");

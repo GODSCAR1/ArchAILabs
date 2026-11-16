@@ -45,6 +45,9 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
         const cmd = String(output.args?.command ?? "")
         // Lab S14: el umbral de cobertura no se sortea pasando la propiedad (-D, MAVEN_OPTS) a Maven.
         if (/acdc\.coverage/.test(cmd)) throw new Error("AC/DC: el umbral de cobertura de ramas (acdc.coverage.* en pom.xml) no se cambia ni se desactiva desde la línea de comandos. Cubre las ramas de regla con tests o explica a la persona por qué una rama no merece test y detente.")
+        // Lab S15: ni el umbral de PIT ni sus mutadores por la línea de comandos; nadie antepone otro PATH a verify-quality.sh.
+        if (/mutationThreshold|-Dmutators/.test(cmd)) throw new Error("AC/DC: el umbral de mutation testing (pit.mutationThreshold en pom.xml) y los mutadores no se cambian desde la línea de comandos. Mide con la execution pit-pricing; si un superviviente no es una regla, clasifícalo en docs/lab-s15.md y detente.")
+        if (/(^|[^\w])PATH=.*verify-quality\.sh/.test(cmd)) throw new Error("AC/DC: verify-quality.sh se ejecuta con el PATH de la persona. Si una herramienta (semgrep, gitleaks) no arranca, explícalo a la persona y detente; no la sustituyas.")
         if (WRITES.test(cmd)) {
           const hit = guards.find(g => cmd.includes(path.basename(g)))
           if (hit) throw new Error(guardMessage(hit))
