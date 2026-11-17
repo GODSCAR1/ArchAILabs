@@ -130,3 +130,21 @@ Change de OpenSpec `expand-customer-name` (commits `73b096b` propuesta, `4ab2d06
 **Decisiones**: regla de partición "primera palabra / resto" (decisión de negocio; parte bien los dos apellidos habituales); ante datos históricos inválidos, fallar sin valores de sustitución; los tests de migración usan bases aisladas del servidor común, no contenedores propios (la propuesta inicial los pedía y se corrigió con `/opsx-update`).
 
 **Hallazgo**: con la línea de Verify de `AGENTS.md` ya aclarada (paso 3), OpenCode completó las 10 tareas en un solo encargo, sin paradas.
+
+## 5. Contextos y tiempo
+
+- **Contextos**: 1 de integración (`missCount = 1` en Failsafe, paso 2) más los contextos pequeños de Surefire (`@WebMvcTest`, `@SpringJUnitConfig`).
+- **Paralelismo por clases** (`junit-platform.properties`: clases `concurrent`, métodos `same_thread`). `IntegrationTest` lleva `@ResourceLock("integration-stores")` (heredado): su `@BeforeEach` vacía los cuatro almacenes, así que dos clases de integración no pueden correr a la vez.
+- **`@Tag("slow")`** en `SessionVersionLatencyIT` (medición estadística de latencia, ~100 s) y en un test de `ProductCacheMultiInstanceIT` (TTL de 30 s): en local `-DexcludedGroups=slow`; `--full` y CI lo ejecutan todo.
+- **Reutilización** en `~/.testcontainers.properties` (`testcontainers.reuse.enable=true`); en CI, desactivada.
+
+| Medida | Resultado |
+|---|---|
+| Surefire en serie / en paralelo por clases | 21,2 s / **13,7 s** (436 tests, ninguno tocado) |
+| IT en paralelo **sin** `@ResourceLock` | 492 tests: 75 fallos y 260 errores (deadlocks de PostgreSQL en el `TRUNCATE` de `cleanStores`) en **1 min 46 s** — `docs/evidencias/s16-paso5-paralelo-sin-lock.txt` |
+| IT con `@ResourceLock` | 492 tests en verde, en serie |
+| `verify` sin Surefire, 1.ª ejecución (arranca contenedores) | 4 min 11 s |
+| `verify` sin Surefire, 2.ª ejecución (reutiliza) | 4 min 03 s |
+| `verify` sin Surefire, reutilización y `-DexcludedGroups=slow` | **2 min 09 s** (490 IT en verde) |
+
+**Lectura**: la reutilización solo ahorra el arranque de los contenedores (~8 s), porque desde el paso 2 se arrancan una vez por ejecución; con los 62 de la línea base habría ahorrado minutos. El mayor coste local era una sola clase de medición de latencia. El paralelismo de los IT daría otros ~2 min, pero exige abandonar la limpieza global y aislar los datos de cada test (ids únicos o una base por hilo): rediseño fuera del lab, anotado con la cifra que lo justifica.
