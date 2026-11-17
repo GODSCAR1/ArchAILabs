@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -258,7 +259,7 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
 
   @org.junit.jupiter.params.ParameterizedTest
   @org.junit.jupiter.params.provider.MethodSource("confirmationMatrix")
-  @org.junit.jupiter.api.DisplayName("Matriz de confirmación")
+  @DisplayName("Matriz de confirmación")
   void should_enforce_confirmation_matrix_when_identity_and_ownership_vary(
       String role, boolean other, int code) throws Exception {
     var request = post("/api/orders/{id}/confirmation", other ? foreign : own).secure(true);
@@ -284,7 +285,7 @@ abstract class SecurityMatrixSupport extends IdentityIntegrationSupport {
   }
 
   @org.junit.jupiter.api.Test
-  @org.junit.jupiter.api.DisplayName("Lectura global no permite confirmar un pedido ajeno")
+  @DisplayName("Lectura global no permite confirmar un pedido ajeno")
   void should_hide_foreign_order_when_customer_also_has_global_read() throws Exception {
     String authorization = bearer("CUSTOMER", "SUPPORT");
     stubAuthorization();

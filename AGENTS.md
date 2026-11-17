@@ -171,6 +171,7 @@ Spring Security 7 — APIs eliminadas (no las uses aunque aparezcan en ejemplos 
 - Migraciones: expandir-contraer. Una migración publicada NUNCA se edita, renombra ni borra; cada cambio es una migración nueva. Renombrar o eliminar una columna en uso se hace en varias versiones: añadir la nueva y rellenarla, escribir en las dos, leer de la nueva, y solo después retirar la antigua. NUNCA un `RENAME COLUMN` ni un `DROP COLUMN` de algo que la versión anterior lee. (verificador: `verify-quality.sh`, hooks y el job `schema-compat` de CI)
 - Una migración de datos lleva su test con casos límite (base aislada en el PostgreSQL común, Flyway hasta la versión anterior, datos, migrar, comprobar) y sus invariantes en `src/main/resources/db/checks/` (una consulta por fichero que devuelve las filas que la violan).
 - SQL de `jdbc.*` siempre en text block (`"""…"""`): el formateador parte los literales largos en `"…" + "…"` y Semgrep los bloquea como concatenación.
+- Las suites de integración de procesos distintos (tu Verify, el del harness al terminar el turno, otro worktree) comparten los contenedores reutilizados y se turnan con un bloqueo de archivo (`TestcontainersConfiguration`): si una suite "se queda parada" al arrancar, está esperando a otra (lo dice el log). No la mates ni la sortees; no lances otra suite en paralelo.
 - Si Docker no está disponible (aviso al iniciar la sesión), los `*IT` fallan por entorno: no sustituyas contenedores por mocks ni desactives tests; avisa a la persona.
 
 ## Verify (no negociable)

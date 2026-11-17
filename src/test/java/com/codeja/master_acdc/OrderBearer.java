@@ -22,14 +22,7 @@ public final class OrderBearer {
           "insert into customers(id,name) values (?, 'Order fixture') on conflict(id) do nothing",
           customer);
     }
-    jdbc.update(
-        "insert into user_account(id,email,password_hash,roles,enabled,session_version,customer_id)"
-            + " values (?,?,'unused',cast(? as text[]),true,0,?) on conflict(id) do update set"
-            + " roles=excluded.roles,customer_id=excluded.customer_id",
-        account,
-        account + "@example.com",
-        "{" + String.join(",", roles) + "}",
-        customer);
+    saveAccount(jdbc, account, customer, roles);
     return issuer
         .issue(
             new UserAccount(
@@ -43,5 +36,29 @@ public final class OrderBearer {
                         "select session_version from user_account where id=?", Long.class, account),
                     customer)))
         .value();
+  }
+
+  /**
+   * Lab S16: dos hilos pueden emitir el mismo bearer a la vez (cancelaciones concurrentes). Con "on
+   * conflict(id) do update", el segundo INSERT concurrente puede chocar con la UNIQUE del email
+   * antes de que PostgreSQL resuelva el conflicto por id. "do nothing" sin destino cubre cualquier
+   * UNIQUE y el UPDATE posterior fija roles y cliente.
+   */
+  private static void saveAccount(JdbcTemplate jdbc, UUID account, UUID customer, String... roles) {
+    String roleArray = "{" + String.join(",", roles) + "}";
+    jdbc.update(
+        """
+        insert into user_account(id,email,password_hash,roles,enabled,session_version,customer_id)
+        values (?,?,'unused',cast(? as text[]),true,0,?) on conflict do nothing
+        """,
+        account,
+        account + "@example.com",
+        roleArray,
+        customer);
+    jdbc.update(
+        "update user_account set roles = cast(? as text[]), customer_id = ? where id = ?",
+        roleArray,
+        customer,
+        account);
   }
 }

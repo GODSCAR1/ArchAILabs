@@ -1,0 +1,35 @@
+diff --git a/src/test/java/com/codeja/master_acdc/ordering/OrderRefundIT.java b/src/test/java/com/codeja/master_acdc/ordering/OrderRefundIT.java
+index cf700ce..9545f6c 100644
+--- a/src/test/java/com/codeja/master_acdc/ordering/OrderRefundIT.java
++++ b/src/test/java/com/codeja/master_acdc/ordering/OrderRefundIT.java
+@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
+ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+ 
+ import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
+ import org.junit.jupiter.params.ParameterizedTest;
+ import org.junit.jupiter.params.provider.CsvSource;
+ import org.junit.jupiter.params.provider.ValueSource;
+@@ -37,6 +38,22 @@ class OrderRefundIT extends OrderRefundSupport {
+     assertThat(stock()).isEqualTo(7);
+   }
+ 
++  @Test
++  @DisplayName("Un pedido no puede reembolsarse dos veces")
++  void should_reject_second_refund_when_order_was_already_refunded() throws Exception {
++    seed("PAID");
++    String support = bearer("SUPPORT");
++    refund(order.toString(), support)
++        .andExpect(status().isOk())
++        .andExpect(jsonPath("$.status").value("REFUNDED"));
++    refund(order.toString(), support)
++        .andExpect(status().isConflict())
++        .andExpect(
++            jsonPath("$.type").value("https://api.master-acdc.dev/problems/order-not-refundable"));
++    assertThat(statusOfOrder()).isEqualTo("REFUNDED");
++    assertThat(stock()).isEqualTo(7);
++  }
++
+   @ParameterizedTest
+   @ValueSource(strings = {"PENDING", "CANCELLED", "REFUNDED"})
+   @DisplayName("Reembolso rechazado por estado")

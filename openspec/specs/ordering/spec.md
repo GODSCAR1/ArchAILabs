@@ -6,7 +6,7 @@ Permite a un cliente crear pedidos con líneas de producto y cantidad, reservand
 ## Requirements
 
 ### Requirement: Creación de pedido válido
-El sistema SHALL aceptar POST `/api/orders` con `order:create`, cliente asociado a la cuenta autenticada y una o varias líneas. Si reserva todas las líneas, SHALL responder 201 con `id`, `status` PENDING y `lines`, sin customerId ni Location. PAID y SHIPPED siguen sin API de transición en este cambio.
+El sistema SHALL aceptar POST `/api/orders` con `order:create`, cliente asociado a la cuenta autenticada y una o varias líneas. Si reserva todas las líneas, SHALL responder 201 con `id`, `status` PENDING y `lines`, sin customerId ni Location. SHIPPED sigue sin API de transición en este cambio.
 
 #### Scenario: Pedido creado con stock disponible
 - **GIVEN** un cliente asociado a la cuenta CUSTOMER y producto A con stock 10
@@ -116,7 +116,12 @@ El sistema SHALL exigir `order:cancel-own` en POST `/api/orders/{id}/cancellatio
 - **THEN** responde HTTP 200 con CANCELLED y stock 10
 
 ### Requirement: Rechazo de pedido no cancelable
-El sistema SHALL rechazar cancelación de un pedido visible SHIPPED, CANCELLED o REFUNDED con HTTP 409 y type `https://api.master-acdc.dev/problems/order-not-cancellable`, conservando pedido y stock.
+El sistema SHALL rechazar cancelación de un pedido visible PAYING, SHIPPED, CANCELLED o REFUNDED con HTTP 409 y type `https://api.master-acdc.dev/problems/order-not-cancellable`, conservando pedido y stock.
+
+#### Scenario: Cancelación mientras el pago está en curso
+- **WHEN** CUSTOMER intenta cancelar su pedido PAYING mientras la autorización está en curso
+- **THEN** responde HTTP 409 con type `https://api.master-acdc.dev/problems/order-not-cancellable`; pedido y stock no cambian por la cancelación
+- **AND** si la autorización se acepta el pago termina en PAID sin liberar stock
 
 #### Scenario: Frontera: pedido SHIPPED no cancelable
 - **WHEN** CUSTOMER cancela su pedido SHIPPED con (A, 1) y stock 9
@@ -313,3 +318,10 @@ El sistema SHALL rechazar campos, direcciones y fragmentos de ordenación fuera 
 - **WHEN** solicita GET `/api/orders?status=PAID` con sort vacío, campo desconocido, dirección distinta de ASC/DESC o fragmentos adicionales
 - **THEN** responde HTTP 400 con type `https://api.master-acdc.dev/problems/invalid-order-sort`
 - **AND** pedidos y stock no cambian
+
+### Requirement: PAYING es visible en consultas
+El sistema SHALL reconocer PAYING en el detalle y como valor exacto del filtro de estado, preservando las reglas de alcance y ordenación existentes.
+
+#### Scenario: Listado de pedidos en pago
+- **WHEN** CUSTOMER solicita GET `/api/orders?status=PAYING` con pedidos propios y ajenos en ese estado
+- **THEN** responde HTTP 200 con solo los propios; pedidos y stock no cambian
