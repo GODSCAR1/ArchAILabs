@@ -4,6 +4,7 @@ import static com.codeja.master_acdc.AuthorizedCalls.withAuthorities;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.inventory.application.port.ReserveProductStockUseCase;
 import com.codeja.master_acdc.inventory.domain.exception.InsufficientStockException;
 import com.codeja.master_acdc.inventory.domain.model.ReservationResult;
@@ -23,23 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@Testcontainers
-class InventoryReservationComparisonIT {
+class InventoryReservationComparisonIT extends IntegrationTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(InventoryReservationComparisonIT.class);
   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
   private static final StockLine LINE = new StockLine(PRODUCT_ID, 1);
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
   @Autowired ReserveProductStockUseCase reserveProductStockUseCase;
   @Autowired InventoryFacade inventoryFacade;

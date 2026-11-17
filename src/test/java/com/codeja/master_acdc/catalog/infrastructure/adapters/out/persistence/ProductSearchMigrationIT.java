@@ -2,23 +2,35 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import java.util.UUID;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
-class ProductSearchMigrationIT {
+class ProductSearchMigrationIT extends IntegrationTest {
 
   private static final UUID PRODUCT_ID = UUID.fromString("30000000-0000-0000-0000-000000000001");
 
-  @Container
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+  @Autowired private PostgreSQLContainer<?> postgres;
+  @Autowired private JdbcTemplate admin;
+
+  @BeforeEach
+  void create_database() {
+    admin.execute("DROP DATABASE IF EXISTS catalog_search_migration WITH (FORCE)");
+    admin.execute("CREATE DATABASE catalog_search_migration");
+  }
+
+  @AfterEach
+  void drop_database() {
+    admin.execute("DROP DATABASE IF EXISTS catalog_search_migration WITH (FORCE)");
+  }
 
   @Test
   void should_preserve_product_data_when_schema_is_migrated_from_v4_to_v5() {
@@ -81,9 +93,14 @@ class ProductSearchMigrationIT {
   private DataSource dataSource() {
     DriverManagerDataSource dataSource = new DriverManagerDataSource();
     dataSource.setDriverClassName("org.postgresql.Driver");
-    dataSource.setUrl(POSTGRES.getJdbcUrl());
-    dataSource.setUsername(POSTGRES.getUsername());
-    dataSource.setPassword(POSTGRES.getPassword());
+    dataSource.setUrl(
+        "jdbc:postgresql://"
+            + postgres.getHost()
+            + ":"
+            + postgres.getMappedPort(5432)
+            + "/catalog_search_migration");
+    dataSource.setUsername(postgres.getUsername());
+    dataSource.setPassword(postgres.getPassword());
     return dataSource;
   }
 

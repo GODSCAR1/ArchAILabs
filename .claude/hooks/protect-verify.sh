@@ -60,6 +60,10 @@ if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
     if grep -qE '(^|[^[:alnum:]_.-])(pom\.xml|verify-quality\.sh|lefthook\.yml)|\.mvn[\\/]' <<<"$CMD"; then
       echo "AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbral de JaCoCo). No se editan ni se sortean desde la shell: explica el cambio a la persona y detente." >&2; exit 2
     fi
+    # Lab S16: las migraciones no se escriben desde la shell (las nuevas, con la herramienta de edición).
+    if grep -qE 'db[\\/]+migration' <<<"$CMD"; then
+      echo "AC/DC: las migraciones de Flyway no se escriben, mueven ni borran desde la shell. Crea las nuevas con la herramienta de edición; las existentes no se tocan (expandir-contraer)." >&2; exit 2
+    fi
     if grep -qF "CatalogSchemaValidator" <<<"$CMD"; then
       echo "AC/DC: CatalogSchemaValidator está en la zona protegida (validador \$jsonSchema del catálogo, ADR 0009). No se edita, no se desactiva ni se sortea: explica el problema a la persona y detente." >&2; exit 2
     fi
@@ -78,6 +82,12 @@ REL="${F#"$ROOT"/}"          # ruta relativa a la raíz del proyecto
 for g in "${GUARDS[@]}"; do
   if [[ "$REL" == "$g" ]]; then guard_msg "$g"; exit 2; fi
 done
+
+# Lab S16: una migración que ya existe no se edita (Flyway guarda su checksum); el cambio va en una nueva.
+if [[ "$REL" == src/main/resources/db/migration/* && -e "$ROOT/$REL" ]]; then
+  echo "AC/DC: $REL es una migración existente: no se edita. Expresa el cambio en una migración nueva (expandir-contraer: añadir, migrar datos y, en otra versión, retirar)." >&2
+  exit 2
+fi
 
 # Solo la raíz: config/ de la raíz, no infrastructure/config/
 case "$REL" in

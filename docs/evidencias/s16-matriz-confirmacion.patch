@@ -1,0 +1,76 @@
+--- a/src/test/java/com/codeja/master_acdc/identity/SecurityMatrixSupport.java
++++ b/src/test/java/com/codeja/master_acdc/identity/SecurityMatrixSupport.java
+@@ -202,6 +202,7 @@
+             com.codeja.master_acdc.identity.infrastructure.adapters.out.redis.RedisSessionVersions
+                     .PREFIX
+                 + unblockTarget));
++    jdbc.update("delete from order_confirmation_outbox where order_id in (select id from orders where customer_id in (?,?))", customer, foreignCustomer);
+     jdbc.update(
+         "delete from order_lines where order_id in (select id from orders where customer_id in"
+             + " (?,?))",
+@@ -241,6 +242,65 @@
+                 .value("https://api.master-acdc.dev/problems/" + type));
+   }
+ 
++  static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> confirmationMatrix() {
++    return java.util.stream.Stream.of(
++        org.junit.jupiter.params.provider.Arguments.of("Anónimo", false, 401),
++        org.junit.jupiter.params.provider.Arguments.of("CUSTOMER", false, 200),
++        org.junit.jupiter.params.provider.Arguments.of("CUSTOMER", true, 404),
++        org.junit.jupiter.params.provider.Arguments.of("CATALOG_MANAGER", false, 403),
++        org.junit.jupiter.params.provider.Arguments.of("SUPPORT", false, 403),
++        org.junit.jupiter.params.provider.Arguments.of("ADMIN", false, 403));
++  }
++
++  @org.junit.jupiter.params.ParameterizedTest
++  @org.junit.jupiter.params.provider.MethodSource("confirmationMatrix")
++  @org.junit.jupiter.api.DisplayName("Matriz de confirmación")
++  void should_enforce_confirmation_matrix_when_identity_and_ownership_vary(
++      String role, boolean other, int code) throws Exception {
++    var request = post("/api/orders/{id}/confirmation", other ? foreign : own).secure(true);
++    if (!"Anónimo".equals(role)) {
++      request.header("Authorization", bearer(role));
++    }
++    stubAuthorization();
++    var before = snapshot();
++    var result = mvc.perform(request).andExpect(status().is(code));
++    if (code != 200) {
++      assertProblem(result, code);
++      before.assertSame(snapshot());
++      assertPaymentRequests(0);
++    } else {
++      assertThat(jdbc.queryForObject("select status from orders where id=?", String.class, own)).isEqualTo("PAID");
++      assertThat(jdbc.queryForObject("select available from stock where product_id=?", Integer.class, product)).isEqualTo(10);
++      assertPaymentRequests(1);
++    }
++  }
++
++  @org.junit.jupiter.api.Test
++  @org.junit.jupiter.api.DisplayName("Lectura global no permite confirmar un pedido ajeno")
++  void should_hide_foreign_order_when_customer_also_has_global_read() throws Exception {
++    String authorization = bearer("CUSTOMER", "SUPPORT");
++    stubAuthorization();
++    var before = snapshot();
++    var result = mvc.perform(post("/api/orders/{id}/confirmation", foreign)
++        .header("Authorization", authorization)).andExpect(status().isNotFound());
++    assertProblem(result, 404);
++    before.assertSame(snapshot());
++    assertPaymentRequests(0);
++  }
++
++  private void assertPaymentRequests(int count) {
++    wiremock().verifyThat(count, com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor(
++        com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo("/authorizations")));
++  }
++
++  private void stubAuthorization() {
++    wiremock().register(com.github.tomakehurst.wiremock.client.WireMock.post(
++        com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo("/authorizations"))
++        .willReturn(com.github.tomakehurst.wiremock.client.WireMock.aResponse()
++            .withStatus(200).withHeader("Content-Type", "application/json")
++            .withBody("{\"status\":\"AUTHORIZED\"}")));
++  }
++
+   record Snapshot(
+       List<Map<String, Object>> orders,
+       List<Map<String, Object>> lines,

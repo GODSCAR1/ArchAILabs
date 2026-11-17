@@ -3,6 +3,8 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache;
 import static com.codeja.master_acdc.AuthorizedCalls.withAuthorities;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
+import com.codeja.master_acdc.IntegrationTestBeans;
 import com.codeja.master_acdc.MasterAcdcApplication;
 import com.codeja.master_acdc.catalog.application.port.CreateProductUseCase;
 import com.codeja.master_acdc.catalog.application.port.EditProductUseCase;
@@ -10,7 +12,6 @@ import com.codeja.master_acdc.catalog.application.port.ProductDetailUseCase;
 import com.codeja.master_acdc.catalog.domain.model.Product;
 import com.codeja.master_acdc.catalog.domain.model.ProductDetail;
 import com.codeja.master_acdc.catalog.domain.port.ProductDetailRepository;
-import com.codeja.master_acdc.catalog.infrastructure.config.CatalogMongoTestConfiguration;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -26,38 +27,34 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
-import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers
-class ProductCacheMultiInstanceIT {
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
-
-  @Container @ServiceConnection
-  static final MongoDBContainer MONGO = new MongoDBContainer(DockerImageName.parse("mongo:7.0"));
-
-  @Container @ServiceConnection
-  static final GenericContainer<?> REDIS =
-      new GenericContainer<>(DockerImageName.parse("redis:7")).withExposedPorts(6379);
+/**
+ * Dos instancias reales de la aplicación sobre los contenedores comunes (lab S16). El contexto de
+ * {@link IntegrationTest} solo aporta los contenedores; las instancias A y B se arrancan aparte y
+ * comparten el contador de lecturas de {@link IntegrationTestBeans}, así que la concurrencia mide
+ * la suma de las dos.
+ */
+class ProductCacheMultiInstanceIT extends IntegrationTest {
 
   private static ConfigurableApplicationContext instanceA;
   private static ConfigurableApplicationContext instanceB;
 
   @BeforeAll
-  static void start_two_instances_with_shared_stores() {
-    instanceA = startInstance("cache-a");
-    instanceB = startInstance("cache-b");
+  static void start_two_instances_with_shared_stores(
+      @Autowired PostgreSQLContainer<?> postgres,
+      @Autowired MongoDBContainer mongo,
+      @Autowired @Qualifier("redis") GenericContainer<?> redis) {
+    instanceA = startInstance("cache-a", postgres, mongo, redis);
+    instanceB = startInstance("cache-b", postgres, mongo, redis);
     awaitListenersReady();
   }
 
@@ -115,7 +112,7 @@ class ProductCacheMultiInstanceIT {
   void should_load_at_most_once_per_instance_when_200_virtual_threads_miss() throws Exception {
     String sku = "SKU-CACHE-" + UUID.randomUUID().toString().toUpperCase(java.util.Locale.ROOT);
     createProduct(instanceA, sku);
-    CatalogMongoTestConfiguration.resetReadCommands();
+    IntegrationTestBeans.resetReadCommands();
     CountDownLatch ready = new CountDownLatch(400);
     CountDownLatch start = new CountDownLatch(1);
     List<Future<ProductDetail>> results = new ArrayList<>();
@@ -132,24 +129,28 @@ class ProductCacheMultiInstanceIT {
       }
     }
 
-    assertThat(CatalogMongoTestConfiguration.readCommands()).isBetween(1, 2);
+    assertThat(IntegrationTestBeans.readCommands()).isBetween(1, 2);
   }
 
-  private static ConfigurableApplicationContext startInstance(String instanceId) {
-    return new SpringApplicationBuilder(
-            MasterAcdcApplication.class, CatalogMongoTestConfiguration.class)
+  private static ConfigurableApplicationContext startInstance(
+      String instanceId,
+      PostgreSQLContainer<?> postgres,
+      MongoDBContainer mongo,
+      GenericContainer<?> redis) {
+    // spring.mongodb.uri (Boot 4): con spring.data.mongodb.uri las instancias acababan en el Mongo
+    // de la extensión global, que ya no existe.
+    return new SpringApplicationBuilder(MasterAcdcApplication.class, IntegrationTestBeans.class)
         .run(
             "--catalog.cache.enabled=true",
-            "--catalog.store=mongo",
             "--catalog.stock-sync.enabled=false",
             "--cache.instance-id=" + instanceId,
             "--server.port=0",
-            "--spring.data.mongodb.uri=" + MONGO.getReplicaSetUrl(),
-            "--spring.datasource.url=" + POSTGRES.getJdbcUrl(),
-            "--spring.datasource.username=" + POSTGRES.getUsername(),
-            "--spring.datasource.password=" + POSTGRES.getPassword(),
-            "--spring.data.redis.host=" + REDIS.getHost(),
-            "--spring.data.redis.port=" + REDIS.getMappedPort(6379));
+            "--spring.mongodb.uri=" + mongo.getReplicaSetUrl(),
+            "--spring.datasource.url=" + postgres.getJdbcUrl(),
+            "--spring.datasource.username=" + postgres.getUsername(),
+            "--spring.datasource.password=" + postgres.getPassword(),
+            "--spring.data.redis.host=" + redis.getHost(),
+            "--spring.data.redis.port=" + redis.getMappedPort(6379));
   }
 
   private static void awaitListenersReady() {

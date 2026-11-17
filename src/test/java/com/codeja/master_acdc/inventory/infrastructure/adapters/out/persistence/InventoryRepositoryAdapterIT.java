@@ -3,26 +3,17 @@ package com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.inventory.domain.exception.StockRecordNotFoundException;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@Testcontainers
 @Transactional
-class InventoryRepositoryAdapterIT {
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+class InventoryRepositoryAdapterIT extends IntegrationTest {
 
   private static final UUID A = UUID.fromString("11111111-1111-1111-1111-111111111111");
   private static final UUID B = UUID.fromString("22222222-2222-2222-2222-222222222222");

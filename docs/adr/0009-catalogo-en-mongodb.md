@@ -78,6 +78,9 @@ El stock copiado no cambia el dueño del dato: `stock` sigue siendo la fuente de
 la copia solo soporta el indicador de catálogo `inStock`. Los índices se centralizan en
 `CatalogIndexInitializer` y las consultas se expresan con `CatalogProduct.class`.
 
+La confirmación de pago consultará precios y SKU por lote mediante `catalog.api`, directamente en
+MongoDB y sin la cache de la ficha. El stock de decisión seguirá consultándose en inventory.
+
 ## Decisión
 
 Se elige **B: MongoDB como almacén del catálogo en modo mongo**, con el modelo descrito en

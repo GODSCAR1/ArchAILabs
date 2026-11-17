@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.OrderBearer;
 import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.util.List;
@@ -19,28 +20,14 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@Testcontainers
-@org.springframework.context.annotation.Import(com.codeja.master_acdc.RedisTestConfiguration.class)
-class OrderPlacementIT {
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+class OrderPlacementIT extends IntegrationTest {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
   private static final String CUSTOMER = "550e8400-e29b-41d4-a716-446655440000";
@@ -54,15 +41,9 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Pedido creado con stock disponible")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)",
-        "insert into stock (product_id, available) values ('" + B + "', 5)"
-      })
   void should_create_pending_order_and_reserve_stock_when_lines_have_stock() throws Exception {
+    stock(A, 10);
+    stock(B, 5);
     placeOrder(CUSTOMER, lines(line(A, "3"), line(B, "2")))
         .andExpect(status().isCreated())
         .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
@@ -80,14 +61,8 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Frontera: cantidad igual al stock disponible")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)"
-      })
   void should_create_order_and_leave_zero_stock_when_quantity_equals_stock() throws Exception {
+    stock(A, 10);
     placeOrder(CUSTOMER, lines(line(A, "10"))).andExpect(status().isCreated());
 
     assertThat(orderCount()).isEqualTo(1);
@@ -96,14 +71,8 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Frontera: cantidad una unidad por encima del stock")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)"
-      })
   void should_reject_and_keep_stock_when_quantity_exceeds_by_one() throws Exception {
+    stock(A, 10);
     placeOrder(CUSTOMER, lines(line(A, "11")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "insufficient-stock"));
@@ -114,14 +83,8 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Cuenta sin cliente no crea pedido")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)"
-      })
   void should_reject_creation_when_account_has_no_customer() throws Exception {
+    stock(A, 10);
     placeOrder(null, lines(line(A, "3")))
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
@@ -132,14 +95,8 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Cabecera antigua no suplanta identidad")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)"
-      })
   void should_ignore_legacy_header_when_account_has_customer() throws Exception {
+    stock(A, 10);
     placeOrder("no-es-uuid", lines(line(A, "3")))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.customerId").doesNotExist());
@@ -152,14 +109,8 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Pedido sin líneas")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)"
-      })
   void should_reject_422_empty_order_when_no_lines() throws Exception {
+    stock(A, 10);
     placeOrder(CUSTOMER, lines())
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "empty-order"));
@@ -170,14 +121,8 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Producto repetido en dos líneas")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)"
-      })
   void should_reject_422_duplicate_product_when_product_repeated() throws Exception {
+    stock(A, 10);
     placeOrder(CUSTOMER, lines(line(A, "2"), line(A, "3")))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "duplicate-product"));
@@ -188,15 +133,9 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Cantidad cero o negativa")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)",
-        "insert into stock (product_id, available) values ('" + B + "', 5)"
-      })
   void should_reject_422_invalid_quantity_when_quantity_not_positive() throws Exception {
+    stock(A, 10);
+    stock(B, 5);
     placeOrder(CUSTOMER, lines(line(A, "0"), line(B, "2")))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-quantity"));
@@ -208,14 +147,8 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Línea sin producto")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)"
-      })
   void should_reject_422_invalid_line_when_product_missing() throws Exception {
+    stock(A, 10);
     placeOrder(CUSTOMER, "{\"lines\":[{\"quantity\":2}," + line(A, "1") + "]}")
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-line"));
@@ -226,14 +159,8 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Pedido con producto desconocido")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)"
-      })
   void should_reject_422_unknown_product_when_product_not_in_inventory() throws Exception {
+    stock(A, 10);
     placeOrder(CUSTOMER, lines(line(A, "3"), line(X, "1")))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "unknown-product"));
@@ -244,15 +171,9 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Una línea sin stock suficiente")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)",
-        "insert into stock (product_id, available) values ('" + B + "', 1)"
-      })
   void should_reject_409_and_keep_all_stock_when_one_line_lacks_stock() throws Exception {
+    stock(A, 10);
+    stock(B, 1);
     placeOrder(CUSTOMER, lines(line(A, "3"), line(B, "2")))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "insufficient-stock"));
@@ -264,15 +185,9 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Precedencia: error de cabecera antes que cuerpo y stock")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)",
-        "insert into stock (product_id, available) values ('" + B + "', 1)"
-      })
   void should_reject_permission_before_body_when_actor_cannot_create_orders() throws Exception {
+    stock(A, 10);
+    stock(B, 1);
     mockMvc
         .perform(
             post("/api/orders")
@@ -296,15 +211,9 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Precedencia: error de cuerpo antes que stock")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 10)",
-        "insert into stock (product_id, available) values ('" + B + "', 1)"
-      })
   void should_reject_422_body_precedence_when_body_and_stock_errors() throws Exception {
+    stock(A, 10);
+    stock(B, 1);
     placeOrder(CUSTOMER, lines(line(A, "0"), line(B, "2")))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "invalid-quantity"));
@@ -316,14 +225,8 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Precedencia: producto desconocido antes que stock insuficiente")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + B + "', 1)"
-      })
   void should_reject_422_unknown_product_when_other_line_lacks_stock() throws Exception {
+    stock(B, 1);
     placeOrder(CUSTOMER, lines(line(B, "2"), line(X, "1")))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "unknown-product"));
@@ -334,15 +237,9 @@ class OrderPlacementIT {
 
   @Test
   @DisplayName("Dos pedidos concurrentes por la última unidad")
-  @Sql(
-      statements = {
-        "delete from order_lines",
-        "delete from orders",
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A + "', 1)"
-      })
   void should_create_exactly_one_order_when_two_concurrent_orders_contend_last_unit()
       throws Exception {
+    stock(A, 1);
     ExecutorService executor = Executors.newFixedThreadPool(2);
     CountDownLatch start = new CountDownLatch(1);
     Callable<Integer> attempt =
@@ -395,6 +292,13 @@ class OrderPlacementIT {
 
   private int orderCount() {
     return jdbcTemplate.queryForObject("select count(*) from orders", Integer.class);
+  }
+
+  private void stock(String productId, int available) {
+    jdbcTemplate.update(
+        "insert into stock (product_id, available) values (?, ?)",
+        UUID.fromString(productId),
+        available);
   }
 
   private int lineCount() {

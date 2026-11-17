@@ -53,13 +53,30 @@ public final class CatalogStockProjectionJob {
               .matching(query)
               .all();
       if (!products.isEmpty()) {
-        synchronizeBatch(products);
+        synchronizeBatch(products, false);
         lastId = products.getLast().id();
       }
     } while (products.size() == batchSize);
   }
 
-  private void synchronizeBatch(List<CatalogProductIdView> products) {
+  public void synchronizeIds(List<UUID> ids) {
+    if (ids.isEmpty()) {
+      return;
+    }
+    Query query = Query.query(Criteria.where("_id").in(ids));
+    query.fields().include("_id").include("sku").include("availableStock");
+    List<CatalogProductIdView> products =
+        mongoTemplate
+            .query(CatalogProduct.class)
+            .as(CatalogProductIdView.class)
+            .matching(query)
+            .all();
+    if (!products.isEmpty()) {
+      synchronizeBatch(products, true);
+    }
+  }
+
+  private void synchronizeBatch(List<CatalogProductIdView> products, boolean invalidateAll) {
     List<UUID> ids = products.stream().map(CatalogProductIdView::id).toList();
     Map<UUID, Integer> availability =
         jdbcTemplate.query(
@@ -77,7 +94,7 @@ public final class CatalogStockProjectionJob {
     List<String> changedSkus = new ArrayList<>();
     for (CatalogProductIdView product : products) {
       int currentStock = availability.getOrDefault(product.id(), 0);
-      if (product.availableStock() == currentStock) {
+      if (!invalidateAll && product.availableStock() == currentStock) {
         continue;
       }
       bulk.updateOne(

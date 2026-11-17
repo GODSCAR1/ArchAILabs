@@ -3,52 +3,31 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
+import com.codeja.master_acdc.IntegrationTest;
 import com.mongodb.MongoWriteException;
 import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import java.util.List;
 import org.bson.Document;
-import org.bson.UuidRepresentation;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
-import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers
-class CatalogMongoStructureIT {
+class CatalogMongoStructureIT extends IntegrationTest {
 
-  @Container
-  static final MongoDBContainer MONGO = new MongoDBContainer(DockerImageName.parse("mongo:7.0"));
-
-  private static MongoClient client;
-  private static MongoTemplate template;
-
-  @BeforeAll
-  static void initialize_mongo_template() {
-    client =
-        MongoClients.create(
-            MongoClientSettings.builder()
-                .applyConnectionString(new ConnectionString(MONGO.getReplicaSetUrl()))
-                .uuidRepresentation(UuidRepresentation.STANDARD)
-                .build());
-    template = new MongoTemplate(client, "catalog_structure_test");
-  }
-
-  @AfterAll
-  static void close_client() {
-    client.close();
-  }
+  @Autowired private MongoClient client;
+  private MongoTemplate template;
 
   @BeforeEach
   void reset_database() {
+    template = new MongoTemplate(client, "catalog_structure_test");
+    template.getDb().drop();
+  }
+
+  @AfterEach
+  void drop_isolated_database() {
     template.getDb().drop();
   }
 

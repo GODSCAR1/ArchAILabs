@@ -2,6 +2,7 @@ package com.codeja.master_acdc.ordering;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
 import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
@@ -17,27 +18,13 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest(
-    properties = {
-      "spring.jpa.properties.hibernate.generate_statistics=true",
-      "logging.level.org.hibernate.SQL=debug"
-    })
-@Testcontainers
-class OrderSummaryProfilingIT {
+class OrderSummaryProfilingIT extends IntegrationTest {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(OrderSummaryProfilingIT.class);
   private static final UUID PRODUCT_A = UUID.fromString("11111111-1111-1111-1111-111111111111");
   private static final UUID PRODUCT_B = UUID.fromString("22222222-2222-2222-2222-222222222222");
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
   @Autowired JdbcTemplate jdbcTemplate;
   @Autowired OrderSummaryQuery orderSummaryQuery;

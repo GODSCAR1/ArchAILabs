@@ -10,6 +10,7 @@ import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableExcep
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotRefundableException;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -30,7 +31,7 @@ class OrderTest {
   @ParameterizedTest
   @EnumSource(
       value = OrderStatus.class,
-      names = {"PENDING", "CANCELLED", "REFUNDED"})
+      names = {"PENDING", "PAYING", "CANCELLED", "REFUNDED"})
   void should_reject_refund_when_status_is_not_refundable(OrderStatus status) {
     Order order = new Order(UUID.randomUUID(), CUSTOMER, status, List.of(new OrderLine(A, 3)));
     assertThatThrownBy(order::refund).isInstanceOf(OrderNotRefundableException.class);
@@ -40,6 +41,14 @@ class OrderTest {
   void should_reject_cancellation_when_status_is_refunded() {
     Order order =
         new Order(UUID.randomUUID(), CUSTOMER, OrderStatus.REFUNDED, List.of(new OrderLine(A, 3)));
+    assertThatThrownBy(order::cancel).isInstanceOf(OrderNotCancellableException.class);
+  }
+
+  @Test
+  @DisplayName("Cancelación mientras el pago está en curso")
+  void should_reject_cancellation_when_status_is_paying() {
+    Order order =
+        new Order(UUID.randomUUID(), CUSTOMER, OrderStatus.PAYING, List.of(new OrderLine(A, 3)));
     assertThatThrownBy(order::cancel).isInstanceOf(OrderNotCancellableException.class);
   }
 

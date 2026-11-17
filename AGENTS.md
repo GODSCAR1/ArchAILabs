@@ -75,7 +75,7 @@ Tras cada edición de un `.java` se compila y se analiza la clase: recibes archi
   columnas manipulables y mantienen la consulta parametrizada. (pendiente: Semgrep en S12)
 - El `Sort` solo acepta una lista blanca de campos y SIEMPRE añade `id` como último criterio.
   Motivo: evita ordenar por campos arbitrarios y hace estable la paginación. (verificador:
-  `ProductControllerTest` para la lista blanca y `ProductSearchPaginationMongoTest` para el `id` final)
+  `ProductControllerTest` para la lista blanca y `ProductSearchPaginationMongoIT` para el `id` final)
 - Las transacciones se abren con `TransactionTemplate` en `infrastructure/config`; NUNCA
   `@Transactional` en `domain` ni `application`. Motivo: mantiene la frontera hexagonal y evita
   la auto-invocación: un método privado anotado no abre una transacción. Si se pide
@@ -109,7 +109,7 @@ Lee los dos documentos antes de tocar el catálogo: el modelo sale de los patron
 - Consultas y agregaciones con la clase de entrada (`CatalogProduct.class`, `CatalogReview.class`) y proyecciones si solo necesitas campos; NUNCA el nombre de la colección como texto ni `Document.class`. Motivo: sin la clase, Spring no mapea `category.id` → `category._id` ni convierte tipos, y una agregación sobre el nombre devuelve un único grupo con `_id: null`. (verificador: `verify-quality.sh`)
 - `CatalogSchemaValidator` (validador `$jsonSchema`) es zona protegida: NUNCA lo desactives, relajes ni sortees "porque da problemas"; si rechaza un documento, el documento está mal o el modelo debe cambiar con un ADR. (verificador: `protect-verify.sh`, plugin de verificación y `verify-quality.sh`)
 - `availableStock` es una copia de `stock.available` (dueño: inventory) que refresca `CatalogStockProjectionJob`; NUNCA reserves ni valides stock contra el documento del catálogo.
-- La ficha se resuelve en 1 operación y el buscador en 2 (página + count); el número de operaciones no depende de variantes, atributos ni reseñas. (verificador: `ProductDetailQueryCountMongoTest` y `CatalogSearchMongoQueryCountTest`)
+- La ficha se resuelve en 1 operación y el buscador en 2 (página + count); el número de operaciones no depende de variantes, atributos ni reseñas. (verificador: `ProductDetailQueryCountMongoIT` y `CatalogSearchMongoQueryCountIT`)
 
 ## Cache — ADR `docs/adr/0010-cache-multinivel.md` y tabla `docs/caching.md`
 Lee los dos antes de tocar una cache.
@@ -134,12 +134,12 @@ Lee los dos antes de tocar una cache.
 - PROHIBIDO `git commit --no-verify`/`-n`, `LEFTHOOK=0` o `core.hooksPath` para saltar el pre-commit.
 
 ### Autenticación y autorización — ADR `docs/adr/0011-autenticacion-refresh-y-version-de-sesion.md`
-Lee el ADR antes de tocar seguridad. `HttpSecurityConfiguration`, `JwtTokenAdapter`, `JwtDecoderFactory`, `SessionVersionValidator`, `Role` y la matriz (`SecurityMatrixTest`/`SecurityMatrixSupport`) son zona protegida: si crees que hay que cambiarlos, explica por qué y detente.
-- La API es stateless: bearer JWT RS256 de 15 min; NUNCA sesión HTTP, `permitAll()` amplio ni `anyRequest().permitAll()`. Las rutas públicas se abren por método y ruta exacta. (verificador: `SecurityMatrixTest`)
+Lee el ADR antes de tocar seguridad. `HttpSecurityConfiguration`, `JwtTokenAdapter`, `JwtDecoderFactory`, `SessionVersionValidator`, `Role` y la matriz (`SecurityMatrixIT`/`SecurityMatrixSupport`) son zona protegida: si crees que hay que cambiarlos, explica por qué y detente.
+- La API es stateless: bearer JWT RS256 de 15 min; NUNCA sesión HTTP, `permitAll()` amplio ni `anyRequest().permitAll()`. Las rutas públicas se abren por método y ruta exacta. (verificador: `SecurityMatrixIT`)
 - NUNCA desactives CSRF en `/api/auth/refresh` ni `/api/auth/logout`: usan cookie. Si el frontend da 403, le falta la cabecera `X-XSRF-TOKEN` con el valor de la cookie `XSRF-TOKEN`. (verificador: `AuthFlowIT`)
 - Claims EXACTOS del access token: `iss, sub, aud, iat, exp, jti, roles, sv`. NUNCA añadas email, permisos, customerId ni nada "para ahorrar una consulta". (verificador: `AuthFlowIT`, claims exactos)
 - Autorización por PERMISOS: `@PreAuthorize("hasAuthority('<permiso>')")` en un DECORADOR de `infrastructure` NO final (CGLIB) sobre el caso de uso; domain y application sin Spring. `hasRole('X')` busca `ROLE_X`. (verificador: `AuthorizationArchitectureTest`, `MethodAuthorizationTest`)
-- Propiedad del objeto: el cliente sale del `sub` vía la cuenta y se filtra EN LA CONSULTA (también en el UPDATE); un objeto ajeno responde 404, nunca 403 ni 200. NUNCA un parámetro, cabecera o campo `customerId` en la API pública. `order:read-any` amplía solo lecturas. (verificador: `AuthorizationArchitectureTest`, `SecurityMatrixTest`)
+- Propiedad del objeto: el cliente sale del `sub` vía la cuenta y se filtra EN LA CONSULTA (también en el UPDATE); un objeto ajeno responde 404, nunca 403 ni 200. NUNCA un parámetro, cabecera o campo `customerId` en la API pública. `order:read-any` amplía solo lecturas. (verificador: `AuthorizationArchitectureTest`, `SecurityMatrixIT`)
 - Todo endpoint nuevo añade sus filas a la matriz (anónimo y los cinco roles), incluida la de objeto ajeno; la matriz la cambia una persona. Errores 401/403 como ProblemDetail conservando `WWW-Authenticate`.
 - Versión de sesión: fail closed (Redis caído = 401), sin cache local ni TTL; incrementar versión, revocar familias y publicar la barrera ANTES del commit, en la misma transacción. (verificador: `SessionVersionRevocationIT`)
 
@@ -161,8 +161,20 @@ Spring Security 7 — APIs eliminadas (no las uses aunque aparezcan en ejemplos 
 | `@EnableGlobalMethodSecurity` | `@EnableMethodSecurity` |
 | `NoOpPasswordEncoder`/`{noop}` en producción | `PasswordEncoderFactories.createDelegatingPasswordEncoder()` |
 
+## Tests de integración y migraciones (lab S16, `docs/lab-s16.md`)
+- Todo test que necesite Spring con base de datos, Mongo, Redis o la pasarela extiende `IntegrationTest` SIN configuración propia: ni `@MockitoBean`/`@MockitoSpyBean`, ni `properties`/`@TestPropertySource`, ni `@Import`, ni `@ActiveProfiles`, ni `@DirtiesContext`, ni `@Container`/`@Testcontainers`. Cualquiera de ellas crea otro contexto y otro juego de contenedores. Lo que haga falta para todos va en `IntegrationTest` o `IntegrationTestBeans` (lo decide una persona: son zona protegida). (verificador: umbral de contextos en `verify-quality.sh` y ArchUnit)
+- Si un test "necesita" `@DirtiesContext` o falla solo en la suite, hay estado compartido sin limpiar: encuéntralo y límpialo en el `@BeforeEach` común o dentro del test. NUNCA `@DirtiesContext` ni un contexto aparte.
+- Los tests de integración terminan en `IT` (Failsafe); los `*Test` son unitarios o slices web (Surefire). (verificador: ArchUnit)
+- NUNCA H2 ni bases en memoria: PostgreSQL, MongoDB y Redis reales en Testcontainers, con las imágenes de `TestcontainersConfiguration`. (verificador: ArchUnit, ninguna clase de test importa `org.h2`)
+- Los servicios HTTP externos (pasarela de pagos) se simulan en la frontera con WireMock (`wiremock()` de `IntegrationTest`), nunca con un mock del cliente HTTP ni del puerto: así se prueban el contrato, los códigos de error y los timeouts reales.
+- Los fixtures se insertan DESPUÉS de la limpieza (en el `@BeforeEach` de la subclase o en el test) con parámetros enlazados; nunca con `@Sql`, que se ejecuta antes del `@BeforeEach` de la base y queda borrado.
+- Migraciones: expandir-contraer. Una migración publicada NUNCA se edita, renombra ni borra; cada cambio es una migración nueva. Renombrar o eliminar una columna en uso se hace en varias versiones: añadir la nueva y rellenarla, escribir en las dos, leer de la nueva, y solo después retirar la antigua. NUNCA un `RENAME COLUMN` ni un `DROP COLUMN` de algo que la versión anterior lee. (verificador: `verify-quality.sh`, hooks y el job `schema-compat` de CI)
+- Una migración de datos lleva su test con casos límite (base aislada en el PostgreSQL común, Flyway hasta la versión anterior, datos, migrar, comprobar) y sus invariantes en `src/main/resources/db/checks/` (una consulta por fichero que devuelve las filas que la violan).
+- SQL de `jdbc.*` siempre en text block (`"""…"""`): el formateador parte los literales largos en `"…" + "…"` y Semgrep los bloquea como concatenación.
+- Si Docker no está disponible (aviso al iniciar la sesión), los `*IT` fallan por entorno: no sustituyas contenedores por mocks ni desactives tests; avisa a la persona.
+
 ## Verify (no negociable)
-- Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
+- Antes de dar por terminado el encargo de la persona (no cada casilla de `tasks.md`): `bash ./verify-quality.sh --fast` en verde; resume su resultado (la salida completa queda en el log). Entre tareas de un mismo encargo, ejecuta solo los tests de la tarea.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
 - PROHIBIDO editar `config/`, `.mvn/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `semgrep-rules/`, `.semgrepignore`, `.gitleaks.toml`, `gitleaks-baseline.json`, `.acdc/open-findings.md`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`. Si hace falta, detente y pide permiso a una persona.

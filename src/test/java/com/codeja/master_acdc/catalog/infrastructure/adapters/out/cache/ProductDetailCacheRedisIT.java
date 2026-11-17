@@ -2,6 +2,7 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.catalog.domain.model.Category;
 import com.codeja.master_acdc.catalog.domain.model.ProductDetail;
 import com.codeja.master_acdc.catalog.domain.model.ProductRating;
@@ -20,25 +21,22 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.support.SimpleCacheManager;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers
-class ProductDetailCacheRedisIT {
+/**
+ * Cache de dos niveles montada a mano sobre el Redis común (lab S16): la conexión es propia del
+ * test y se cierra al final; el Redis lo aporta el contexto de {@link IntegrationTest}.
+ */
+class ProductDetailCacheRedisIT extends IntegrationTest {
 
   private static final String SKU = "SKU-REDIS";
-
-  @Container @ServiceConnection
-  static final GenericContainer<?> REDIS =
-      new GenericContainer<>(DockerImageName.parse("redis:7")).withExposedPorts(6379);
 
   private static LettuceConnectionFactory connectionFactory;
   private static RedisTemplate<String, ProductDetail> redisTemplate;
@@ -46,8 +44,8 @@ class ProductDetailCacheRedisIT {
   private static CacheManager cacheManager;
 
   @BeforeAll
-  static void initialize_redis_cache() {
-    connectionFactory = new LettuceConnectionFactory(REDIS.getHost(), REDIS.getMappedPort(6379));
+  static void initialize_redis_cache(@Autowired @Qualifier("redis") GenericContainer<?> redis) {
+    connectionFactory = new LettuceConnectionFactory(redis.getHost(), redis.getMappedPort(6379));
     connectionFactory.afterPropertiesSet();
     connectionFactory.start();
     ProductCacheConfiguration configuration = new ProductCacheConfiguration();

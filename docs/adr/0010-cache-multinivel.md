@@ -8,8 +8,8 @@
 
 `GET /api/products/{sku}` concentra el 70% del tráfico de lectura. Tras el ADR 0009 la ficha se resuelve
 en una operación de MongoDB, pero con tres réplicas y picos de campaña MongoDB llega al 80% de CPU. El
-negocio acepta hasta 30 s de obsolescencia de la ficha, salvo en el checkout (`ordering`), que no lee del
-catálogo ni de ninguna cache.
+negocio acepta hasta 30 s de obsolescencia de la ficha. El checkout (`ordering`) no lee de ninguna
+cache: la confirmación de pago consultará precios actuales directamente en MongoDB por `catalog.api`.
 
 La ficha (`ProductDetail`) incluye `stock`, una copia de `inventory` que `CatalogStockProjectionJob`
 refresca cada minuto; por eso la cache también debe invalidarse cuando cambia el stock.

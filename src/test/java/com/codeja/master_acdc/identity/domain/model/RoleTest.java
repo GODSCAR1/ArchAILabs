@@ -37,14 +37,21 @@ class RoleTest {
     union.addAll(Role.CATALOG_MANAGER.permissions());
     assertThat(union)
         .containsExactlyInAnyOrder(
-            "order:create", "order:read-own", "order:cancel-own", "product:write", "stock:reserve");
-    assertThat(Role.CUSTOMER.permissions()).hasSize(3);
+            "order:create",
+            "order:read-own",
+            "order:cancel-own",
+            "order:confirm-own",
+            "product:write",
+            "stock:reserve");
+    assertThat(Role.CUSTOMER.permissions()).hasSize(4);
     assertThat(Role.CATALOG_MANAGER.permissions()).hasSize(2);
   }
 
   private static Stream<Arguments> permissionTable() {
     return Stream.of(
-        Arguments.of(Role.CUSTOMER, Set.of("order:create", "order:read-own", "order:cancel-own")),
+        Arguments.of(
+            Role.CUSTOMER,
+            Set.of("order:create", "order:read-own", "order:cancel-own", "order:confirm-own")),
         Arguments.of(Role.CATALOG_MANAGER, Set.of("product:write", "stock:reserve")),
         Arguments.of(Role.SUPPORT, Set.of("order:read-any", "order:refund")),
         Arguments.of(

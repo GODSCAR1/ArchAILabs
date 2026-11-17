@@ -9,8 +9,13 @@ import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderStatusExcept
 import com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException;
 import com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
+import com.codeja.master_acdc.ordering.domain.exception.OrderNotConfirmableException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotRefundableException;
+import com.codeja.master_acdc.ordering.domain.exception.PaymentDeclinedException;
+import com.codeja.master_acdc.ordering.domain.exception.PaymentPriceUnavailableException;
+import com.codeja.master_acdc.ordering.domain.exception.PaymentTimeoutException;
+import com.codeja.master_acdc.ordering.domain.exception.PaymentUnavailableException;
 import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
 import java.net.URI;
 import org.springframework.http.HttpStatus;
@@ -23,6 +28,32 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class OrderExceptionHandler {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
+
+  @ExceptionHandler(OrderNotConfirmableException.class)
+  ProblemDetail handleOrderNotConfirmable(OrderNotConfirmableException exception) {
+    return problem(HttpStatus.CONFLICT, "order-not-confirmable", exception.getMessage());
+  }
+
+  @ExceptionHandler(PaymentDeclinedException.class)
+  ProblemDetail handlePaymentDeclined(PaymentDeclinedException exception) {
+    return problem(HttpStatus.PAYMENT_REQUIRED, "payment-declined", exception.getMessage());
+  }
+
+  @ExceptionHandler(PaymentPriceUnavailableException.class)
+  ProblemDetail handlePaymentPriceUnavailable(PaymentPriceUnavailableException exception) {
+    return problem(
+        HttpStatus.UNPROCESSABLE_ENTITY, "payment-price-unavailable", exception.getMessage());
+  }
+
+  @ExceptionHandler(PaymentTimeoutException.class)
+  ProblemDetail handlePaymentTimeout(PaymentTimeoutException exception) {
+    return problem(HttpStatus.GATEWAY_TIMEOUT, "payment-timeout", exception.getMessage());
+  }
+
+  @ExceptionHandler(PaymentUnavailableException.class)
+  ProblemDetail handlePaymentUnavailable(PaymentUnavailableException exception) {
+    return problem(HttpStatus.BAD_GATEWAY, "payment-unavailable", exception.getMessage());
+  }
 
   @ExceptionHandler(InvalidOrderSortException.class)
   ProblemDetail handleInvalidOrderSort(InvalidOrderSortException exception) {

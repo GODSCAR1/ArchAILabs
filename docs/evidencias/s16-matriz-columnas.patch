@@ -1,0 +1,18 @@
+diff --git a/src/test/java/com/codeja/master_acdc/identity/SecurityMatrixIT.java b/src/test/java/com/codeja/master_acdc/identity/SecurityMatrixIT.java
+--- a/src/test/java/com/codeja/master_acdc/identity/SecurityMatrixIT.java
++++ b/src/test/java/com/codeja/master_acdc/identity/SecurityMatrixIT.java
+@@ -291,7 +291,13 @@ class SecurityMatrixIT extends SecurityMatrixSupport {
+ 
+   private void assertCreatedOrder(Snapshot expected, tools.jackson.databind.JsonNode body) {
+     UUID id = UUID.fromString(body.get("id").asString());
+-    expected.orders().add(Map.of("id", id, "customer_id", customer, "status", "PENDING"));
++    var order = new java.util.LinkedHashMap<String, Object>();
++    order.put("id", id);
++    order.put("customer_id", customer);
++    order.put("status", "PENDING");
++    order.put("payment_amount", null);
++    order.put("payment_attempt", 0);
++    expected.orders().add(order);
+     expected.lines().add(Map.of("order_id", id, "product_id", product, "quantity", 2));
+     change(expected.stock(), "product_id", product, "available", 8);
+     assertOrderBody(body, id, "PENDING");

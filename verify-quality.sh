@@ -77,6 +77,15 @@ while IFS= read -r guard; do
   fi
 done < scripts/protected-tests.txt
 (( GUARDS_MISSING == 0 )) || exit 1
+echo "▶ Migraciones publicadas (lab S16: expandir-contraer)"
+# Flyway guarda el checksum de cada migración aplicada: una ya publicada en main no se edita, renombra ni borra.
+if git rev-parse -q --verify origin/main >/dev/null; then
+  CHANGED_MIGRATIONS=$(git diff --name-only --diff-filter=MDR origin/main -- src/main/resources/db/migration/ 2>/dev/null || true)
+  [[ -z "$CHANGED_MIGRATIONS" ]] \
+    || { echo "AC/DC: se ha modificado, renombrado o borrado una migración ya publicada en main. Restáurala (git restore --source origin/main <fichero>) y expresa el cambio en una migración nueva (expandir-contraer):" >&2; echo "$CHANGED_MIGRATIONS" >&2; exit 1; }
+else
+  echo "  (sin origin/main: no se comprueba)"
+fi
 echo "▶ Capa 2: SAST y secretos (lab S13, docs/lab-s13.md)"
 # Segunda capa: no depende de que los hooks del agente hayan funcionado.
 if [[ "${GITHUB_ACTIONS:-}" == "true" && "${ACDC_LAYER2_IN_OWN_JOB:-}" == "true" ]]; then
@@ -170,7 +179,8 @@ awk -v m="${COVERAGE_MIN:-0}" -v f="$COVERAGE_FLOOR" 'BEGIN { exit !(m + 0 >= f 
 if grep -qs 'acdc\.coverage' <<<"${MAVEN_OPTS:-} ${MAVEN_ARGS:-} $(cat .mvn/maven.config 2>/dev/null)"; then
   echo "AC/DC: MAVEN_OPTS, MAVEN_ARGS o .mvn/maven.config sobrescriben acdc.coverage.*. El umbral de cobertura no se cambia por entorno." >&2; exit 1
 fi
-COVERAGE_HINT='AC/DC: fallan los tests o la cobertura de ramas de identity. Si es la cobertura ("Rule violated … branches covered ratio"), escribe tests que verifiquen las ramas de regla de negocio (target/site/jacoco/index.html). El umbral (pom.xml) no se baja y un test sin aserciones no cuenta.'
+CTX_STATS=(-Dlogging.level.org.springframework.test.context.cache=DEBUG -Dmaven.test.redirectTestOutputToFile=true)
+COVERAGE_HINT='AC/DC: fallan los tests o la cobertura de ramas de identity (salida de cada IT en target/failsafe-reports/*-output.txt). Si es la cobertura ("Rule violated … branches covered ratio"), escribe tests que verifiquen las ramas de regla de negocio (target/site/jacoco/index.html). El umbral (pom.xml) no se baja y un test sin aserciones no cuenta.'
 case "${1:---fast}" in
   --fast)
     ./mvnw -q test
@@ -178,15 +188,27 @@ case "${1:---fast}" in
     # Lab S14: el check de JaCoCo va al final de este verify. SessionVersionRedisIT entra porque la
     # carrera de reconstrucción en Redis (SETNX) solo se prueba con Redis real; comparte el contexto
     # de AuthFlowIT (IdentityIntegrationSupport), así que solo suma el tiempo de sus tests.
-    ./mvnw -q -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=AuthFlowIT,SessionVersionRedisIT "$COVERAGE_GATE" verify \
+    # Lab S16: los IT que antes se llamaban *Test (matriz, autorización por método y número de
+    # consultas) siguen aquí: aportan la cobertura de ramas de identity y comparten el mismo contexto.
+    # Lab S16: SchemaIT (todas las migraciones desde cero + validación JPA) también en el loop rápido.
+    ./mvnw -q -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=AuthFlowIT,SessionVersionRedisIT,SecurityMatrixIT,ApiSecurityIT,MethodAuthorizationIT,AdminUsersQueryCountIT,SessionVersionQueryCountIT,OrderAuthorizationQueryCountIT,SchemaIT "${CTX_STATS[@]}" "$COVERAGE_GATE" verify \
       || { echo "$COVERAGE_HINT" >&2; exit 1; } ;;
-  --full) ./mvnw -q "$COVERAGE_GATE" verify || { echo "$COVERAGE_HINT" >&2; exit 1; } ;;
+  --full) ./mvnw -q "${CTX_STATS[@]}" "$COVERAGE_GATE" verify || { echo "$COVERAGE_HINT" >&2; exit 1; } ;;
 esac
+echo "▶ Contextos de Spring en los IT (lab S16)"
+# La cache de contextos publica sus estadísticas en DEBUG; la salida de cada clase va a failsafe-reports/*-output.txt.
+MAX_IT_CONTEXTS=1
+IT_CONTEXTS=$(grep -hoE 'missCount = [0-9]+' target/failsafe-reports/*-output.txt 2>/dev/null | grep -oE '[0-9]+$' | sort -n | tail -1 || true)
+[[ -n "$IT_CONTEXTS" ]] \
+  || { echo "AC/DC: no encuentro las estadísticas de la cache de contextos en target/failsafe-reports/*-output.txt; ¿se ejecutaron los IT?" >&2; exit 1; }
+(( IT_CONTEXTS <= MAX_IT_CONTEXTS )) \
+  || { echo "AC/DC: los IT crearon $IT_CONTEXTS contextos de Spring (máximo $MAX_IT_CONTEXTS). Alguna clase añade configuración propia (@MockitoBean, properties, @Import, @ActiveProfiles, @TestPropertySource o @DirtiesContext): llévala a IntegrationTest o quítala; no subas el máximo." >&2; exit 1; }
+echo "  $IT_CONTEXTS contexto(s) de integración"
 # La matriz de seguridad debe haberse ejecutado entera (anónimo + 5 roles por endpoint).
-MATRIX_REPORT=target/surefire-reports/TEST-com.codeja.master_acdc.identity.SecurityMatrixTest.xml
+MATRIX_REPORT=target/failsafe-reports/TEST-com.codeja.master_acdc.identity.SecurityMatrixIT.xml
 MATRIX_RUN=$(grep -o 'tests="[0-9]*"' "$MATRIX_REPORT" 2>/dev/null | head -1 | tr -dc '0-9')
 (( ${MATRIX_RUN:-0} >= 90 )) \
-  || { echo "AC/DC: SecurityMatrixTest no se ejecutó completo (${MATRIX_RUN:-0} casos, mínimo 90). No la excluyas ni la recortes." >&2; exit 1; }
+  || { echo "AC/DC: SecurityMatrixIT no se ejecutó completo (${MATRIX_RUN:-0} casos, mínimo 90). No la excluyas ni la recortes." >&2; exit 1; }
 echo "▶ Capa 3: mutation testing de pricing (lab S15, docs/lab-s15.md)"
 # --full siempre; --fast solo si la rama toca pricing (PIT tarda < 1 min con targetTests, pero no se paga en cada turno).
 PIT_DIRS=(src/main/java/com/codeja/master_acdc/pricing src/test/java/com/codeja/master_acdc/pricing)

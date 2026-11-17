@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisCallback;
@@ -37,12 +38,16 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 
+@Tag("slow")
 class SessionVersionLatencyIT extends IdentityIntegrationSupport {
   @Autowired JwtDecoder decoder;
   @Autowired AccessTokenIssuer issuer;
   @Autowired JdbcTemplate jdbc;
   @Autowired StringRedisTemplate redis;
-  @Autowired GenericContainer<?> identityRedis;
+
+  @Autowired
+  @org.springframework.beans.factory.annotation.Qualifier("redis") GenericContainer<?> identityRedis;
+
   @Autowired PostgreSQLContainer<?> identityPostgres;
   @Autowired JWKSource<SecurityContext> source;
   @Autowired JwtSettings settings;

@@ -2,37 +2,27 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.catalog.application.ProductSearchService;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder;
 import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.in.web.ProductController;
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.bson.UuidRepresentation;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
-import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers
-class CatalogSearchMongoRepositoryAdapterIT {
+class CatalogSearchMongoRepositoryAdapterIT extends IntegrationTest {
 
   private static final UUID CATEGORY_ID = UUID.fromString("20000000-0000-0000-0000-000000000001");
   private static final UUID LAPTOP_ID = UUID.fromString("20000000-0000-0000-0000-000000000010");
@@ -44,33 +34,11 @@ class CatalogSearchMongoRepositoryAdapterIT {
   private static final UUID ALPHA_ACCENT_ID =
       UUID.fromString("20000000-0000-0000-0000-000000000050");
 
-  @Container
-  static final MongoDBContainer MONGO = new MongoDBContainer(DockerImageName.parse("mongo:7.0"));
-
-  private static MongoClient client;
-  private static MongoTemplate template;
+  @Autowired private MongoTemplate template;
   private ProductSearchMongoRepositoryAdapter adapter;
-
-  @BeforeAll
-  static void initialize_mongo_template() {
-    client =
-        MongoClients.create(
-            MongoClientSettings.builder()
-                .applyConnectionString(new ConnectionString(MONGO.getReplicaSetUrl()))
-                .uuidRepresentation(UuidRepresentation.STANDARD)
-                .build());
-    template = new MongoTemplate(client, "catalog_search_test");
-  }
-
-  @AfterAll
-  static void close_client() {
-    client.close();
-  }
 
   @BeforeEach
   void initialize_adapter_and_products() {
-    template.getDb().drop();
-    new CatalogIndexInitializer(template).initialize();
     adapter = new ProductSearchMongoRepositoryAdapter(template);
     template.insertAll(products());
   }
