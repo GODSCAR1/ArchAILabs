@@ -110,3 +110,23 @@ Más la matriz de seguridad («Matriz de confirmación» y «Lectura global no p
 - **google-java-format convierte un SQL literal largo en `"…" + "…"`** y `shop-sql-concatenation` lo bloquea: SQL de `jdbc.*` siempre en text block.
 - **PMD `CloseResource`** con `HttpClient` del JDK (`AutoCloseable` desde Java 21) creado dentro del método del bean: pasa a ser un bean propio que Spring cierra.
 - Mejoras anotadas, no bloqueantes: el relay procesa un evento por ciclo; `PaymentTransactions` es una clase anónima dentro de la configuración.
+
+## 4. Migraciones
+
+Change de OpenSpec `expand-customer-name` (commits `73b096b` propuesta, `4ab2d06` implementación). El repo no tenía `full_name`; el caso equivalente es `customers.name VARCHAR(120) NOT NULL` (V4), que se separa en `first_name` / `last_name` con expandir-contraer.
+
+| Pieza | Qué hace |
+|---|---|
+| `V11__expand_customer_name.sql` (expandir) | Prevalida: si hay nombres vacíos o solo con espacios, `RAISE EXCEPTION` con el recuento (sin datos personales) y Flyway + PostgreSQL revierten DDL y datos. Si no, añade las columnas anulables y rellena: espacios U+0020 recortados y colapsados, primera palabra / resto, `last_name` NULL con una sola palabra. `name` no se toca |
+| `CustomerName` (dominio de ordering) | La misma regla en Java para la doble escritura del registro (la API sigue recibiendo un único nombre) |
+| `db/checks/*.sql` | Cuatro invariantes, una consulta por fichero que devuelve los ids que la violan: `first_name` presente; `concat_ws` = `name` normalizado; componentes sin espacios en los extremos; `last_name` NULL ⇔ una palabra |
+| `SchemaIT` (nivel 1) | Base aislada en el PostgreSQL común: todas las migraciones desde cero, ninguna pendiente ni fallida, entidades JPA validadas contra ese esquema |
+| `CustomerNameMigrationIT` (nivel 2) | Base aislada hasta V10, casos límite (una palabra, varias, espacios en extremos y repetidos, tildes, ñ, guion, apóstrofo, tabulación, 120 caracteres), V11, resultados y checks a cero; cada check detecta su infracción; con un nombre en blanco la migración falla, el historial sigue en V10, nada cambia, y tras corregir la fila el reintento pasa |
+| `CustomerNameRegistrationIT` | Un registro nuevo cumple los mismos checks (doble escritura) |
+| CI `schema-compat` (nivel 3, cambio humano) | En cada PR: código de la rama base + migraciones de la rama, y sus tests de persistencia (`*RepositoryAdapterIT`, `*QueryAdapterIT`, `*PersistenceIT`, `CustomerRegistrationFacadeIT`) con Failsafe |
+
+**Contraer queda para una versión posterior** (design.md del change): cuando no quede ningún escritor que solo rellene `name`, cambiar las lecturas a los componentes, repetir el backfill si los checks lo piden y, en otra versión, dejar de escribir y borrar `name`.
+
+**Decisiones**: regla de partición "primera palabra / resto" (decisión de negocio; parte bien los dos apellidos habituales); ante datos históricos inválidos, fallar sin valores de sustitución; los tests de migración usan bases aisladas del servidor común, no contenedores propios (la propuesta inicial los pedía y se corrigió con `/opsx-update`).
+
+**Hallazgo**: con la línea de Verify de `AGENTS.md` ya aclarada (paso 3), OpenCode completó las 10 tareas en un solo encargo, sin paradas.
