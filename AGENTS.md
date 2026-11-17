@@ -75,7 +75,7 @@ Tras cada edición de un `.java` se compila y se analiza la clase: recibes archi
   columnas manipulables y mantienen la consulta parametrizada. (pendiente: Semgrep en S12)
 - El `Sort` solo acepta una lista blanca de campos y SIEMPRE añade `id` como último criterio.
   Motivo: evita ordenar por campos arbitrarios y hace estable la paginación. (verificador:
-  `ProductControllerTest` para la lista blanca y `ProductSearchPaginationMongoTest` para el `id` final)
+  `ProductControllerTest` para la lista blanca y `ProductSearchPaginationMongoIT` para el `id` final)
 - Las transacciones se abren con `TransactionTemplate` en `infrastructure/config`; NUNCA
   `@Transactional` en `domain` ni `application`. Motivo: mantiene la frontera hexagonal y evita
   la auto-invocación: un método privado anotado no abre una transacción. Si se pide
@@ -109,7 +109,7 @@ Lee los dos documentos antes de tocar el catálogo: el modelo sale de los patron
 - Consultas y agregaciones con la clase de entrada (`CatalogProduct.class`, `CatalogReview.class`) y proyecciones si solo necesitas campos; NUNCA el nombre de la colección como texto ni `Document.class`. Motivo: sin la clase, Spring no mapea `category.id` → `category._id` ni convierte tipos, y una agregación sobre el nombre devuelve un único grupo con `_id: null`. (verificador: `verify-quality.sh`)
 - `CatalogSchemaValidator` (validador `$jsonSchema`) es zona protegida: NUNCA lo desactives, relajes ni sortees "porque da problemas"; si rechaza un documento, el documento está mal o el modelo debe cambiar con un ADR. (verificador: `protect-verify.sh`, plugin de verificación y `verify-quality.sh`)
 - `availableStock` es una copia de `stock.available` (dueño: inventory) que refresca `CatalogStockProjectionJob`; NUNCA reserves ni valides stock contra el documento del catálogo.
-- La ficha se resuelve en 1 operación y el buscador en 2 (página + count); el número de operaciones no depende de variantes, atributos ni reseñas. (verificador: `ProductDetailQueryCountMongoTest` y `CatalogSearchMongoQueryCountTest`)
+- La ficha se resuelve en 1 operación y el buscador en 2 (página + count); el número de operaciones no depende de variantes, atributos ni reseñas. (verificador: `ProductDetailQueryCountMongoIT` y `CatalogSearchMongoQueryCountIT`)
 
 ## Cache — ADR `docs/adr/0010-cache-multinivel.md` y tabla `docs/caching.md`
 Lee los dos antes de tocar una cache.

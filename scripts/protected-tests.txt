@@ -11,9 +11,9 @@ src/test/java/com/codeja/master_acdc/arch/DomainSignatureRulesTest.java
 # Lab S10: guardianes Mongo (sustituyen a los JPA cuando catalog.store=mongo)
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/ProductEditingMongoRepositoryAdapterTest.java
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/CatalogProductEditingMongoIT.java
-src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogSearchMongoQueryCountTest.java
-src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/ProductSearchPaginationMongoTest.java
-src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/ProductDetailQueryCountMongoTest.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogSearchMongoQueryCountIT.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/ProductSearchPaginationMongoIT.java
+src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/ProductDetailQueryCountMongoIT.java
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogMongoStructureIT.java
 # Lab S11: guardianes de la cache multinivel
 src/test/java/com/codeja/master_acdc/arch/CatalogMongoArchitectureTest.java

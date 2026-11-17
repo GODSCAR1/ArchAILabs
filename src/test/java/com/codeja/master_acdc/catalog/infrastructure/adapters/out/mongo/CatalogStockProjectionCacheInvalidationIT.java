@@ -7,9 +7,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.IntegrationTest;
+import com.codeja.master_acdc.IntegrationTestBeans;
 import com.codeja.master_acdc.catalog.application.port.CreateProductUseCase;
 import com.codeja.master_acdc.catalog.domain.port.ProductChangedPublisher;
-import com.codeja.master_acdc.catalog.infrastructure.config.CatalogMongoTestConfiguration;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.UUID;
@@ -19,11 +20,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.cache.CacheManager;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -32,37 +29,11 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
-import org.testcontainers.utility.DockerImageName;
 
-@SpringBootTest(
-    properties = {
-      "catalog.store=mongo",
-      "catalog.cache.enabled=true",
-      "catalog.stock-sync.enabled=false",
-      "cache.instance-id=stock-cache-it"
-    })
-@AutoConfigureMockMvc
-@Testcontainers
-@Import(CatalogMongoTestConfiguration.class)
-class CatalogStockProjectionCacheInvalidationIT {
+class CatalogStockProjectionCacheInvalidationIT extends IntegrationTest {
 
   private static final String CHANGED_SKU = "SKU-STOCK-CHANGED";
   private static final String STABLE_SKU = "SKU-STOCK-STABLE";
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
-
-  @Container @ServiceConnection
-  static final MongoDBContainer MONGO = new MongoDBContainer(DockerImageName.parse("mongo:7.0"));
-
-  @Container @ServiceConnection
-  static final GenericContainer<?> REDIS =
-      new GenericContainer<>(DockerImageName.parse("redis:7")).withExposedPorts(6379);
 
   @Autowired private CacheManager cacheManager;
   @Autowired private CreateProductUseCase createProductUseCase;
@@ -101,17 +72,17 @@ class CatalogStockProjectionCacheInvalidationIT {
     jdbcTemplate.update("insert into stock (product_id, available) values (?, ?)", stable.id(), 6);
     getStock(CHANGED_SKU, 2);
     getStock(STABLE_SKU, 6);
-    CatalogMongoTestConfiguration.resetReadCommands();
+    IntegrationTestBeans.resetReadCommands();
 
     new CatalogStockProjectionJob(
             namedParameterJdbcTemplate, mongoTemplate, 10, productChangedPublisher)
         .synchronizeStock();
 
-    assertThat(CatalogMongoTestConfiguration.readCommands()).isEqualTo(1);
+    assertThat(IntegrationTestBeans.readCommands()).isEqualTo(1);
     getStock(CHANGED_SKU, 5);
-    assertThat(CatalogMongoTestConfiguration.readCommands()).isEqualTo(2);
+    assertThat(IntegrationTestBeans.readCommands()).isEqualTo(2);
     getStock(STABLE_SKU, 6);
-    assertThat(CatalogMongoTestConfiguration.readCommands()).isEqualTo(2);
+    assertThat(IntegrationTestBeans.readCommands()).isEqualTo(2);
   }
 
   private void setProjectedStock(UUID productId, int stock) {
