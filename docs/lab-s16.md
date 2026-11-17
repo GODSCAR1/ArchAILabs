@@ -182,7 +182,7 @@ En `.github/workflows/acdc.yml` (zona protegida, cambio humano), job `quality`:
 | Tests de integración (Failsafe) | 294 | **492** (los `*Test` que levantaban contexto pasan a `*IT`, más los nuevos de los pasos 3 y 4); 493 tras el test del bloqueo del paso 9 |
 | Contextos de Spring en los IT | 23 | **1** (verificado por `verify-quality.sh`; Surefire mantiene 7 contextos pequeños de `@WebMvcTest`/`@SpringJUnitConfig`) |
 | Contenedores arrancados por ejecución | 62 | **4** (+ Ryuk) |
-| Tiempo de la suite en CI (job `quality` en `main`) | 7 min 53 s (merge del S15) | **pendiente**: se toma del merge del PR de archivo. Los 5 min 14 s anotados antes venían de una ejecución fallida (carrera en `OrderCancellationIT`, paso 9) y no valen |
+| Tiempo de la suite en CI (job `quality` en `main`) | 7 min 53 s (merge del S15) | **6 min 37 s** (merge del PR #28, run 44196940775), con 493 IT frente a 294. Los 5 min 14 s anotados antes venían de una ejecución fallida (carrera en `OrderCancellationIT`, paso 9) y no valen; en el PR #28 el mismo job tardó 5 min 0 s |
 | Tiempo local (`verify` sin Surefire) | 4 min 11 s sin reutilización | **2 min 09 s** con reutilización y `-DexcludedGroups=slow` |
 | Clases con H2 / `@MockitoBean` fuera de `@WebMvcTest` / `@DynamicPropertySource` propio | 0 / 1 / 0 | **0 / 0 / 0** |
 
