@@ -59,10 +59,30 @@ jobs:
           node-version: 22
       - run: npm install -g @fission-ai/openspec@${{ env.OPENSPEC_VERSION }}
       - run: chmod +x mvnw      # el bit de ejecución no viaja desde Windows
+      # Lab S16: las imágenes se descargan antes, para que su descarga no cuente como tiempo de test.
+      # La lista sale de TestcontainersConfiguration: una sola fuente de verdad.
+      - name: Descargar las imágenes de Testcontainers
+        run: |
+          grep -oE '"(postgres|mongo|redis|wiremock/wiremock):[^"]+"' \
+            src/test/java/com/codeja/master_acdc/TestcontainersConfiguration.java \
+            | tr -d '"' | sort -u | xargs -n1 docker pull -q
+      - run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main   # lab S16: verify-quality.sh compara las migraciones publicadas con main
       - run: bash ./verify-quality.sh --full   # unitarios + IT con Testcontainers (Docker del runner)
         env:
           ACDC_LAYER2_IN_OWN_JOB: "true"        # la capa 2 corre en security-layer-2 (versiones fijadas + SARIF)
           ACDC_LAYER3_IN_OWN_JOB: "true"        # la capa 3 corre en mutation-testing (informe de PIT como artefacto)
+          TESTCONTAINERS_REUSE_ENABLE: "false"  # lab S16: en CI cada ejecución arranca contenedores limpios
+          MAVEN_ARGS: "-Dmaven.test.redirectTestOutputToFile=true"   # salida (y logs de contenedores) por clase
+          LOGGING_LEVEL_CONTAINER: "INFO"       # logs completos de los contenedores en CI (en local, WARN)
+      - name: Informes de tests y logs de contenedores
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: integration-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+          retention-days: 7
 
   schema-compat:
     # Lab S16 (paso 4, expandir-contraer): el código de la rama base debe seguir funcionando con el esquema de la

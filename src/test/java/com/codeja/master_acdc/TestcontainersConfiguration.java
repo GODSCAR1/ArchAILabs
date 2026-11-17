@@ -1,5 +1,6 @@
 package com.codeja.master_acdc;
 
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -7,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.context.DynamicPropertyRegistrar;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.mongodb.MongoDBContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -16,13 +18,17 @@ public class TestcontainersConfiguration {
   @Bean
   @ServiceConnection
   PostgreSQLContainer<?> postgres() {
-    return new PostgreSQLContainer<>("postgres:17-alpine").withReuse(true);
+    return new PostgreSQLContainer<>("postgres:17-alpine")
+        .withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger("container.postgres")))
+        .withReuse(true);
   }
 
   @Bean
   @ServiceConnection
   MongoDBContainer mongoContainer() {
-    return new MongoDBContainer(DockerImageName.parse("mongo:8")).withReuse(true);
+    return new MongoDBContainer(DockerImageName.parse("mongo:8"))
+        .withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger("container.mongo")))
+        .withReuse(true);
   }
 
   @Bean
@@ -30,6 +36,7 @@ public class TestcontainersConfiguration {
   GenericContainer<?> redis() {
     return new GenericContainer<>(DockerImageName.parse("redis:8-alpine"))
         .withExposedPorts(6379)
+        .withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger("container.redis")))
         .withReuse(true);
   }
 
@@ -39,6 +46,7 @@ public class TestcontainersConfiguration {
         .withExposedPorts(8080)
         .withCopyFileToContainer(
             MountableFile.forClasspathResource("wiremock/mappings"), "/home/wiremock/mappings")
+        .withLogConsumer(new Slf4jLogConsumer(LoggerFactory.getLogger("container.wiremock")))
         .withReuse(true);
   }
 

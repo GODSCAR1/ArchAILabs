@@ -60,12 +60,18 @@ export const VerifyQuality: Plugin = async ({ client, $, directory }) => {
           if (/(^|[^\w.-])scripts[\\/]/.test(cmd)) throw new Error("AC/DC: scripts/ es zona protegida (gates de Verify: mutation-gate.sh, pit-accepted-survivors.txt, tests guardianes, supresiones). No se edita ni se sortea desde la shell: explica el cambio a la persona y detente.")
           if (/(^|[^\w.-])(pom\.xml|verify-quality\.sh|lefthook\.yml)|\.mvn[\\/]/.test(cmd)) throw new Error("AC/DC: pom.xml, verify-quality.sh, lefthook.yml y .mvn/ son zona protegida (incluido el umbral de JaCoCo). No se editan ni se sortean desde la shell: explica el cambio a la persona y detente.")
           if (/CacheTtlPolicy|ProductDetailCache\.java/.test(cmd)) throw new Error("AC/DC: los TTL y la cache compuesta están en la zona protegida (ADR 0010, docs/caching.md). No se editan ni se sortean: explica el cambio a la persona y detente.")
+          // Lab S16: las migraciones no se escriben desde la shell (las nuevas, con la herramienta de edición).
+          if (/db[\\/]+migration/.test(cmd)) throw new Error("AC/DC: las migraciones de Flyway no se escriben, mueven ni borran desde la shell. Crea las nuevas con la herramienta de edición; las existentes no se tocan (expandir-contraer).")
         }
         return
       }
       for (const raw of editedPaths(input.tool, output.args)) {
         const rel = path.relative(directory, path.resolve(directory, raw)).replace(/\\/g, "/")
         if (guards.includes(rel)) throw new Error(guardMessage(rel))
+        // Lab S16: una migración que ya existe no se edita (Flyway guarda su checksum); el cambio va en una nueva.
+        if (rel.startsWith("src/main/resources/db/migration/") && fs.existsSync(path.join(directory, rel))) {
+          throw new Error(`AC/DC: ${rel} es una migración existente: no se edita. Expresa el cambio en una migración nueva (expandir-contraer: añadir, migrar datos y, en otra versión, retirar).`)
+        }
         if (PROTECTED.test(rel)) {
           throw new Error(`AC/DC: ${rel} está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente.`)
         }

@@ -161,6 +161,18 @@ Spring Security 7 — APIs eliminadas (no las uses aunque aparezcan en ejemplos 
 | `@EnableGlobalMethodSecurity` | `@EnableMethodSecurity` |
 | `NoOpPasswordEncoder`/`{noop}` en producción | `PasswordEncoderFactories.createDelegatingPasswordEncoder()` |
 
+## Tests de integración y migraciones (lab S16, `docs/lab-s16.md`)
+- Todo test que necesite Spring con base de datos, Mongo, Redis o la pasarela extiende `IntegrationTest` SIN configuración propia: ni `@MockitoBean`/`@MockitoSpyBean`, ni `properties`/`@TestPropertySource`, ni `@Import`, ni `@ActiveProfiles`, ni `@DirtiesContext`, ni `@Container`/`@Testcontainers`. Cualquiera de ellas crea otro contexto y otro juego de contenedores. Lo que haga falta para todos va en `IntegrationTest` o `IntegrationTestBeans` (lo decide una persona: son zona protegida). (verificador: umbral de contextos en `verify-quality.sh` y ArchUnit)
+- Si un test "necesita" `@DirtiesContext` o falla solo en la suite, hay estado compartido sin limpiar: encuéntralo y límpialo en el `@BeforeEach` común o dentro del test. NUNCA `@DirtiesContext` ni un contexto aparte.
+- Los tests de integración terminan en `IT` (Failsafe); los `*Test` son unitarios o slices web (Surefire). (verificador: ArchUnit)
+- NUNCA H2 ni bases en memoria: PostgreSQL, MongoDB y Redis reales en Testcontainers, con las imágenes de `TestcontainersConfiguration`. (verificador: ArchUnit, ninguna clase de test importa `org.h2`)
+- Los servicios HTTP externos (pasarela de pagos) se simulan en la frontera con WireMock (`wiremock()` de `IntegrationTest`), nunca con un mock del cliente HTTP ni del puerto: así se prueban el contrato, los códigos de error y los timeouts reales.
+- Los fixtures se insertan DESPUÉS de la limpieza (en el `@BeforeEach` de la subclase o en el test) con parámetros enlazados; nunca con `@Sql`, que se ejecuta antes del `@BeforeEach` de la base y queda borrado.
+- Migraciones: expandir-contraer. Una migración publicada NUNCA se edita, renombra ni borra; cada cambio es una migración nueva. Renombrar o eliminar una columna en uso se hace en varias versiones: añadir la nueva y rellenarla, escribir en las dos, leer de la nueva, y solo después retirar la antigua. NUNCA un `RENAME COLUMN` ni un `DROP COLUMN` de algo que la versión anterior lee. (verificador: `verify-quality.sh`, hooks y el job `schema-compat` de CI)
+- Una migración de datos lleva su test con casos límite (base aislada en el PostgreSQL común, Flyway hasta la versión anterior, datos, migrar, comprobar) y sus invariantes en `src/main/resources/db/checks/` (una consulta por fichero que devuelve las filas que la violan).
+- SQL de `jdbc.*` siempre en text block (`"""…"""`): el formateador parte los literales largos en `"…" + "…"` y Semgrep los bloquea como concatenación.
+- Si Docker no está disponible (aviso al iniciar la sesión), los `*IT` fallan por entorno: no sustituyas contenedores por mocks ni desactives tests; avisa a la persona.
+
 ## Verify (no negociable)
 - Antes de dar por terminado el encargo de la persona (no cada casilla de `tasks.md`): `bash ./verify-quality.sh --fast` en verde; resume su resultado (la salida completa queda en el log). Entre tareas de un mismo encargo, ejecuta solo los tests de la tarea.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).

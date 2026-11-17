@@ -28,3 +28,8 @@ src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/C
 src/test/java/com/codeja/master_acdc/identity/SecurityMatrixIT.java
 src/test/java/com/codeja/master_acdc/identity/SecurityMatrixSupport.java
 src/test/java/com/codeja/master_acdc/arch/AuthorizationArchitectureTest.java
+# Lab S16: infraestructura común de integración (un contexto, cuatro contenedores, limpieza de los almacenes).
+src/test/java/com/codeja/master_acdc/TestcontainersConfiguration.java
+src/test/java/com/codeja/master_acdc/IntegrationTest.java
+src/test/java/com/codeja/master_acdc/IntegrationTestInfrastructureIT.java
+src/test/java/com/codeja/master_acdc/SchemaIT.java
