@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.ordering.infrastructure.config;
 
+import com.codeja.master_acdc.catalog.api.CatalogPrices;
 import com.codeja.master_acdc.inventory.api.InventoryFacade;
 import com.codeja.master_acdc.ordering.api.CurrentOrderActor;
 import com.codeja.master_acdc.ordering.application.CancelOrderService;
@@ -12,7 +13,10 @@ import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
 import com.codeja.master_acdc.ordering.application.port.RefundOrderUseCase;
+import com.codeja.master_acdc.ordering.domain.port.OrderAmountCalculator;
 import com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher;
+import com.codeja.master_acdc.ordering.domain.port.OrderConfirmationOutbox;
+import com.codeja.master_acdc.ordering.domain.port.OrderPaymentRepository;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
 import com.codeja.master_acdc.ordering.domain.port.StockReserver;
@@ -22,20 +26,42 @@ import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.Authorized
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedListOrdersByStatusUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedRefundOrderUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderActorResolver;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.out.catalog.CatalogOrderAmountCalculator;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.SpringOrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.OrderCancelledListener;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.StockReserverAdapter;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderConfirmationOutboxJdbcAdapter;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaRepository;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderPaymentJdbcAdapter;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderRepositoryAdapter;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryQueryAdapter;
+import com.codeja.master_acdc.pricing.domain.model.OrderPricing;
+import java.math.BigDecimal;
+import java.time.Clock;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
 public class OrderingConfiguration {
+  @Bean
+  public OrderConfirmationOutbox orderConfirmationOutbox(JdbcTemplate jdbc) {
+    return new OrderConfirmationOutboxJdbcAdapter(jdbc);
+  }
+
+  @Bean
+  public OrderPaymentRepository orderPaymentRepository(JdbcTemplate jdbc) {
+    return new OrderPaymentJdbcAdapter(jdbc);
+  }
+
+  @Bean
+  public OrderAmountCalculator orderAmountCalculator(CatalogPrices prices, Clock clock) {
+    return new CatalogOrderAmountCalculator(prices, new OrderPricing(clock, BigDecimal.ZERO));
+  }
+
   @Bean
   public RefundOrderUseCase refundOrderUseCase(
       OrderRepository repository, PlatformTransactionManager manager, OrderActorResolver actor) {

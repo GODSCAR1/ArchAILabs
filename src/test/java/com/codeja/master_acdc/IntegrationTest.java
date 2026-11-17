@@ -10,8 +10,10 @@ import com.codeja.master_acdc.inventory.api.InventoryFacade;
 import com.codeja.master_acdc.inventory.domain.port.StockReservationRepository;
 import com.codeja.master_acdc.ordering.api.CurrentOrderActor;
 import com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher;
+import com.codeja.master_acdc.ordering.domain.port.OrderConfirmationOutbox;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
+import com.codeja.master_acdc.ordering.domain.port.PaymentGateway;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import java.time.Clock;
 import org.bson.Document;
@@ -60,6 +62,8 @@ public abstract class IntegrationTest {
   @MockitoSpyBean protected OrderRepository spiedOrders;
   @MockitoSpyBean protected OrderSummaryQuery spiedOrderSummaries;
   @MockitoSpyBean protected OrderCancelledPublisher spiedCancellations;
+  @MockitoSpyBean protected OrderConfirmationOutbox spiedConfirmations;
+  @MockitoSpyBean protected PaymentGateway spiedPaymentGateway;
   @MockitoSpyBean protected InventoryFacade spiedInventory;
 
   @Autowired private JdbcTemplate cleanupJdbc;

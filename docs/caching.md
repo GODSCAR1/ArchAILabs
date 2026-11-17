@@ -27,6 +27,9 @@ Fuente única de verdad de las caches. **Toda cache nueva añade aquí su fila a
 - SKU inexistente: **no se cachea** (`disableCachingNullValues`); el 404 (`ProductNotFoundException`) se
   lanza sin escribir en la cache. Por eso crear un producto no necesita invalidación.
 - Las reseñas paginadas (`ProductReviewsUseCase`) **no** se cachean.
+- El relay de confirmaciones vuelve a invalidar los SKU proyectados incluso si el valor no cambió,
+  para recuperar una invalidación interrumpida. El relay y el job pueden escribir fuera de orden:
+  un evento posterior o la reconciliación corrigen el stock temporalmente desfasado.
 
 ## Justificación de los TTL
 

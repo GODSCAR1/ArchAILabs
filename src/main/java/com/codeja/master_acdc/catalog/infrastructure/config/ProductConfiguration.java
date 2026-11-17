@@ -1,5 +1,7 @@
 package com.codeja.master_acdc.catalog.infrastructure.config;
 
+import com.codeja.master_acdc.catalog.api.CatalogPrices;
+import com.codeja.master_acdc.catalog.api.CatalogStockProjection;
 import com.codeja.master_acdc.catalog.application.CreateProductService;
 import com.codeja.master_acdc.catalog.application.EditProductService;
 import com.codeja.master_acdc.catalog.application.ProductDetailService;
@@ -20,7 +22,9 @@ import com.codeja.master_acdc.catalog.infrastructure.adapters.out.cache.CachedPr
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.events.SpringProductChangedPublisher;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogDetailMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogIndexInitializer;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogPricesMongoAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogSchemaValidator;
+import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogStockProjectionJob;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductEditingMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductMongoRepositoryAdapter;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.ProductSearchMongoRepositoryAdapter;
@@ -28,11 +32,24 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Configuration
 public class ProductConfiguration {
+
+  @Bean
+  public CatalogStockProjection catalogStockProjection(
+      NamedParameterJdbcTemplate jdbc, MongoTemplate mongo, ProductChangedPublisher publisher) {
+    var projection = new CatalogStockProjectionJob(jdbc, mongo, 100, publisher);
+    return projection::synchronizeIds;
+  }
+
+  @Bean
+  public CatalogPrices catalogPrices(MongoTemplate mongoTemplate) {
+    return new CatalogPricesMongoAdapter(mongoTemplate);
+  }
 
   @Bean(initMethod = "initialize")
   public CatalogSchemaValidator catalogSchemaValidator(MongoTemplate mongoTemplate) {

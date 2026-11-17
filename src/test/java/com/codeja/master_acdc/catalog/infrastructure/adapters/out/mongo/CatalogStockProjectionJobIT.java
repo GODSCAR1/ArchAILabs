@@ -78,6 +78,19 @@ class CatalogStockProjectionJobIT extends IntegrationTest {
     BDDMockito.then(publisher).shouldHaveNoInteractions();
   }
 
+  @Test
+  @DisplayName("La proyección repetida vuelve a publicar la invalidación")
+  void should_invalidate_again_when_projecting_same_product_twice() {
+    var job = new CatalogStockProjectionJob(jdbcTemplate, mongoTemplate, 2, publisher);
+    job.synchronizeIds(List.of(PRODUCT_IDS.getFirst()));
+    job.synchronizeIds(List.of(PRODUCT_IDS.getFirst()));
+
+    assertThat(stock(PRODUCT_IDS.getFirst())).isEqualTo(7);
+    BDDMockito.then(publisher)
+        .should(org.mockito.Mockito.times(2))
+        .publish(new ProductChanged("SKU-STOCK-0"));
+  }
+
   private int stock(UUID id) {
     return mongoTemplate
         .findOne(Query.query(Criteria.where("_id").is(id)), CatalogProduct.class)

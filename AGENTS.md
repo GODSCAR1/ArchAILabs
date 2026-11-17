@@ -162,7 +162,7 @@ Spring Security 7 — APIs eliminadas (no las uses aunque aparezcan en ejemplos 
 | `NoOpPasswordEncoder`/`{noop}` en producción | `PasswordEncoderFactories.createDelegatingPasswordEncoder()` |
 
 ## Verify (no negociable)
-- Antes de terminar cualquier tarea: `bash ./verify-quality.sh --fast` en verde y pega su salida completa.
+- Antes de dar por terminado el encargo de la persona (no cada casilla de `tasks.md`): `bash ./verify-quality.sh --fast` en verde; resume su resultado (la salida completa queda en el log). Entre tareas de un mismo encargo, ejecuta solo los tests de la tarea.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
 - PROHIBIDO editar `config/`, `.mvn/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `semgrep-rules/`, `.semgrepignore`, `.gitleaks.toml`, `gitleaks-baseline.json`, `.acdc/open-findings.md`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`. Si hace falta, detente y pide permiso a una persona.
