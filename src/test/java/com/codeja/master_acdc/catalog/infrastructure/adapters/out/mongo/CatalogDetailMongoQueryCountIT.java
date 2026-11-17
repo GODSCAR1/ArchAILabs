@@ -2,12 +2,8 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.event.CommandListener;
-import com.mongodb.event.CommandStartedEvent;
+import com.codeja.master_acdc.IntegrationTest;
+import com.codeja.master_acdc.IntegrationTestBeans;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -15,62 +11,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
-import org.bson.UuidRepresentation;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
-import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers
-class CatalogDetailMongoQueryCountTest {
+class CatalogDetailMongoQueryCountIT extends IntegrationTest {
 
   private static final UUID PRODUCT_ID = UUID.randomUUID();
-  private static final AtomicInteger READ_COMMANDS = new AtomicInteger();
-  private static final CommandListener COMMAND_LISTENER =
-      new CommandListener() {
-        @Override
-        public void commandStarted(CommandStartedEvent event) {
-          if (List.of("find", "aggregate").contains(event.getCommandName())) {
-            READ_COMMANDS.incrementAndGet();
-          }
-        }
-      };
-
-  @Container
-  static final MongoDBContainer MONGO = new MongoDBContainer(DockerImageName.parse("mongo:7.0"));
-
-  private static MongoClient client;
-  private static MongoTemplate mongoTemplate;
+  @Autowired private MongoTemplate mongoTemplate;
   private CatalogDetailMongoRepositoryAdapter adapter;
-
-  @BeforeAll
-  static void initialize_mongo_client() {
-    client =
-        MongoClients.create(
-            MongoClientSettings.builder()
-                .applyConnectionString(new ConnectionString(MONGO.getReplicaSetUrl()))
-                .uuidRepresentation(UuidRepresentation.STANDARD)
-                .addCommandListener(COMMAND_LISTENER)
-                .build());
-    mongoTemplate = new MongoTemplate(client, "catalog_detail_query_count_test");
-  }
-
-  @AfterAll
-  static void close_mongo_client() {
-    client.close();
-  }
 
   @BeforeEach
   void reset_mongo_data() {
-    mongoTemplate.getDb().drop();
-    new CatalogIndexInitializer(mongoTemplate).initialize();
     adapter = new CatalogDetailMongoRepositoryAdapter(mongoTemplate);
     mongoTemplate.insert(product());
     mongoTemplate.insertAll(reviews());
@@ -79,11 +33,11 @@ class CatalogDetailMongoQueryCountTest {
   @Test
   @DisplayName("Ficha Mongo con una operación")
   void should_load_detail_with_one_command_when_product_has_many_embedded_values() {
-    READ_COMMANDS.set(0);
+    IntegrationTestBeans.resetReadCommands();
 
     var detail = adapter.findBySku("SKU-QUERY-COUNT").orElseThrow();
 
-    assertThat(READ_COMMANDS).hasValue(1);
+    assertThat(IntegrationTestBeans.readCommands()).isEqualTo(1);
     assertThat(detail.variants()).hasSize(60);
     assertThat(detail.attributes()).hasSize(60);
     assertThat(detail.recentReviews()).hasSize(5);

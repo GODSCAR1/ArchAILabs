@@ -2,7 +2,7 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.codeja.master_acdc.GlobalMongoClientTestConfiguration;
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.catalog.application.port.ProductSearchUseCase;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchCriteria;
 import com.codeja.master_acdc.catalog.domain.model.ProductSearchOrder;
@@ -23,19 +23,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Query;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@Testcontainers
-@Import(GlobalMongoClientTestConfiguration.class)
-class ProductSearchQueryIT {
+class ProductSearchQueryIT extends IntegrationTest {
 
   private static final UUID PRODUCT_WITHOUT_STOCK =
       UUID.fromString("10000000-0000-0000-0000-000000000001");
@@ -43,9 +34,6 @@ class ProductSearchQueryIT {
       UUID.fromString("10000000-0000-0000-0000-000000000002");
   private static final UUID PRODUCT_CAFE = UUID.fromString("10000000-0000-0000-0000-000000000003");
   private static final UUID PRODUCT_LAMP = UUID.fromString("10000000-0000-0000-0000-000000000004");
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
   @Autowired ProductSearchUseCase productSearchUseCase;
   @Autowired MongoTemplate mongoTemplate;

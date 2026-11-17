@@ -2,26 +2,38 @@ package com.codeja.master_acdc.catalog.infrastructure.adapters.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import java.util.Set;
 import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers
-class CatalogContractMigrationIT {
+class CatalogContractMigrationIT extends IntegrationTest {
 
   private static final String[] CATALOG_TABLES = {
     "reviews", "product_attributes", "product_variants", "products", "categories"
   };
 
-  @Container
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+  @Autowired private PostgreSQLContainer<?> postgres;
+  @Autowired private JdbcTemplate admin;
+
+  @BeforeEach
+  void create_database() {
+    admin.execute("DROP DATABASE IF EXISTS catalog_contract_migration WITH (FORCE)");
+    admin.execute("CREATE DATABASE catalog_contract_migration");
+  }
+
+  @AfterEach
+  void drop_database() {
+    admin.execute("DROP DATABASE IF EXISTS catalog_contract_migration WITH (FORCE)");
+  }
 
   @Test
   @DisplayName("V7 elimina solo las tablas PostgreSQL del catálogo")
@@ -40,9 +52,14 @@ class CatalogContractMigrationIT {
   private DataSource dataSource() {
     DriverManagerDataSource source = new DriverManagerDataSource();
     source.setDriverClassName("org.postgresql.Driver");
-    source.setUrl(POSTGRES.getJdbcUrl());
-    source.setUsername(POSTGRES.getUsername());
-    source.setPassword(POSTGRES.getPassword());
+    source.setUrl(
+        "jdbc:postgresql://"
+            + postgres.getHost()
+            + ":"
+            + postgres.getMappedPort(5432)
+            + "/catalog_contract_migration");
+    source.setUsername(postgres.getUsername());
+    source.setPassword(postgres.getPassword());
     return source;
   }
 

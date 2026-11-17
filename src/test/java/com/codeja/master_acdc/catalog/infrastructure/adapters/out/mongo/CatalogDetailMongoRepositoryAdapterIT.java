@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.catalog.application.ProductDetailService;
 import com.codeja.master_acdc.catalog.domain.model.Category;
 import com.codeja.master_acdc.catalog.domain.model.ProductDetail;
@@ -14,60 +15,27 @@ import com.codeja.master_acdc.catalog.domain.model.ProductStatus;
 import com.codeja.master_acdc.catalog.domain.model.ProductVariant;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.in.web.ApiExceptionHandler;
 import com.codeja.master_acdc.catalog.infrastructure.adapters.in.web.ProductDetailController;
-import com.mongodb.ConnectionString;
-import com.mongodb.MongoClientSettings;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.bson.UuidRepresentation;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.mongodb.MongoDBContainer;
-import org.testcontainers.utility.DockerImageName;
 
-@Testcontainers
-class CatalogDetailMongoRepositoryAdapterIT {
+class CatalogDetailMongoRepositoryAdapterIT extends IntegrationTest {
 
-  @Container
-  static final MongoDBContainer MONGO = new MongoDBContainer(DockerImageName.parse("mongo:7.0"));
-
-  private static MongoClient client;
-  private static MongoTemplate template;
+  @Autowired private MongoTemplate template;
   private CatalogDetailMongoRepositoryAdapter adapter;
   private MockMvc mockMvc;
 
-  @BeforeAll
-  static void initialize_mongo_template() {
-    client =
-        MongoClients.create(
-            MongoClientSettings.builder()
-                .applyConnectionString(new ConnectionString(MONGO.getReplicaSetUrl()))
-                .uuidRepresentation(UuidRepresentation.STANDARD)
-                .build());
-    template = new MongoTemplate(client, "catalog_detail_test");
-  }
-
-  @AfterAll
-  static void close_client() {
-    client.close();
-  }
-
   @BeforeEach
   void initialize_adapter() {
-    template.getDb().drop();
-    new CatalogIndexInitializer(template).initialize();
     adapter = new CatalogDetailMongoRepositoryAdapter(template);
     ProductDetailService service = new ProductDetailService(adapter);
     mockMvc =
