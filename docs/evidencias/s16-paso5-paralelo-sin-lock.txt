@@ -1,0 +1,11 @@
+Lab S16, paso 5 — IT en paralelo sin ResourceLock
+
+Comando: bash ./mvnw -B verify -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false '-Dit.test=*IT' -Dspotbugs.skip -Dpmd.skip
+Resultado: 492 pruebas, 75 fallos, 260 errores, 0 omitidas (335 pruebas con fallo o error).
+
+Primeros tres errores del resumen de Maven:
+1. CatalogProductEditingMongoIT > IntegrationTest.cleanStores:79: PessimisticLockingFailure; PostgreSQL detectó un deadlock durante TRUNCATE.
+2. CreateProductIT > IntegrationTest.cleanStores:79: PessimisticLockingFailure; PostgreSQL detectó un deadlock durante TRUNCATE.
+3. CreateProductIT > IntegrationTest.cleanStores:79: PessimisticLockingFailure; PostgreSQL detectó otro deadlock durante TRUNCATE.
+
+La ejecución terminó en 1:46 min con BUILD FAILURE. Los errores corresponden a pruebas distintas aunque Maven agrupe su método de limpieza en el resumen.

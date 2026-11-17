@@ -19,6 +19,7 @@ import java.time.Clock;
 import org.bson.Document;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.parallel.ResourceLock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -45,7 +46,10 @@ import org.testcontainers.containers.GenericContainer;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Import({TestcontainersConfiguration.class, IntegrationTestBeans.class})
+@ResourceLock(IntegrationTest.INTEGRATION_STORES)
 public abstract class IntegrationTest {
+  // La limpieza de cada test vacía los almacenes compartidos por todas las subclases.
+  static final String INTEGRATION_STORES = "integration-stores";
   static final String TRUNCATE_DOMAIN =
       """
       TRUNCATE TABLE customers, order_confirmation_outbox, order_lines, orders, password_reset_token, refresh_token, stock, user_account
