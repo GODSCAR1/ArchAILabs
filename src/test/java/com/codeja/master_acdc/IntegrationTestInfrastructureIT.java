@@ -5,13 +5,18 @@ import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import org.bson.Document;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -80,5 +85,43 @@ class IntegrationTestInfrastructureIT extends IntegrationTest {
     assertThat(redis.hasKey("integration-cleanup")).isFalse();
     assertThat(wiremock().getServeEvents()).isEmpty();
     assertThat(wiremock().allStubMappings().getMappings()).isEmpty();
+  }
+
+  // Lab S16 (paso 9): otro proceso no puede usar los contenedores reutilizados mientras esta suite
+  // corre. Se comprueba desde una JVM aparte (programa Java de un solo archivo), que termina con
+  // error si consigue el bloqueo.
+  @Test
+  void should_block_other_processes_when_suite_uses_reused_containers(@TempDir Path dir)
+      throws Exception {
+    Path probe = dir.resolve("LockProbe.java");
+    Files.writeString(
+        probe,
+        """
+        import java.nio.channels.FileChannel;
+        import java.nio.file.Path;
+        import java.nio.file.StandardOpenOption;
+
+        class LockProbe {
+          public static void main(String[] args) throws Exception {
+            try (var channel = FileChannel.open(Path.of(args[0]), StandardOpenOption.WRITE);
+                var lock = channel.tryLock()) {
+              if (lock != null) {
+                throw new IllegalStateException("bloqueo libre: la suite no lo tiene tomado");
+              }
+            }
+          }
+        }
+        """);
+    Process process =
+        new ProcessBuilder(
+                Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                probe.toString(),
+                TestcontainersConfiguration.REUSED_CONTAINERS_LOCK_FILE.toString())
+            .redirectErrorStream(true)
+            .start();
+    String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    assertThat(process.waitFor(60, TimeUnit.SECONDS)).isTrue();
+    assertThat(process.exitValue()).as(output).isZero();
+    assertThat(TestcontainersConfiguration.REUSED_CONTAINERS_LOCK.isValid()).isTrue();
   }
 }
