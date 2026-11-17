@@ -74,3 +74,39 @@ Commits `c314d72` (identity, ordering, inventory), `9fb7a31` (catalog sin guardi
 - **El agente respetó el guide frente al revisor**: rechazó el bloque `DO ... EXECUTE` que se le propuso porque `AGENTS.md` prohíbe el SQL concatenado, y paró en cada cambio de la zona protegida (guardianes, `pom.xml`, `verify-quality.sh`, `protected-tests.txt`).
 - **Entorno (Windows)**: Smart App Control bloquea los lanzadores de pip sin firmar; `osemgrep` delegaba `--version` en `pysemgrep.exe` y la capa 2 fallaba con `Semgrep ?`. El `~/bin/semgrep` local entra ahora directamente en `semgrep.console_scripts.pysemgrep:main` por `python.exe`; el canario de `verify-quality.sh` confirma que analiza (7 hallazgos).
 - **Medir con `clean`**: `verify` sin `clean` deja en `target/test-classes` los recursos borrados (`spring.properties`, `config/`), y `clean` borra un log que se escriba en `target/`. Los logs de medida van fuera de `target/`.
+
+## 3. Flujos que cruzan almacenes
+
+Change de OpenSpec `confirm-order-payment-outbox` (commits `8b488ab` propuesta, `d255c44` grupo 1, `9bc7973` implementación).
+
+### Decisiones de diseño
+
+| Pregunta | Decisión |
+|---|---|
+| ¿Quién es dueño del stock del catálogo? | PostgreSQL. El evento `OrderConfirmed` solo avisa: el relay relee el stock actual y hace `$set` en Mongo (idempotente por diseño). `CatalogStockProjectionJob` queda como reconciliación (`PT1H`) y comparte la proyección por ids |
+| ¿De dónde sale el importe? | Precio actual del catálogo al confirmar (`catalog.api.CatalogPrices`, Mongo sin cache) y `OrderPricing.subtotal` (descuento por volumen, COP, sin cupón ni impuestos: no hay tasa configurada). Se fija en el primer intento (`payment_amount`, `coalesce`) |
+| ¿Cómo no cobrar un pedido cancelado durante el pago? | Estado intermedio `PAYING`: no cancelable (409). Rechazo, 5xx y timeout vuelven a `PENDING` |
+| ¿Cómo evitar el doble cobro? | `Idempotency-Key: order-<uuid>-<intento>`; el contador solo sube tras `DECLINED` (definitivo), nunca tras 5xx o timeout (ambiguos) |
+| ¿Dónde va la llamada HTTP? | Fuera de transacción: T1 `PENDING→PAYING` + importe, HTTP, T2 `PAYING→PAID` + evento en `order_confirmation_outbox` (o vuelta a `PENDING`) |
+| Riesgos aceptados | Caída entre T1 y T2 deja `PAYING`; cobro huérfano tras fallo ambiguo; proyecciones fuera de orden (consistencia eventual, corrige el siguiente evento o el job). Reconciliación con la pasarela fuera de alcance |
+
+### Tests del enunciado
+
+| Test del lab | En el repo |
+|---|---|
+| `OrderConfirmationOutboxIT` | Nuevo: evento en la misma transacción que `PAID` y stock proyectado en Mongo (≤ 5 s). `OrderConfirmationAtomicIT` añade el fallo del outbox con spy (queda `PAYING`, sin evento) |
+| `OutboxRelayIdempotencyIT` | Nuevo: procesar dos veces el mismo evento deja el mismo stock; un fallo de proyección deja el evento pendiente |
+| `ProductCacheIT` | Ya cubierto por `CatalogProductCacheEditingIT` (segunda lectura desde la cache, invalidación tras el commit de la edición) y `CatalogStockProjectionCacheInvalidationIT` (invalidación por proyección de stock); no se duplica |
+| `CheckoutPaymentIT` | Nuevo: autorizado → `PAID`; rechazado → `PENDING` (402) y nuevo intento con otra clave; 500 → `PENDING` (502), reintento con la misma clave e importe |
+| `CheckoutTimeoutIT` | Nuevo: `shop.payments.timeout=PT0.5S` en el perfil test, WireMock con retardo mayor, 504 antes de timeout + margen |
+| `AuthFlowIT` | Ya migrado a `IntegrationTest` en el paso 2 |
+
+Más la matriz de seguridad («Matriz de confirmación» y «Lectura global no permite confirmar un pedido ajeno», cambio humano).
+
+### Hallazgos
+
+- **OpenCode (GPT-6.1 Terra) no completaba el apply**: cerraba el turno tras cada pieza. Causa del guide: `AGENTS.md` decía "antes de terminar cualquier tarea: `verify-quality.sh --fast` y pega su salida", y el modelo lo aplicaba a cada casilla de `tasks.md` (verify de minutos, salida enorme en el contexto, fin de turno). Se cambió a "antes de dar por terminado el encargo de la persona". Quitó el verify prematuro; el modelo siguió parando sin motivo y se avanzó con "continúa". Otra causa: frases del design como "requiere aceptación explícita" funcionan como cables trampa; conviene cerrarlas antes del apply.
+- **El plugin de Verify es silencioso cuando pasa** y solo corre en `session.idle`: con "continúa" encadenados, durante una hora no se completó ningún verify. El verify final lo lanzó la persona.
+- **google-java-format convierte un SQL literal largo en `"…" + "…"`** y `shop-sql-concatenation` lo bloquea: SQL de `jdbc.*` siempre en text block.
+- **PMD `CloseResource`** con `HttpClient` del JDK (`AutoCloseable` desde Java 21) creado dentro del método del bean: pasa a ser un bean propio que Spring cierra.
+- Mejoras anotadas, no bloqueantes: el relay procesa un evento por ciclo; `PaymentTransactions` es una clase anónima dentro de la configuración.
