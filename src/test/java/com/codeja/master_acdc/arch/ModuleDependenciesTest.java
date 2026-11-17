@@ -70,4 +70,26 @@ class ModuleDependenciesTest {
           .should()
           .dependOnClassesThat()
           .resideInAPackage("com.codeja.master_acdc.ordering..");
+
+  @ArchTest
+  static final ArchRule ordering_uses_only_public_catalog_api =
+      noClasses()
+          .that()
+          .resideInAPackage("com.codeja.master_acdc.ordering..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAnyPackage(
+              "com.codeja.master_acdc.catalog.domain..",
+              "com.codeja.master_acdc.catalog.application..",
+              "com.codeja.master_acdc.catalog.infrastructure..");
+
+  @ArchTest
+  static final ArchRule catalog_and_pricing_do_not_depend_on_ordering =
+      noClasses()
+          .that()
+          .resideInAnyPackage(
+              "com.codeja.master_acdc.catalog..", "com.codeja.master_acdc.pricing..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("com.codeja.master_acdc.ordering..");
 }

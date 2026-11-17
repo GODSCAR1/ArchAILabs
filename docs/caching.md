@@ -7,9 +7,10 @@ Fuente única de verdad de las caches. **Toda cache nueva añade aquí su fila a
 
 - Un cambio en la ficha (precio, nombre, stock mostrado) puede tardar **como máximo 30 s** en verse en
   todas las instancias.
-- El **checkout nunca lee de una cache**. En este repo el checkout es `ordering`: reserva stock contra
-  `inventory` (`StockReserver`) y no lee del catálogo. Debe seguir así: `ordering` e `inventory` no
-  dependen de la cache ni del caso de uso cacheado de la ficha.
+- El **checkout nunca lee de una cache**. `ordering` reserva stock contra `inventory`
+  (`StockReserver`); para confirmar el pago consultará precios actuales directamente en MongoDB por
+  `catalog.api`, sin usar la ficha cacheada. `ordering` e `inventory` no dependen de la cache ni del
+  caso de uso cacheado de la ficha.
 - El **stock no se cachea como dato de decisión**: la ficha muestra `stock` (copia de
   `availableStock`), pero nadie reserva ni valida contra ese valor (AGENTS.md, catálogo en MongoDB).
 

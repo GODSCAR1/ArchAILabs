@@ -246,7 +246,12 @@ class JwtTokenAdapterTest {
     return Stream.of(
         Arguments.of(
             Set.of("CUSTOMER"),
-            Set.of("ROLE_CUSTOMER", "order:create", "order:read-own", "order:cancel-own")),
+            Set.of(
+                "ROLE_CUSTOMER",
+                "order:create",
+                "order:read-own",
+                "order:cancel-own",
+                "order:confirm-own")),
         Arguments.of(Set.of("UNKNOWN"), Set.of()),
         Arguments.of(
             Set.of("SUPPORT", "UNKNOWN"),

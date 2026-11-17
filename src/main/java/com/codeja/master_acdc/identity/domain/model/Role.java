@@ -3,7 +3,7 @@ package com.codeja.master_acdc.identity.domain.model;
 import java.util.Set;
 
 public enum Role {
-  CUSTOMER(Set.of("order:create", "order:read-own", "order:cancel-own")),
+  CUSTOMER(Set.of("order:create", "order:read-own", "order:cancel-own", "order:confirm-own")),
   CATALOG_MANAGER(Set.of("product:write", "stock:reserve")),
   SUPPORT(Set.of("order:read-any", "order:refund")),
   ADMIN(

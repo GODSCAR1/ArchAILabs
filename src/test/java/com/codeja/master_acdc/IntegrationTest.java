@@ -46,7 +46,7 @@ import org.testcontainers.containers.GenericContainer;
 public abstract class IntegrationTest {
   static final String TRUNCATE_DOMAIN =
       """
-      TRUNCATE TABLE customers, order_lines, orders, password_reset_token, refresh_token, stock, user_account
+      TRUNCATE TABLE customers, order_confirmation_outbox, order_lines, orders, password_reset_token, refresh_token, stock, user_account
       RESTART IDENTITY CASCADE
       """;
   @MockitoSpyBean protected Clock spiedClock;

@@ -38,7 +38,12 @@ class RolesAndPermissionsConverterTest {
     return Stream.of(
         Arguments.of(
             List.of("CUSTOMER"),
-            Set.of("ROLE_CUSTOMER", "order:create", "order:read-own", "order:cancel-own")),
+            Set.of(
+                "ROLE_CUSTOMER",
+                "order:create",
+                "order:read-own",
+                "order:cancel-own",
+                "order:confirm-own")),
         Arguments.of(
             List.of("CATALOG_MANAGER"),
             Set.of("ROLE_CATALOG_MANAGER", "product:write", "stock:reserve")),
@@ -67,6 +72,7 @@ class RolesAndPermissionsConverterTest {
                 "order:create",
                 "order:read-own",
                 "order:cancel-own",
+                "order:confirm-own",
                 "product:write",
                 "stock:reserve")),
         Arguments.of(

@@ -4,10 +4,11 @@ Todos los escenarios nuevos se trazan con `@DisplayName` igual al título exacto
 
 ## 1. Contratos y datos
 
-- [ ] 1.1 Preparar `docs/evidencias/s16-confirmacion-protegida.patch` con el permiso y matriz protegidos para `order:confirm-own`; una persona aplica el parche. Verificar `SecurityMatrixIT` escenario «Matriz de confirmación» y «Lectura global no permite confirmar un pedido ajeno» y `MethodAuthorizationIT`.
-- [ ] 1.2 Añadir reglas de `ModuleDependenciesTest` para catalog.api, ausencia de dependencias inversas y ciclos; ejecutar `ModuleDependenciesTest`.
-- [ ] 1.3 Añadir migración aditiva de importe, contador de intentos en `orders` con `DEFAULT 0`, PAYING y outbox, incluida limpieza de fixtures; verificar migración con PostgreSQL y `IntegrationTestInfrastructureIT`.
-- [ ] 1.4 Documentar la lectura de precios sin cache en `docs/caching.md` y ADR relacionados; verificar coherencia con `CatalogMongoArchitectureTest`.
+- [x] 1.1a Preparar `docs/evidencias/s16-confirmacion-protegida.patch` solo con el permiso `order:confirm-own` para CUSTOMER en `Role`; comprobar con `git apply --check` y una persona aplica el parche.
+- [ ] 1.1b Tras el grupo 2, preparar `docs/evidencias/s16-matriz-confirmacion.patch` con la matriz de `SecurityMatrixIT`/`SecurityMatrixSupport` para anónimo, los cinco roles y pedido ajeno; una persona aplica el parche. Verificar `SecurityMatrixIT` escenario «Matriz de confirmación» y «Lectura global no permite confirmar un pedido ajeno» y `MethodAuthorizationIT`.
+- [x] 1.2 Añadir reglas de `ModuleDependenciesTest` para catalog.api, ausencia de dependencias inversas y ciclos; ejecutar `ModuleDependenciesTest`.
+- [x] 1.3 Añadir migración aditiva de importe, contador de intentos en `orders` con `DEFAULT 0`, PAYING y outbox, incluida limpieza de fixtures; verificar migración con PostgreSQL y `IntegrationTestInfrastructureIT`.
+- [x] 1.4 Documentar la lectura de precios sin cache en `docs/caching.md` y ADR relacionados; verificar coherencia con `CatalogMongoArchitectureTest`.
 
 ## 2. Precio, estado y pagos
 
