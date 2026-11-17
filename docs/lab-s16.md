@@ -148,3 +148,28 @@ Change de OpenSpec `expand-customer-name` (commits `73b096b` propuesta, `4ab2d06
 | `verify` sin Surefire, reutilización y `-DexcludedGroups=slow` | **2 min 09 s** (490 IT en verde) |
 
 **Lectura**: la reutilización solo ahorra el arranque de los contenedores (~8 s), porque desde el paso 2 se arrancan una vez por ejecución; con los 62 de la línea base habría ahorrado minutos. El mayor coste local era una sola clase de medición de latencia. El paralelismo de los IT daría otros ~2 min, pero exige abandonar la limpieza global y aislar los datos de cada test (ids únicos o una base por hilo): rediseño fuera del lab, anotado con la cifra que lo justifica.
+
+## 6. CI
+
+En `.github/workflows/acdc.yml` (zona protegida, cambio humano), job `quality`:
+
+- `ubuntu-latest` (Docker incluido) y cache de Maven: ya estaban.
+- **Descarga previa de las imágenes**: un paso propio antes de `verify-quality.sh --full`; la lista se extrae de `TestcontainersConfiguration` con `grep`, sin una segunda lista que se desactualice.
+- **Reutilización desactivada**: `TESTCONTAINERS_REUSE_ENABLE=false`.
+- **Salida por clase y logs de contenedores**: `MAVEN_ARGS=-Dmaven.test.redirectTestOutputToFile=true`; cada contenedor tiene un `Slf4jLogConsumer` (`container.postgres`, `container.mongo`, `container.redis`, `container.wiremock`), en `WARN` en local y `INFO` en CI (`LOGGING_LEVEL_CONTAINER`).
+- **Artefacto si falla**: `surefire-reports/` y `failsafe-reports/` (con los `*-output.txt`), 7 días.
+- **`schema-compat`** (paso 4): tests de persistencia de la rama base contra las migraciones del PR.
+
+**`*Test` / `*IT`**: no se parte `quality` en dos jobs. El gate de cobertura de ramas de identity necesita la ejecución de Surefire y la de Failsafe juntas (parte de esa cobertura viene ahora de `*IT`), y separarlos obligaría a fusionar `jacoco.exec` en un tercer job. La separación ya la dan los nombres (ArchUnit) y `verify-quality.sh`: `--fast` = Surefire + los IT del gate de identity y `SchemaIT`; `--full` y CI = todo.
+
+## 7. Protecciones del loop
+
+| Capa | Qué se añadió |
+|---|---|
+| Guide | `AGENTS.md`, sección "Tests de integración y migraciones": `IntegrationTest` sin configuración propia, nada de `@DirtiesContext`, `*IT`/`*Test`, sin H2, fronteras con WireMock, fixtures tras la limpieza (nunca `@Sql`), expandir-contraer y migraciones inmutables, migraciones de datos con test e invariantes, SQL en text block, Docker ausente = problema de entorno |
+| Verify (tests) | `verify-quality.sh`: `SchemaIT` en `--fast`; **umbral de contextos** (máximo 1 en Failsafe, leído del `missCount` de la cache de contextos en `failsafe-reports/*-output.txt`); migraciones publicadas en `main` sin modificar, renombrar ni borrar |
+| Verify (ArchUnit) | `IntegrationTestRulesTest` (solo clases de test): solo `IntegrationTest` declara `@SpringBootTest`; las subclases concretas terminan en `IT`; nada depende de `org.h2`; ninguna subclase declara `@MockitoBean`, `@TestPropertySource`, `@DirtiesContext` ni `@Testcontainers` |
+| Verify (zona protegida) | `scripts/protected-tests.txt`: `TestcontainersConfiguration`, `IntegrationTest`, `IntegrationTestInfrastructureIT`, `SchemaIT`. Hooks de Claude Code y plugin de OpenCode: una migración existente no se edita; la shell no escribe en `db/migration` |
+| Guide dinámico | `guide-context.sh` (SessionStart de Claude Code y `session.created` del plugin de OpenCode): si `docker info` no responde en 10 s, aviso de entorno |
+
+**Coste aceptado**: con `IntegrationTest` protegida, una tabla nueva obliga a que una persona la añada al `TRUNCATE` de la lista blanca (el agente debe parar y pedirlo).
