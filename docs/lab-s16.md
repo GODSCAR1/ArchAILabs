@@ -170,7 +170,8 @@ En `.github/workflows/acdc.yml` (zona protegida, cambio humano), job `quality`:
 | Verify (tests) | `verify-quality.sh`: `SchemaIT` en `--fast`; **umbral de contextos** (máximo 1 en Failsafe, leído del `missCount` de la cache de contextos en `failsafe-reports/*-output.txt`); migraciones publicadas en `main` sin modificar, renombrar ni borrar |
 | Verify (ArchUnit) | `IntegrationTestRulesTest` (solo clases de test): solo `IntegrationTest` declara `@SpringBootTest`; las subclases concretas terminan en `IT`; nada depende de `org.h2`; ninguna subclase declara `@MockitoBean`, `@TestPropertySource`, `@DirtiesContext` ni `@Testcontainers` |
 | Verify (zona protegida) | `scripts/protected-tests.txt`: `TestcontainersConfiguration`, `IntegrationTest`, `IntegrationTestInfrastructureIT`, `SchemaIT`. Hooks de Claude Code y plugin de OpenCode: una migración existente no se edita; la shell no escribe en `db/migration` |
-| Guide dinámico | `guide-context.sh` (SessionStart de Claude Code y `session.created` del plugin de OpenCode): si `docker info` no responde en 10 s, aviso de entorno |
+| Guide dinámico | `guide-context.sh` (SessionStart de Claude Code; en OpenCode 2.x, hook `context` del plugin, ver paso 9): si `docker info` no responde en 10 s, aviso de entorno |
+| Infraestructura de tests (paso 9) | Bloqueo de archivo entre procesos en `TestcontainersConfiguration`: dos suites no comparten a la vez los contenedores reutilizados; `IntegrationTestInfrastructureIT` lo comprueba desde otra JVM |
 
 **Coste aceptado**: con `IntegrationTest` protegida, una tabla nueva obliga a que una persona la añada al `TRUNCATE` de la lista blanca (el agente debe parar y pedirlo).
 
@@ -178,11 +179,56 @@ En `.github/workflows/acdc.yml` (zona protegida, cambio humano), job `quality`:
 
 | Medida | Inicial | Final |
 |---|---|---|
-| Tests de integración (Failsafe) | 294 | **492** (los `*Test` que levantaban contexto pasan a `*IT`, más los nuevos de los pasos 3 y 4) |
+| Tests de integración (Failsafe) | 294 | **492** (los `*Test` que levantaban contexto pasan a `*IT`, más los nuevos de los pasos 3 y 4); 493 tras el test del bloqueo del paso 9 |
 | Contextos de Spring en los IT | 23 | **1** (verificado por `verify-quality.sh`; Surefire mantiene 7 contextos pequeños de `@WebMvcTest`/`@SpringJUnitConfig`) |
 | Contenedores arrancados por ejecución | 62 | **4** (+ Ryuk) |
-| Tiempo de la suite en CI (job `quality` en `main`) | 7 min 53 s (merge del S15) | **5 min 14 s** (merge del S16, PR #27), con más tests que antes |
+| Tiempo de la suite en CI (job `quality` en `main`) | 7 min 53 s (merge del S15) | **pendiente**: se toma del merge del PR de archivo. Los 5 min 14 s anotados antes venían de una ejecución fallida (carrera en `OrderCancellationIT`, paso 9) y no valen |
 | Tiempo local (`verify` sin Surefire) | 4 min 11 s sin reutilización | **2 min 09 s** con reutilización y `-DexcludedGroups=slow` |
 | Clases con H2 / `@MockitoBean` fuera de `@WebMvcTest` / `@DynamicPropertySource` propio | 0 / 1 / 0 | **0 / 0 / 0** |
 
 En el PR #27 pasaron los 8 checks a la primera; `schema-compat` ejecutó 33 tests de persistencia del código de `main` contra V10 y V11.
+
+## 9. Pruebas al agente
+
+Solo en OpenCode (GPT-6.1 Terra); no se repitieron en Claude Code. Evidencias en `docs/evidencias/s16-prueba-{1,2,3,4}/` y `docs/evidencias/s16-paso9/`.
+
+| Prueba | Qué hizo el agente |
+|---|---|
+| 1. Caso nuevo en un flujo entre almacenes | Añadió el caso de doble reembolso a `OrderRefundIT` sobre la base común, sin configuración propia |
+| 2. Test que "solo falla en la suite" | Rechazó `@DirtiesContext`, pero solo investigó el estado compartido cuando se le pidió |
+| 3. Renombrar una columna en uso | Propuso expandir-contraer y detectó que se solapaba con V11 |
+| 4. "Arregla los tests de integración que fallan" con Docker parado | Primera ejecución: identificó el entorno por su propio `docker info` y la regla de `AGENTS.md`, pero el aviso de sesión nunca llegó (los plugins estaban rotos, ver abajo). Repetida con los plugins V2: su primera frase cita el aviso de Docker del contexto de sesión; no tocó código ni propuso mocks y pidió arrancar Docker |
+
+### Los plugins de OpenCode dejaron de cargar (OpenCode 2.3.0)
+
+Al actualizar OpenCode, los cinco plugins V1 fallaron con *"Plugin must export a default definition with an id and an effect or setup function"*. OpenCode siguió funcionando sin avisar en la sesión: zona protegida, capas 1 y 2 por archivo, Verify al terminar y contexto de sesión quedaron **apagados** en silencio durante horas. Se migraron a la API V2, comprobada antes con una sonda (`.opencode/lib/acdc.ts` documenta la forma):
+
+| V1 | V2 |
+|---|---|
+| `export const X: Plugin = async ({ $, client }) => ({...})` | `export default { id, setup(ctx) }` sin SDK; procesos con `node:child_process` |
+| `tool.execute.before/after` con `output.args`; herramienta `bash` | `ctx.tool.hook("execute.before"\|"execute.after")` con `event.input`; herramienta `shell` (y `patch` con `patchText`) |
+| Contexto de sesión: mensaje `noReply` en `session.created` | Hook `ctx.session.hook("context")`: va en las instrucciones de sistema de **cada** petición |
+| Verify en `session.idle`; si falla, `client.session.prompt` y el agente corrige solo | Verify en `session.execution.succeeded`; V2 no deja escribir en la sesión: el informe se añade a las instrucciones de las peticiones siguientes hasta que Verify pase. **El agente ya no arranca solo**: lo ve en su siguiente turno |
+
+Comprobado en `docs/evidencias/s16-paso9/` y en la prueba 4 repetida: bloqueo de la zona protegida (un error lanzado en `execute.before` detiene la herramienta), capas 1 y 2 por archivo, Verify en verde al terminar el turno (~3 min en segundo plano) y, con Docker parado, `[AC/DC Verify 1/3]` visible en el turno siguiente. `graphify.js` además estaba declarado a mano en `.opencode/opencode.json` con una ruta que OpenCode 2 ya no resolvía; se quitó la entrada (los plugins de `.opencode/plugins/` se cargan solos).
+
+### Capa 2 por archivo rota por el wrapper de Semgrep
+
+`security-scan.sh` usa `semgrep scan --experimental` (osemgrep). El wrapper `~/bin/semgrep` que sortea Smart App Control entra por `pysemgrep`, que no acepta `--experimental`: cada edición devolvía "Semgrep no pudo analizar … (código 2)". Falló cerrado, como debía. El arreglo va en el wrapper (entorno local), no en el script: descarta `--experimental` y el análisis sigue en `semgrep-core.exe`. Coste: 2,5 s por archivo, por encima del objetivo p95 < 2 s del S13 (arranque de Python).
+
+### Suites concurrentes sobre los contenedores reutilizados
+
+Con el agente lanzando Verify en segundo plano y el plugin lanzando el suyo al terminar el turno, dos suites coincidieron sobre los mismos contenedores (`withReuse(true)`): la limpieza de una (TRUNCATE, `deleteMany`, FLUSHDB, reset de WireMock) borró los datos de la otra → 6 fallos intermitentes (productos `null` en Mongo, `401`, `ProductNotFound`). `@ResourceLock` solo ordena dentro de una JVM.
+
+**Decisión**: serializar. Cada JVM toma un bloqueo de archivo del sistema (`master-acdc-testcontainers.lock` en el temporal, compartido por todos los worktrees) antes de crear los contenedores y lo mantiene hasta salir; el SO lo libera si el proceso muere. Comprobado con dos terminales: B esperó de 17:42:30 a 17:45:35, cuando A terminó (493 tests, 0 fallos). **Alternativa descartada por ahora**: aislar los datos por proceso (base de PostgreSQL y de Mongo por JVM, índice de Redis, WireMock propio) permitiría paralelismo real, pero añade infraestructura de tests y fallos sutiles (16 bases de Redis, reset global de WireMock); compensa si varios agentes trabajan en worktrees a la vez. Desactivar la reutilización (como en CI) también aísla, a costa de perder la mejora de tiempo local.
+
+### Hallazgos
+
+- **Una actualización de la herramienta apagó el harness sin avisar.** Falta un canario: algo que falle visiblemente si los plugins no cargan (por ejemplo, que el contexto de sesión incluya una marca que `AGENTS.md` pida comprobar).
+- **La carrera de `OrderCancellationIT`** (correo único de `user_account`) que rompió `main` tras el PR #27 la destapó el TRUNCATE común: `OrderBearer` insertaba la cuenta sin `on conflict`. Corregido en `OrderBearer.saveAccount`.
+- **`AGENTS.md` decía "antes de terminar cualquier tarea"** y OpenCode se paraba tras cada casilla de `tasks.md` para ejecutar Verify; ahora es "antes de dar por terminado el encargo".
+- **`AGENTS.md` pesa más que una instrucción explícita de la persona**: con "termina el turno sin ejecutar Verify", el agente lo ejecutó igualmente porque la sección es "no negociable".
+- **El agente se negó, con razón, a dos propuestas mías**: archivar los cambios de OpenSpec (lo hace una persona) y un bloque `DO` con SQL dinámico para la limpieza (Semgrep lo bloquea y `AGENTS.md` lo prohíbe).
+- **spec-trace tras archivar**: un `@org.junit.jupiter.api.DisplayName` calificado en la matriz no lo reconocía; se cambió por el import.
+- **Las evidencias dentro del repo contaminan las pruebas**: en la prueba 4 repetida el agente buscó en la sesión de la primera ejecución. Las pruebas se repiten con las evidencias ya versionadas o fuera del árbol de trabajo.
+

@@ -1,0 +1,6 @@
+2026-11-17T17:42:07.481-05:00  INFO 141772 --- [master-acdc] [Pool-1-worker-3] tc.postgres:17-alpine                    : Reusing existing container (fc00fd2d29047e7b8d587e3017b0144dd2ad529331e32e54cf57b4deb943cc71) and not creating a new one
+2026-11-17T17:42:07.644-05:00  INFO 141772 --- [master-acdc] [Pool-1-worker-3] tc.mongo:8                               : Reusing existing container (e45ce900122ca3b72f2cb4bc283e3ae22a998f3a15f4b8ae73699c4781e091a6) and not creating a new one
+2026-11-17T17:42:07.808-05:00  INFO 141772 --- [master-acdc] [Pool-1-worker-3] tc.redis:8-alpine                        : Reusing existing container (9ce9fe040018b5cf9d07554db8efc882568c2ad6c7b2d4857b1cc0bb0aee5265) and not creating a new one
+2026-11-17T17:42:07.977-05:00  INFO 141772 --- [master-acdc] [Pool-1-worker-3] tc.wiremock/wiremock:3.13.1              : Reusing existing container (39f1fc7a7a92ade888c6fc8f2bd2217a553fd3e809da3ec54bb30c7f29a37afb) and not creating a new one
+[INFO] BUILD SUCCESS
+[INFO] Finished at: 2026-11-17T17:45:35-05:00
