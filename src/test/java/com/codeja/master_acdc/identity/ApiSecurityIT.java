@@ -23,7 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-class ApiSecurityTest extends AuthHttpSupport {
+class ApiSecurityIT extends AuthHttpSupport {
   @Autowired private MongoTemplate mongo;
   @Autowired private org.springframework.cache.CacheManager caches;
   private UUID product;

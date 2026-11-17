@@ -1,0 +1,91 @@
+diff --git a/src/test/java/com/codeja/master_acdc/inventory/infrastructure/config/StockReservationTransactionIT.java b/src/test/java/com/codeja/master_acdc/inventory/infrastructure/config/StockReservationTransactionIT.java
+--- a/src/test/java/com/codeja/master_acdc/inventory/infrastructure/config/StockReservationTransactionIT.java
++++ b/src/test/java/com/codeja/master_acdc/inventory/infrastructure/config/StockReservationTransactionIT.java
+@@ -9,1 +9,2 @@
++import com.codeja.master_acdc.IntegrationTest;
+ import com.codeja.master_acdc.inventory.application.port.ReserveProductStockUseCase;
+@@ -28,17 +29,7 @@
+-import org.springframework.boot.test.context.SpringBootTest;
+-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+ import org.springframework.jdbc.core.JdbcTemplate;
+-import org.testcontainers.containers.PostgreSQLContainer;
+-import org.testcontainers.junit.jupiter.Container;
+-import org.testcontainers.junit.jupiter.Testcontainers;
+ 
+-@SpringBootTest
+-@Testcontainers
+-class StockReservationTransactionIT {
++class StockReservationTransactionIT extends IntegrationTest {
+ 
+   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+ 
+-  @Container @ServiceConnection
+-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+-
+   @Autowired ReserveProductStockUseCase useCase;
+diff --git a/src/test/java/com/codeja/master_acdc/inventory/infrastructure/adapters/in/web/StockReservationConcurrencyTest.java b/src/test/java/com/codeja/master_acdc/inventory/infrastructure/adapters/in/web/StockReservationConcurrencyTest.java
+--- a/src/test/java/com/codeja/master_acdc/inventory/infrastructure/adapters/in/web/StockReservationConcurrencyTest.java
++++ b/src/test/java/com/codeja/master_acdc/inventory/infrastructure/adapters/in/web/StockReservationConcurrencyTest.java
+@@ -6,1 +6,2 @@
++import com.codeja.master_acdc.IntegrationTest;
+ import com.codeja.master_acdc.OrderBearer;
+@@ -31,15 +32,6 @@
+-import org.springframework.boot.test.context.SpringBootTest;
+ import org.springframework.boot.test.web.server.LocalServerPort;
+-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+ import org.springframework.jdbc.core.JdbcTemplate;
+-import org.testcontainers.containers.GenericContainer;
+-import org.testcontainers.containers.PostgreSQLContainer;
+-import org.testcontainers.junit.jupiter.Container;
+-import org.testcontainers.junit.jupiter.Testcontainers;
+-import org.testcontainers.utility.DockerImageName;
+ 
+-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+-@Testcontainers
+-class StockReservationConcurrencyTest {
++class StockReservationConcurrencyTest extends IntegrationTest {
+ 
+   private static final String STOCK_BUSY_TYPE = "https://api.master-acdc.dev/problems/stock-busy";
+@@ -50,9 +43,1 @@
+-  @Container @ServiceConnection
+-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+-
+-  // Lab S12: la versión de sesión de cada bearer se comprueba en Redis (fail closed).
+-  @Container @ServiceConnection
+-  static final GenericContainer<?> REDIS =
+-      new GenericContainer<>(DockerImageName.parse("redis:7")).withExposedPorts(6379);
+-
+   @LocalServerPort int port;
+diff --git a/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterQueryCountTest.java b/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterQueryCountTest.java
+--- a/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterQueryCountTest.java
++++ b/src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterQueryCountTest.java
+@@ -5,1 +5,2 @@
++import com.codeja.master_acdc.IntegrationTest;
+ import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
+@@ -18,18 +19,7 @@
+-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+-import org.springframework.context.annotation.Import;
+ import org.springframework.jdbc.core.JdbcTemplate;
+-import org.testcontainers.containers.PostgreSQLContainer;
+-import org.testcontainers.junit.jupiter.Container;
+-import org.testcontainers.junit.jupiter.Testcontainers;
++import org.springframework.transaction.annotation.Transactional;
+ 
+-@DataJpaTest(
+-    showSql = false,
+-    properties = "spring.jpa.properties.hibernate.generate_statistics=true")
+-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+-@Import(OrderSummaryQueryAdapter.class)
+-@Testcontainers
+-class OrderSummaryQueryAdapterQueryCountTest {
++@Transactional
++class OrderSummaryQueryAdapterQueryCountTest extends IntegrationTest {
+ 
+   private static final UUID PRODUCT_A = UUID.fromString("11111111-1111-1111-1111-111111111111");
+@@ -39,4 +29,1 @@
+-  @Container @ServiceConnection
+-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+-
+   @Autowired JdbcTemplate jdbcTemplate;

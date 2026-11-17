@@ -172,6 +172,14 @@
       <scope>test</scope>
     </dependency>
 
+    <!-- Lab S16: cliente de WireMock para la pasarela de pagos (misma versión que la imagen) -->
+    <dependency>
+      <groupId>org.wiremock</groupId>
+      <artifactId>wiremock-standalone</artifactId>
+      <version>3.13.1</version>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Lab S12: autenticación JWT -->
     <dependency>
       <groupId>org.springframework.boot</groupId>

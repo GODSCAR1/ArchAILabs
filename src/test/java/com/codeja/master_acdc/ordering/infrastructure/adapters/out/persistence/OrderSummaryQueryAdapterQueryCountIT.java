@@ -2,6 +2,7 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
 import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
@@ -15,29 +16,15 @@ import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.transaction.annotation.Transactional;
 
-@DataJpaTest(
-    showSql = false,
-    properties = "spring.jpa.properties.hibernate.generate_statistics=true")
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import(OrderSummaryQueryAdapter.class)
-@Testcontainers
-class OrderSummaryQueryAdapterQueryCountTest {
+@Transactional
+class OrderSummaryQueryAdapterQueryCountIT extends IntegrationTest {
 
   private static final UUID PRODUCT_A = UUID.fromString("11111111-1111-1111-1111-111111111111");
   private static final UUID PRODUCT_B = UUID.fromString("22222222-2222-2222-2222-222222222222");
   private static final int ORDER_COUNT = 120;
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
   @Autowired JdbcTemplate jdbcTemplate;
   @Autowired EntityManager entityManager;

@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.OrderBearer;
 import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.util.List;
@@ -18,22 +19,11 @@ import java.util.concurrent.Future;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@Testcontainers
-@org.springframework.context.annotation.Import(com.codeja.master_acdc.RedisTestConfiguration.class)
-class OrderCancellationIT {
+class OrderCancellationIT extends IntegrationTest {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
   private static final String CUSTOMER = "550e8400-e29b-41d4-a716-446655440000";
@@ -45,40 +35,18 @@ class OrderCancellationIT {
   private static final String SHIPPED_ORDER = "550e8400-e29b-41d4-a716-446655440003";
   private static final String CANCELLED_ORDER = "550e8400-e29b-41d4-a716-446655440004";
   private static final String OTHER_ORDER = "550e8400-e29b-41d4-a716-446655440005";
-  private static final String CLEANUP =
-      "delete from order_lines; delete from orders; delete from stock";
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
-
   @Autowired MockMvc mockMvc;
   @Autowired JdbcTemplate jdbcTemplate;
   @Autowired AccessTokenIssuer tokenIssuer;
 
   @Test
   @DisplayName("Pedido PENDING cancelado libera stock de todas sus líneas")
-  @Sql(
-      statements = {
-        CLEANUP,
-        "insert into stock (product_id, available) values ('" + A + "', 7)",
-        "insert into stock (product_id, available) values ('" + B + "', 8)",
-        "insert into orders (id, customer_id, status) values ('"
-            + PENDING_ORDER
-            + "', '"
-            + CUSTOMER
-            + "', 'PENDING')",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + PENDING_ORDER
-            + "', '"
-            + A
-            + "', 3)",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + PENDING_ORDER
-            + "', '"
-            + B
-            + "', 2)"
-      })
   void should_release_all_stock_lines_when_pending_order_is_cancelled() throws Exception {
+    stock(A, 7);
+    stock(B, 8);
+    order(PENDING_ORDER, CUSTOMER, "PENDING");
+    line(PENDING_ORDER, A, 3);
+    line(PENDING_ORDER, B, 2);
     cancel(PENDING_ORDER, CUSTOMER)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.customerId").doesNotExist())
@@ -92,22 +60,10 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Frontera: pedido PAID cancelable")
-  @Sql(
-      statements = {
-        CLEANUP,
-        "insert into stock (product_id, available) values ('" + A + "', 9)",
-        "insert into orders (id, customer_id, status) values ('"
-            + PAID_ORDER
-            + "', '"
-            + CUSTOMER
-            + "', 'PAID')",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + PAID_ORDER
-            + "', '"
-            + A
-            + "', 1)"
-      })
   void should_cancel_order_when_status_is_paid() throws Exception {
+    stock(A, 9);
+    order(PAID_ORDER, CUSTOMER, "PAID");
+    line(PAID_ORDER, A, 1);
     cancel(PAID_ORDER, CUSTOMER)
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CANCELLED"));
@@ -118,22 +74,10 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Frontera: pedido SHIPPED no cancelable")
-  @Sql(
-      statements = {
-        CLEANUP,
-        "insert into stock (product_id, available) values ('" + A + "', 9)",
-        "insert into orders (id, customer_id, status) values ('"
-            + SHIPPED_ORDER
-            + "', '"
-            + CUSTOMER
-            + "', 'SHIPPED')",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + SHIPPED_ORDER
-            + "', '"
-            + A
-            + "', 1)"
-      })
   void should_reject_cancellation_when_status_is_shipped() throws Exception {
+    stock(A, 9);
+    order(SHIPPED_ORDER, CUSTOMER, "SHIPPED");
+    line(SHIPPED_ORDER, A, 1);
     cancel(SHIPPED_ORDER, CUSTOMER)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-cancellable"));
@@ -144,22 +88,10 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Pedido ya cancelado")
-  @Sql(
-      statements = {
-        CLEANUP,
-        "insert into stock (product_id, available) values ('" + A + "', 10)",
-        "insert into orders (id, customer_id, status) values ('"
-            + CANCELLED_ORDER
-            + "', '"
-            + CUSTOMER
-            + "', 'CANCELLED')",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + CANCELLED_ORDER
-            + "', '"
-            + A
-            + "', 3)"
-      })
   void should_reject_cancellation_when_order_is_already_cancelled() throws Exception {
+    stock(A, 10);
+    order(CANCELLED_ORDER, CUSTOMER, "CANCELLED");
+    line(CANCELLED_ORDER, A, 3);
     cancel(CANCELLED_ORDER, CUSTOMER)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-cancellable"));
@@ -170,8 +102,8 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Pedido inexistente")
-  @Sql(statements = {CLEANUP, "insert into stock (product_id, available) values ('" + A + "', 10)"})
   void should_return_not_found_when_order_does_not_exist() throws Exception {
+    stock(A, 10);
     cancel("00000000-0000-0000-0000-000000000000", CUSTOMER)
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -181,8 +113,8 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Cancelación con id de pedido que no es UUID")
-  @Sql(statements = {CLEANUP, "insert into stock (product_id, available) values ('" + A + "', 10)"})
   void should_return_not_found_when_order_id_is_not_uuid() throws Exception {
+    stock(A, 10);
     cancel("no-uuid", CUSTOMER)
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -192,22 +124,10 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Pedido de otro cliente")
-  @Sql(
-      statements = {
-        CLEANUP,
-        "insert into stock (product_id, available) values ('" + A + "', 9)",
-        "insert into orders (id, customer_id, status) values ('"
-            + OTHER_ORDER
-            + "', '"
-            + OTHER_CUSTOMER
-            + "', 'PENDING')",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + OTHER_ORDER
-            + "', '"
-            + A
-            + "', 1)"
-      })
   void should_return_not_found_when_order_belongs_to_another_customer() throws Exception {
+    stock(A, 9);
+    order(OTHER_ORDER, OTHER_CUSTOMER, "PENDING");
+    line(OTHER_ORDER, A, 1);
     cancel(OTHER_ORDER, CUSTOMER)
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -218,22 +138,8 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Lectura global no concede cancelación")
-  @Sql(
-      statements = {
-        CLEANUP,
-        "insert into stock (product_id, available) values ('" + A + "', 9)",
-        "insert into orders (id, customer_id, status) values ('"
-            + PENDING_ORDER
-            + "', '"
-            + CUSTOMER
-            + "', 'PENDING')",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + PENDING_ORDER
-            + "', '"
-            + A
-            + "', 1)"
-      })
   void should_reject_cancellation_when_support_has_no_cancel_permission() throws Exception {
+    pendingFixture();
     cancel(PENDING_ORDER, null)
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "forbidden"));
@@ -244,22 +150,8 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Cliente ausente no abre el alcance")
-  @Sql(
-      statements = {
-        CLEANUP,
-        "insert into stock (product_id, available) values ('" + A + "', 9)",
-        "insert into orders (id, customer_id, status) values ('"
-            + PENDING_ORDER
-            + "', '"
-            + CUSTOMER
-            + "', 'PENDING')",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + PENDING_ORDER
-            + "', '"
-            + A
-            + "', 1)"
-      })
   void should_hide_order_when_account_has_no_customer() throws Exception {
+    pendingFixture();
     cancel(PENDING_ORDER, "no-es-uuid")
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -270,7 +162,6 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Precedencia: cabecera antes que existencia")
-  @Sql(statements = {CLEANUP})
   void should_report_forbidden_when_support_cancels_missing_order() throws Exception {
     cancel("00000000-0000-0000-0000-000000000000", null)
         .andExpect(status().isForbidden())
@@ -279,22 +170,10 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Precedencia: propiedad antes que estado")
-  @Sql(
-      statements = {
-        CLEANUP,
-        "insert into stock (product_id, available) values ('" + A + "', 9)",
-        "insert into orders (id, customer_id, status) values ('"
-            + SHIPPED_ORDER
-            + "', '"
-            + OTHER_CUSTOMER
-            + "', 'SHIPPED')",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + SHIPPED_ORDER
-            + "', '"
-            + A
-            + "', 1)"
-      })
   void should_report_not_found_when_shipped_order_belongs_to_another_customer() throws Exception {
+    stock(A, 9);
+    order(SHIPPED_ORDER, OTHER_CUSTOMER, "SHIPPED");
+    line(SHIPPED_ORDER, A, 1);
     cancel(SHIPPED_ORDER, CUSTOMER)
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.type").value(TYPE_BASE + "order-not-found"));
@@ -305,22 +184,8 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Dos cancelaciones concurrentes del mismo pedido")
-  @Sql(
-      statements = {
-        CLEANUP,
-        "insert into stock (product_id, available) values ('" + A + "', 9)",
-        "insert into orders (id, customer_id, status) values ('"
-            + PENDING_ORDER
-            + "', '"
-            + CUSTOMER
-            + "', 'PENDING')",
-        "insert into order_lines (order_id, product_id, quantity) values ('"
-            + PENDING_ORDER
-            + "', '"
-            + A
-            + "', 1)"
-      })
   void should_release_stock_only_once_when_two_cancellations_are_concurrent() throws Exception {
+    pendingFixture();
     ExecutorService executor = Executors.newFixedThreadPool(2);
     CountDownLatch start = new CountDownLatch(1);
     Callable<CancellationResponse> attempt =
@@ -371,7 +236,6 @@ class OrderCancellationIT {
 
   @Test
   @DisplayName("Pedido reembolsado no cancelable")
-  @Sql(statements = {CLEANUP})
   void should_preserve_order_and_stock_when_cancelling_refunded_order() throws Exception {
     UUID id = UUID.randomUUID();
     jdbcTemplate.update("insert into stock(product_id,available) values (?,7)", UUID.fromString(A));
@@ -393,6 +257,35 @@ class OrderCancellationIT {
   private String statusOf(String orderId) {
     return jdbcTemplate.queryForObject(
         "select status from orders where id = ?", String.class, UUID.fromString(orderId));
+  }
+
+  private void pendingFixture() {
+    stock(A, 9);
+    order(PENDING_ORDER, CUSTOMER, "PENDING");
+    line(PENDING_ORDER, A, 1);
+  }
+
+  private void stock(String productId, int available) {
+    jdbcTemplate.update(
+        "insert into stock (product_id, available) values (?, ?)",
+        UUID.fromString(productId),
+        available);
+  }
+
+  private void order(String orderId, String customerId, String status) {
+    jdbcTemplate.update(
+        "insert into orders (id, customer_id, status) values (?, ?, ?)",
+        UUID.fromString(orderId),
+        UUID.fromString(customerId),
+        status);
+  }
+
+  private void line(String orderId, String productId, int quantity) {
+    jdbcTemplate.update(
+        "insert into order_lines (order_id, product_id, quantity) values (?, ?, ?)",
+        UUID.fromString(orderId),
+        UUID.fromString(productId),
+        quantity);
   }
 
   private int availableOf(String productId) {

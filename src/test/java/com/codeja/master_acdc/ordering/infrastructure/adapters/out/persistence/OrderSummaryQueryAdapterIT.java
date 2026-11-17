@@ -2,6 +2,7 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
 import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
@@ -11,21 +12,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@Testcontainers
 @Transactional
-class OrderSummaryQueryAdapterIT {
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+class OrderSummaryQueryAdapterIT extends IntegrationTest {
 
   private static final UUID CUSTOMER = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
   private static final UUID PAID = UUID.fromString("550e8400-e29b-41d4-a716-446655440001");

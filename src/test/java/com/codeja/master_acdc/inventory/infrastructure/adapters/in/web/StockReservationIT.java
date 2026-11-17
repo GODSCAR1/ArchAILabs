@@ -7,33 +7,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codeja.master_acdc.CatalogManagerToken;
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@Testcontainers
-@org.springframework.context.annotation.Import(com.codeja.master_acdc.RedisTestConfiguration.class)
-class StockReservationIT {
+class StockReservationIT extends IntegrationTest {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
 
   @Autowired MockMvc mockMvc;
   @Autowired JdbcTemplate jdbcTemplate;

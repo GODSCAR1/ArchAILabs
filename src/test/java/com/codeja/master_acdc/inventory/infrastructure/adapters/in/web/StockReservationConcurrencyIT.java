@@ -3,6 +3,7 @@ package com.codeja.master_acdc.inventory.infrastructure.adapters.in.web;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.OrderBearer;
 import com.codeja.master_acdc.identity.domain.port.AccessTokenIssuer;
 import java.io.IOException;
@@ -28,32 +29,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-class StockReservationConcurrencyTest {
+class StockReservationConcurrencyIT extends IntegrationTest {
 
   private static final String STOCK_BUSY_TYPE = "https://api.master-acdc.dev/problems/stock-busy";
   private static final String INSUFFICIENT_STOCK_TYPE =
       "https://api.master-acdc.dev/problems/insufficient-stock";
   private static final UUID PRODUCT_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
-
-  // Lab S12: la versión de sesión de cada bearer se comprueba en Redis (fail closed).
-  @Container @ServiceConnection
-  static final GenericContainer<?> REDIS =
-      new GenericContainer<>(DockerImageName.parse("redis:7")).withExposedPorts(6379);
 
   @LocalServerPort int port;
   @Autowired JdbcTemplate jdbcTemplate;

@@ -26,7 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
-class OrderAuthorizationQueryCountTest extends IdentityIntegrationSupport {
+class OrderAuthorizationQueryCountIT extends IdentityIntegrationSupport {
   private static final int ORDER_COUNT = 120;
   private static final int OWN_COUNT = 60;
   private final UUID owner = UUID.randomUUID();

@@ -26,7 +26,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.test.context.support.WithMockUser;
 
-class MethodAuthorizationTest extends IdentityIntegrationSupport {
+class MethodAuthorizationIT extends IdentityIntegrationSupport {
   @Autowired private com.codeja.master_acdc.identity.application.port.BlockUserUseCase blockUser;
 
   @Autowired

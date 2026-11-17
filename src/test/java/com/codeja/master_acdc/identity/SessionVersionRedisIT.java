@@ -19,7 +19,9 @@ class SessionVersionRedisIT extends SessionIntegrationSupport {
   @Autowired SessionVersions versions;
   @Autowired RedisSessionVersions barrier;
   @Autowired StringRedisTemplate redis;
-  @Autowired org.testcontainers.containers.GenericContainer<?> identityRedis;
+
+  @Autowired
+  @org.springframework.beans.factory.annotation.Qualifier("redis") org.testcontainers.containers.GenericContainer<?> identityRedis;
 
   @Test
   void should_reconstruct_from_committed_database_when_redis_is_replaced_empty() {
@@ -27,26 +29,30 @@ class SessionVersionRedisIT extends SessionIntegrationSupport {
     change.changePassword(
         new com.codeja.master_acdc.identity.domain.model.PasswordChange(
             user.id(), PASSWORD, NEW_PASSWORD));
-    try (var empty =
-        new org.testcontainers.containers.GenericContainer<>(
-                org.testcontainers.utility.DockerImageName.parse("redis:7"))
-            .withExposedPorts(6379)) {
-      empty.start();
-      var factory =
-          new org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory(
-              empty.getHost(), empty.getMappedPort(6379));
-      factory.afterPropertiesSet();
-      try {
-        var store = new RedisSessionVersions(new StringRedisTemplate(factory));
-        assertThat(store.find(user.id())).isEmpty();
-        var restored =
-            new com.codeja.master_acdc.identity.infrastructure.config.LockedSessionVersions(
-                store, accounts, transactions);
-        assertThat(restored.current(user.id())).isEqualTo(new SessionVersion(1));
-        assertThat(store.find(user.id())).contains(new SessionVersion(1));
-      } finally {
-        factory.destroy();
-      }
+    var config =
+        new org.springframework.data.redis.connection.RedisStandaloneConfiguration(
+            identityRedis.getHost(), identityRedis.getMappedPort(6379));
+    config.setDatabase(1);
+    var factory =
+        new org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory(config);
+    factory.afterPropertiesSet();
+    try {
+      var template = new StringRedisTemplate(factory);
+      template.execute(
+          (org.springframework.data.redis.core.RedisCallback<Void>)
+              connection -> {
+                connection.serverCommands().flushDb();
+                return null;
+              });
+      var store = new RedisSessionVersions(template);
+      assertThat(store.find(user.id())).isEmpty();
+      var restored =
+          new com.codeja.master_acdc.identity.infrastructure.config.LockedSessionVersions(
+              store, accounts, transactions);
+      assertThat(restored.current(user.id())).isEqualTo(new SessionVersion(1));
+      assertThat(store.find(user.id())).contains(new SessionVersion(1));
+    } finally {
+      factory.destroy();
     }
   }
 

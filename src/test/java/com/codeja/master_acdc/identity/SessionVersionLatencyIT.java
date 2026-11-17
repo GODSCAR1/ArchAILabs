@@ -42,7 +42,10 @@ class SessionVersionLatencyIT extends IdentityIntegrationSupport {
   @Autowired AccessTokenIssuer issuer;
   @Autowired JdbcTemplate jdbc;
   @Autowired StringRedisTemplate redis;
-  @Autowired GenericContainer<?> identityRedis;
+
+  @Autowired
+  @org.springframework.beans.factory.annotation.Qualifier("redis") GenericContainer<?> identityRedis;
+
   @Autowired PostgreSQLContainer<?> identityPostgres;
   @Autowired JWKSource<SecurityContext> source;
   @Autowired JwtSettings settings;

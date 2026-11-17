@@ -3,6 +3,7 @@ package com.codeja.master_acdc.inventory.api;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.inventory.domain.model.ReservationResult;
 import com.codeja.master_acdc.inventory.domain.model.StockLine;
 import java.util.List;
@@ -14,20 +15,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.jdbc.Sql;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@SpringBootTest
-@Testcontainers
-class InventoryConcurrencyIT {
-
-  @Container @ServiceConnection
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17-alpine");
+class InventoryConcurrencyIT extends IntegrationTest {
 
   private static final String A_TEXT = "11111111-1111-1111-1111-111111111111";
 
@@ -35,12 +25,9 @@ class InventoryConcurrencyIT {
   @Autowired JdbcTemplate jdbcTemplate;
 
   @Test
-  @Sql(
-      statements = {
-        "delete from stock",
-        "insert into stock (product_id, available) values ('" + A_TEXT + "', 1)"
-      })
   void should_allow_exactly_one_reservation_when_last_unit_contended() throws Exception {
+    jdbcTemplate.update(
+        "insert into stock (product_id, available) values (?, ?)", UUID.fromString(A_TEXT), 1);
     ExecutorService executor = Executors.newFixedThreadPool(2);
     CountDownLatch start = new CountDownLatch(1);
     Callable<ReservationResult> attempt =

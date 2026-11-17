@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 // Supresión aprobada (lab S16b): la matriz de seguridad concentra a propósito todos los endpoints
 // y roles en una clase (ADR 0011); dividirla rompería la lectura de la matriz.
 @SuppressWarnings("PMD.GodClass")
-class SecurityMatrixTest extends SecurityMatrixSupport {
+class SecurityMatrixIT extends SecurityMatrixSupport {
   @org.springframework.beans.factory.annotation.Autowired
   private jakarta.persistence.EntityManagerFactory factory;
 

@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 @Transactional
-class SessionVersionQueryCountTest extends IdentityIntegrationSupport {
+class SessionVersionQueryCountIT extends IdentityIntegrationSupport {
   @Autowired JdbcTemplate jdbc;
   @Autowired AccessTokenIssuer issuer;
   @Autowired JwtDecoder decoder;

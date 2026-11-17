@@ -28,7 +28,9 @@ import org.testcontainers.containers.GenericContainer;
 
 abstract class AuthSessionVersionScenarios extends AuthHttpConcurrencyScenarios {
   @Autowired StringRedisTemplate redis;
-  @Autowired GenericContainer<?> identityRedis;
+
+  @Autowired
+  @org.springframework.beans.factory.annotation.Qualifier("redis") GenericContainer<?> identityRedis;
 
   @Test
   @DisplayName("Fallo compartido durante escritura impide confirmar contraseña")

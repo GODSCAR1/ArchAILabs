@@ -1,9 +1,9 @@
 # Tests guardianes (lab S09, paso 8). Zona protegida: solo los edita, mueve o borra una persona.
 # Una ruta por línea, relativa a la raíz. Los lee protect-verify.sh, el plugin verify-quality.ts
 # y verify-quality.sh (segunda capa: fallar si alguno falta).
-src/test/java/com/codeja/master_acdc/inventory/infrastructure/adapters/in/web/StockReservationConcurrencyTest.java
+src/test/java/com/codeja/master_acdc/inventory/infrastructure/adapters/in/web/StockReservationConcurrencyIT.java
 src/test/java/com/codeja/master_acdc/inventory/infrastructure/config/StockReservationTransactionIT.java
-src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterQueryCountTest.java
+src/test/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapterQueryCountIT.java
 src/test/java/com/codeja/master_acdc/arch/ArchitectureTest.java
 src/test/java/com/codeja/master_acdc/CatalogArchitectureTest.java
 src/test/java/com/codeja/master_acdc/arch/PersistenceRulesTest.java
@@ -25,6 +25,6 @@ src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/in/web/Cata
 src/test/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogStockProjectionCacheInvalidationIT.java
 # Lab S12: matriz de seguridad y fronteras de autorización (ADR 0011). Si un agente pudiera editar la
 # matriz, podría "arreglar" un fallo cambiando el 404 esperado por un 200.
-src/test/java/com/codeja/master_acdc/identity/SecurityMatrixTest.java
+src/test/java/com/codeja/master_acdc/identity/SecurityMatrixIT.java
 src/test/java/com/codeja/master_acdc/identity/SecurityMatrixSupport.java
 src/test/java/com/codeja/master_acdc/arch/AuthorizationArchitectureTest.java

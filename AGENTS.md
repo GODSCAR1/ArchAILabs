@@ -134,12 +134,12 @@ Lee los dos antes de tocar una cache.
 - PROHIBIDO `git commit --no-verify`/`-n`, `LEFTHOOK=0` o `core.hooksPath` para saltar el pre-commit.
 
 ### Autenticación y autorización — ADR `docs/adr/0011-autenticacion-refresh-y-version-de-sesion.md`
-Lee el ADR antes de tocar seguridad. `HttpSecurityConfiguration`, `JwtTokenAdapter`, `JwtDecoderFactory`, `SessionVersionValidator`, `Role` y la matriz (`SecurityMatrixTest`/`SecurityMatrixSupport`) son zona protegida: si crees que hay que cambiarlos, explica por qué y detente.
-- La API es stateless: bearer JWT RS256 de 15 min; NUNCA sesión HTTP, `permitAll()` amplio ni `anyRequest().permitAll()`. Las rutas públicas se abren por método y ruta exacta. (verificador: `SecurityMatrixTest`)
+Lee el ADR antes de tocar seguridad. `HttpSecurityConfiguration`, `JwtTokenAdapter`, `JwtDecoderFactory`, `SessionVersionValidator`, `Role` y la matriz (`SecurityMatrixIT`/`SecurityMatrixSupport`) son zona protegida: si crees que hay que cambiarlos, explica por qué y detente.
+- La API es stateless: bearer JWT RS256 de 15 min; NUNCA sesión HTTP, `permitAll()` amplio ni `anyRequest().permitAll()`. Las rutas públicas se abren por método y ruta exacta. (verificador: `SecurityMatrixIT`)
 - NUNCA desactives CSRF en `/api/auth/refresh` ni `/api/auth/logout`: usan cookie. Si el frontend da 403, le falta la cabecera `X-XSRF-TOKEN` con el valor de la cookie `XSRF-TOKEN`. (verificador: `AuthFlowIT`)
 - Claims EXACTOS del access token: `iss, sub, aud, iat, exp, jti, roles, sv`. NUNCA añadas email, permisos, customerId ni nada "para ahorrar una consulta". (verificador: `AuthFlowIT`, claims exactos)
 - Autorización por PERMISOS: `@PreAuthorize("hasAuthority('<permiso>')")` en un DECORADOR de `infrastructure` NO final (CGLIB) sobre el caso de uso; domain y application sin Spring. `hasRole('X')` busca `ROLE_X`. (verificador: `AuthorizationArchitectureTest`, `MethodAuthorizationTest`)
-- Propiedad del objeto: el cliente sale del `sub` vía la cuenta y se filtra EN LA CONSULTA (también en el UPDATE); un objeto ajeno responde 404, nunca 403 ni 200. NUNCA un parámetro, cabecera o campo `customerId` en la API pública. `order:read-any` amplía solo lecturas. (verificador: `AuthorizationArchitectureTest`, `SecurityMatrixTest`)
+- Propiedad del objeto: el cliente sale del `sub` vía la cuenta y se filtra EN LA CONSULTA (también en el UPDATE); un objeto ajeno responde 404, nunca 403 ni 200. NUNCA un parámetro, cabecera o campo `customerId` en la API pública. `order:read-any` amplía solo lecturas. (verificador: `AuthorizationArchitectureTest`, `SecurityMatrixIT`)
 - Todo endpoint nuevo añade sus filas a la matriz (anónimo y los cinco roles), incluida la de objeto ajeno; la matriz la cambia una persona. Errores 401/403 como ProblemDetail conservando `WWW-Authenticate`.
 - Versión de sesión: fail closed (Redis caído = 401), sin cache local ni TTL; incrementar versión, revocar familias y publicar la barrera ANTES del commit, en la misma transacción. (verificador: `SessionVersionRevocationIT`)
 

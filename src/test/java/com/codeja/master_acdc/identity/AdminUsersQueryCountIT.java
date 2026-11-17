@@ -12,7 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 
-class AdminUsersQueryCountTest extends AdminUsersSupport {
+class AdminUsersQueryCountIT extends AdminUsersSupport {
   @Autowired EntityManager entityManager;
   @Autowired EntityManagerFactory factory;
 

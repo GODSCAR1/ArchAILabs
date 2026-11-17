@@ -178,15 +178,17 @@ case "${1:---fast}" in
     # Lab S14: el check de JaCoCo va al final de este verify. SessionVersionRedisIT entra porque la
     # carrera de reconstrucción en Redis (SETNX) solo se prueba con Redis real; comparte el contexto
     # de AuthFlowIT (IdentityIntegrationSupport), así que solo suma el tiempo de sus tests.
-    ./mvnw -q -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=AuthFlowIT,SessionVersionRedisIT "$COVERAGE_GATE" verify \
+    # Lab S16: los IT que antes se llamaban *Test (matriz, autorización por método y número de
+    # consultas) siguen aquí: aportan la cobertura de ramas de identity y comparten el mismo contexto.
+    ./mvnw -q -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=AuthFlowIT,SessionVersionRedisIT,SecurityMatrixIT,ApiSecurityIT,MethodAuthorizationIT,AdminUsersQueryCountIT,SessionVersionQueryCountIT,OrderAuthorizationQueryCountIT "$COVERAGE_GATE" verify \
       || { echo "$COVERAGE_HINT" >&2; exit 1; } ;;
   --full) ./mvnw -q "$COVERAGE_GATE" verify || { echo "$COVERAGE_HINT" >&2; exit 1; } ;;
 esac
 # La matriz de seguridad debe haberse ejecutado entera (anónimo + 5 roles por endpoint).
-MATRIX_REPORT=target/surefire-reports/TEST-com.codeja.master_acdc.identity.SecurityMatrixTest.xml
+MATRIX_REPORT=target/failsafe-reports/TEST-com.codeja.master_acdc.identity.SecurityMatrixIT.xml
 MATRIX_RUN=$(grep -o 'tests="[0-9]*"' "$MATRIX_REPORT" 2>/dev/null | head -1 | tr -dc '0-9')
 (( ${MATRIX_RUN:-0} >= 90 )) \
-  || { echo "AC/DC: SecurityMatrixTest no se ejecutó completo (${MATRIX_RUN:-0} casos, mínimo 90). No la excluyas ni la recortes." >&2; exit 1; }
+  || { echo "AC/DC: SecurityMatrixIT no se ejecutó completo (${MATRIX_RUN:-0} casos, mínimo 90). No la excluyas ni la recortes." >&2; exit 1; }
 echo "▶ Capa 3: mutation testing de pricing (lab S15, docs/lab-s15.md)"
 # --full siempre; --fast solo si la rama toca pricing (PIT tarda < 1 min con targetTests, pero no se paga en cada turno).
 PIT_DIRS=(src/main/java/com/codeja/master_acdc/pricing src/test/java/com/codeja/master_acdc/pricing)
