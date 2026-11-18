@@ -2,6 +2,9 @@
 
 Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automático: cúmplelas igual y no las describas como verificadas.
 
+## Harness (canario, lab S16)
+- Al empezar, tus instrucciones deben incluir la línea "AC/DC harness activo" (la inyecta el harness: hook SessionStart de Claude Code o plugin de OpenCode). Si NO aparece, o aparece "[AC/DC harness INCOMPLETO]", las protecciones están apagadas (zona protegida, verificación por archivo, Verify al terminar): díselo a la persona en tu primera respuesta y no modifiques archivos hasta que responda.
+
 ## Comandos (tu shell en Windows es PowerShell: invoca los scripts con `bash`)
 - Compilar y probar: `bash ./mvnw -q test`. Formato: `bash ./mvnw spotless:apply`.
 - Verify: `bash ./verify-quality.sh --fast` (specs + capa 1 + tests; tarda varios minutos: ejecútalo con un timeout de al menos 600 s). Solo estilo: `bash ./mvnw -q checkstyle:check`.

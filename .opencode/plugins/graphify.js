@@ -15,6 +15,12 @@ import { join } from "path";
 export default {
   id: "graphify",
   async setup(ctx) {
+    // Canario AC/DC (lab S16): mismo latido que heartbeat() de .opencode/lib/acdc.ts
+    await ctx.session.hook("context", (event) => {
+      const alive = (globalThis.__acdcAlive ??= new Map());
+      if (!alive.has(event.sessionID)) alive.set(event.sessionID, new Set());
+      alive.get(event.sessionID).add("graphify");
+    });
     const directory = ctx.location.directory;
     let reminded = false;
 
