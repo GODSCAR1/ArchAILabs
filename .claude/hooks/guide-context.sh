@@ -16,7 +16,9 @@ if ! timeout 10 docker info >/dev/null 2>&1; then
 AVISO DE ENTORNO: Docker no responde. Los *IT (Testcontainers) fallarán por entorno, no por código: no sustituyas contenedores por mocks, H2 ni @MockitoBean, no desactives tests; avisa a la persona para que arranque Docker."
 fi
 
-CTX="Rama: $BRANCH
+# Lab S16 (canario): AGENTS.md pide al agente comprobar esta marca. Si no le llega, el harness no se cargó.
+CTX="AC/DC harness activo (guía de sesión cargada por el harness).
+Rama: $BRANCH
 Umbral PIT de pricing (execution pit-pricing, STRONGER; verify-quality.sh capa 3): ${PIT:-sin definir}% — no se baja; supervivientes en .acdc/pit-survivors.md
 Umbral de cobertura de RAMAS (JaCoCo, por paquete de identity, verify-quality.sh): ${BRANCH_MIN:-sin definir} — no se baja
 Hallazgos abiertos (no introduzcas más de estos tipos):

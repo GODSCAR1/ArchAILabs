@@ -6,7 +6,7 @@
 // Lab S16: migrado a la API V2 de OpenCode (ver .opencode/lib/acdc.ts).
 import path from "node:path"
 import fs from "node:fs"
-import { appendToResult, editedPaths, isShell, run } from "../lib/acdc.ts"
+import { appendToResult, editedPaths, isShell, heartbeat, run } from "../lib/acdc.ts"
 
 // Traduce la llamada de OpenCode al formato de entrada de los hooks de Claude Code.
 function asClaudeInput(tool: string, input: any): object[] {
@@ -38,6 +38,7 @@ function asClaudeInput(tool: string, input: any): object[] {
 export default {
   id: "acdc.security",
   async setup(ctx: any) {
+    await heartbeat(ctx, "acdc.security")
     const directory: string = ctx.location.directory
     const guard = path.join(directory, ".claude/hooks/protect-security.sh")
     const scan = path.join(directory, ".claude/hooks/security-scan.sh")

@@ -1,7 +1,7 @@
 // .opencode/plugins/acdc-specs.ts — specs aprobadas protegidas + validación del change editado.
 // Lab S16: migrado a la API V2 de OpenCode (ver .opencode/lib/acdc.ts).
 import path from "node:path"
-import { appendToResult, editedPaths, isShell, run } from "../lib/acdc.ts"
+import { appendToResult, editedPaths, isShell, heartbeat, run } from "../lib/acdc.ts"
 
 // Rutas normalizadas a "/": el agente puede usar rutas de Windows
 const PROTECTED = /openspec[\\/](specs|changes[\\/]archive)([\\/]|\s|$)/
@@ -10,6 +10,7 @@ const WRITES = /(>|sed -i|rm |mv |cp |tee |set-content|add-content|out-file|copy
 export default {
   id: "acdc.specs",
   async setup(ctx: any) {
+    await heartbeat(ctx, "acdc.specs")
     const directory: string = ctx.location.directory
 
     await ctx.tool.hook("execute.before", (event: any) => {

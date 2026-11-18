@@ -77,3 +77,29 @@ export function subscribe(ctx: any, onEvent: (event: any) => unknown): () => voi
   })()
   return () => controller.abort()
 }
+
+// Canario del harness (lab S16): cada plugin marca un latido en el hook "context" de cada sesión;
+// verify-quality bloquea las herramientas que no son de lectura si en esa sesión falta el latido de
+// alguno. Un registro "al cargar" no sirve: OpenCode recarga plugins dentro del mismo proceso y
+// globalThis conserva a los que ya no están (el primer intento dio "faltan=[]" con un plugin quitado).
+export const EXPECTED_PLUGINS = ["acdc.security", "acdc.specs", "acdc.style", "acdc.verify-quality", "graphify"]
+
+export function markAlive(id: string, sessionID: string): void {
+  const g = globalThis as any
+  g.__acdcAlive ??= new Map<string, Set<string>>()
+  if (!g.__acdcAlive.has(sessionID)) g.__acdcAlive.set(sessionID, new Set<string>())
+  g.__acdcAlive.get(sessionID).add(id)
+}
+
+export async function heartbeat(ctx: any, id: string): Promise<void> {
+  await ctx.session.hook("context", (event: any) => markAlive(id, event.sessionID))
+}
+
+export function alivePlugins(sessionID: string): string[] {
+  return [...((globalThis as any).__acdcAlive?.get(sessionID) ?? [])].sort()
+}
+
+export function missingPlugins(sessionID: string): string[] {
+  const alive = new Set(alivePlugins(sessionID))
+  return EXPECTED_PLUGINS.filter(id => !alive.has(id))
+}

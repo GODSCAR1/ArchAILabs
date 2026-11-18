@@ -8,9 +8,11 @@
 //    su siguiente turno (ya no arranca solo a corregir, como en V1).
 import path from "node:path"
 import fs from "node:fs"
-import { editedPaths, isShell, run, runSync, subscribe } from "../lib/acdc.ts"
+import { alivePlugins, editedPaths, heartbeat, isShell, missingPlugins, run, runSync, subscribe } from "../lib/acdc.ts"
 
 const MAX_ATTEMPTS = 3
+// Herramientas que se permiten con el harness incompleto (no modifican nada).
+const READ_ONLY_TOOLS = new Set(["read", "glob", "grep", "list", "webfetch", "websearch", "skill", "todoread"])
 // Rutas RELATIVAS a la raíz del repo: config/ de la raíz, no infrastructure/config/
 const PROTECTED = /^(config|\.mvn|\.claude|\.opencode|\.github|scripts)\/|^pom\.xml$|^verify-quality\.sh$|^lefthook\.yml$|^openspec\/config\.yaml$|^src\/main\/resources\/application[^/]*$|^\.env(\..*)?$|^semgrep-rules\/|^\.semgrepignore$|^\.gitleaks(\.toml|ignore)$|^gitleaks-baseline\.json$|^\.acdc\/open-findings\.md$|^src\/main\/java\/com\/codeja\/master_acdc\/catalog\/infrastructure\/adapters\/out\/mongo\/CatalogSchemaValidator\.java$|^src\/main\/java\/com\/codeja\/master_acdc\/catalog\/infrastructure\/adapters\/out\/cache\/(CacheTtlPolicy|ProductDetailCache)\.java$|^src\/main\/java\/com\/codeja\/master_acdc\/identity\/infrastructure\/config\/HttpSecurityConfiguration\.java$|^src\/main\/java\/com\/codeja\/master_acdc\/identity\/infrastructure\/adapters\/out\/security\/(JwtTokenAdapter|JwtDecoderFactory|SessionVersionValidator)\.java$|^src\/main\/java\/com\/codeja\/master_acdc\/identity\/domain\/model\/Role\.java$/
 
@@ -67,15 +69,18 @@ function checkEdit(directory: string, raw: string, guards: string[]): void {
 export default {
   id: "acdc.verify-quality",
   async setup(ctx: any) {
+    await heartbeat(ctx, "acdc.verify-quality")
     const directory: string = ctx.location.directory
     const env = { ...process.env, CLAUDE_PROJECT_DIR: directory }
     const attempts = new Map<string, number>()
     const running = new Set<string>()
     const guide = new Map<string, string>()    // contexto de sesión, calculado una vez por sesión
     const pending = new Map<string, string>()  // informe del último Verify fallido de cada sesión
+    const checked = new Set<string>()           // sesiones cuyo canario ya se registró en el log
 
     // Guía dura: zona protegida (≈ PreToolUse)
     await ctx.tool.hook("execute.before", (event: any) => {
+      checkHarness(event)
       const guards = loadGuards(directory)
       if (isShell(event.tool)) {
         checkShell(String(event.input?.command ?? ""), guards)
@@ -99,6 +104,35 @@ export default {
     return subscribe(ctx, (event: any) => {
       if (event?.type === "session.execution.succeeded" && event.data?.sessionID) return verify(event.data.sessionID)
     })
+
+    // Canario: en la primera herramienta de la sesión todos los plugins ya han pasado por el hook
+    // "context" (la petición al modelo va antes). Si falta alguno, solo se permiten herramientas de
+    // lectura: el agente recibe el motivo y no puede modificar nada con el harness incompleto.
+    function checkHarness(event: any): void {
+      const id: string = event.sessionID
+      const missing = missingPlugins(id)
+      if (!checked.has(id)) {
+        checked.add(id)
+        logHarness(id, missing)
+      }
+      if (missing.length > 0 && !READ_ONLY_TOOLS.has(event.tool)) {
+        throw new Error(
+          `[AC/DC harness INCOMPLETO] No cargaron estos plugins: ${missing.join(", ")}. Sus protecciones ` +
+            "están apagadas y no puedes modificar nada. Díselo a la persona y detente hasta que lo resuelva.",
+        )
+      }
+    }
+
+    // Evidencia del canario (target/ no se versiona).
+    function logHarness(id: string, missing: string[]): void {
+      try {
+        const line = `${new Date().toISOString()} ${id} vivos=[${alivePlugins(id).join(",")}] faltan=[${missing.join(",")}]\n`
+        fs.mkdirSync(path.join(directory, "target", "acdc"), { recursive: true })
+        fs.appendFileSync(path.join(directory, "target", "acdc", "harness.log"), line)
+      } catch (err) {
+        console.error("AC/DC: no pude escribir target/acdc/harness.log", err)
+      }
+    }
 
     function guideContext(): string {
       const r = runSync("bash", [".claude/hooks/guide-context.sh"], { cwd: directory, env })

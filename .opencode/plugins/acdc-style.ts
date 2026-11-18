@@ -6,11 +6,12 @@
 // Spotless corre al terminar el turno (verify-quality.ts) y en el pre-commit.
 // Lab S16: migrado a la API V2 de OpenCode (ver .opencode/lib/acdc.ts).
 import path from "node:path"
-import { appendToResult, editedPaths, run } from "../lib/acdc.ts"
+import { appendToResult, editedPaths, heartbeat, run } from "../lib/acdc.ts"
 
 export default {
   id: "acdc.style",
   async setup(ctx: any) {
+    await heartbeat(ctx, "acdc.style")
     const directory: string = ctx.location.directory
 
     await ctx.tool.hook("execute.after", async (event: any) => {

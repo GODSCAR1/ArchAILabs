@@ -171,6 +171,7 @@ En `.github/workflows/acdc.yml` (zona protegida, cambio humano), job `quality`:
 | Verify (ArchUnit) | `IntegrationTestRulesTest` (solo clases de test): solo `IntegrationTest` declara `@SpringBootTest`; las subclases concretas terminan en `IT`; nada depende de `org.h2`; ninguna subclase declara `@MockitoBean`, `@TestPropertySource`, `@DirtiesContext` ni `@Testcontainers` |
 | Verify (zona protegida) | `scripts/protected-tests.txt`: `TestcontainersConfiguration`, `IntegrationTest`, `IntegrationTestInfrastructureIT`, `SchemaIT`. Hooks de Claude Code y plugin de OpenCode: una migración existente no se edita; la shell no escribe en `db/migration` |
 | Guide dinámico | `guide-context.sh` (SessionStart de Claude Code; en OpenCode 2.x, hook `context` del plugin, ver paso 9): si `docker info` no responde en 10 s, aviso de entorno |
+| Canario del harness (paso 9) | `guide-context.sh` empieza por "AC/DC harness activo" y `AGENTS.md` pide avisar y no modificar nada si falta; en OpenCode, cada plugin marca un latido por sesión y `verify-quality` bloquea las herramientas que no son de lectura si falta alguno (`target/acdc/harness.log`) |
 | Infraestructura de tests (paso 9) | Bloqueo de archivo entre procesos en `TestcontainersConfiguration`: dos suites no comparten a la vez los contenedores reutilizados; `IntegrationTestInfrastructureIT` lo comprueba desde otra JVM |
 
 **Coste aceptado**: con `IntegrationTest` protegida, una tabla nueva obliga a que una persona la añada al `TRUNCATE` de la lista blanca (el agente debe parar y pedirlo).
@@ -224,7 +225,8 @@ Con el agente lanzando Verify en segundo plano y el plugin lanzando el suyo al t
 
 ### Hallazgos
 
-- **Una actualización de la herramienta apagó el harness sin avisar.** Falta un canario: algo que falle visiblemente si los plugins no cargan (por ejemplo, que el contexto de sesión incluya una marca que `AGENTS.md` pida comprobar).
+- **Una actualización de la herramienta apagó el harness sin avisar.** Se añadió un canario (ver abajo).
+- **Cerrar OpenCode no reinicia su servidor**: quedaban cinco procesos `opencode.exe` vivos y los plugins se recargaban dentro del mismo proceso. Tras cambiar un plugin: `taskkill //F //IM opencode.exe //IM opencode-pty.exe`.
 - **La carrera de `OrderCancellationIT`** (correo único de `user_account`) que rompió `main` tras el PR #27 la destapó el TRUNCATE común: `OrderBearer` insertaba la cuenta sin `on conflict`. Corregido en `OrderBearer.saveAccount`.
 - **`AGENTS.md` decía "antes de terminar cualquier tarea"** y OpenCode se paraba tras cada casilla de `tasks.md` para ejecutar Verify; ahora es "antes de dar por terminado el encargo".
 - **`AGENTS.md` pesa más que una instrucción explícita de la persona**: con "termina el turno sin ejecutar Verify", el agente lo ejecutó igualmente porque la sección es "no negociable".
@@ -232,3 +234,19 @@ Con el agente lanzando Verify en segundo plano y el plugin lanzando el suyo al t
 - **spec-trace tras archivar**: un `@org.junit.jupiter.api.DisplayName` calificado en la matriz no lo reconocía; se cambió por el import.
 - **Las evidencias dentro del repo contaminan las pruebas**: en la prueba 4 repetida el agente buscó en la sesión de la primera ejecución. Las pruebas se repiten con las evidencias ya versionadas o fuera del árbol de trabajo.
 
+### Canario del harness
+
+Para que una actualización no vuelva a apagar el harness en silencio, dos capas:
+
+| Fallo | Detección | Respuesta |
+|---|---|---|
+| Total: no carga `verify-quality` (o falla el hook SessionStart de Claude Code) | La guía de sesión empieza por "AC/DC harness activo"; `AGENTS.md`, que el agente lee siempre, pide comprobarla | El agente avisa y no modifica nada (depende de que obedezca: no queda plugin que bloquee) |
+| Parcial: falta algún plugin | Cada plugin marca un latido en el hook `context` de **cada sesión**; en la primera herramienta, `verify-quality` compara con la lista esperada | **Bloqueo** de toda herramienta que no sea de lectura con "[AC/DC harness INCOMPLETO] …" (no depende del agente) |
+
+El primer diseño (registro en `globalThis` al cargar el plugin) no servía: OpenCode recarga plugins dentro del mismo proceso y el registro conservaba un plugin ya retirado (`faltan=[]` sin `acdc-style.ts`), y el aviso solo en el contexto no impidió que el agente editara. Pruebas en `docs/evidencias/s16-canario/` (`harness.log` con `vivos`/`faltan` por sesión):
+
+| Prueba | Resultado |
+|---|---|
+| Todo cargado | `faltan=[]`; lectura y shell sin bloqueo; el agente confirma la marca |
+| Sin `acdc-style.ts` | `faltan=[acdc.style]`; el `patch` se bloquea y el agente avisa sin modificar nada |
+| Sin `verify-quality.ts` | El agente echa en falta la marca, avisa y no modifica nada |
