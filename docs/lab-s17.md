@@ -44,6 +44,37 @@ segundos más porque hay un 26 % más de mutantes (el agregado y los puertos tie
 tests. Lo que mejora es el **dónde**: las reglas de estado que antes estaban en `ConfirmationConfiguration` y en
 `ConfirmOrderService` ahora están en el agregado, cubiertas por tests unitarios y por PIT.
 
+## Paso 8: segunda pasada con agente (`exports`)
+
+Rama desechable `lab/s17-agente`, sesión nueva de OpenCode (GPT) con el prompt del enunciado adaptado a `exports`
+y sin más contexto (`session-46796960-…`, 5 min).
+
+**Qué hizo.** Escribió `ExportApiCharacterizationIT` (3 tests: descarga binaria, 404 y 400 por ruta fuera del
+directorio, con `ProblemDetail` estricto), lo ejecutó en verde con `verify-quality.sh --fast` y **no movió código
+productivo**: concluyó que `exports` ya cumple el ADR 0012.
+
+**Fugas de arquitectura introducidas: 0.** El diagnóstico es correcto: el caso de uso devuelve `ExportContent`
+(valor del dominio, no un agregado), el sistema de ficheros está detrás de `ExportFiles` (`LocalExportFiles`),
+la autorización vive en el decorador web `AuthorizedDownloadExportUseCase` y el ensamblado es con `@Bean`.
+El test extiende `IdentityIntegrationSupport`, como pide `AGENTS.md`.
+
+| Paso | Hallazgo | Tipo | ¿Lo detectaría una regla? |
+|---|---|---|---|
+| Caracterización | Faltan 401 (sin token), 403 (rol distinto de ADMIN) y el error de lectura del fichero; el agente lo reconoce en su resumen pero sigue adelante | Red de seguridad incompleta | No con ArchUnit: es cobertura del contrato. Lo frena revisar el test antes de refactorizar |
+| Refactor | Sin cambios de código | — | — |
+
+**Limitación.** En el repo no queda ningún módulo en capas: todos se hicieron hexagonales en labs anteriores, así
+que esta pasada no puede mostrar fugas de refactor. Las reglas de ArchUnit de la sección 30 se escribirán contra
+las fugas reales de `ordering` (tabla del ADR 0012):
+
+- Fuera de `..domain..` nadie llama al constructor ni a factorías de estado de un agregado salvo `place`/`restore`
+  (y `restore` solo desde `..adapters.out.persistence..`).
+- `..adapters.in..` no depende de clases de agregado de `..domain.model..`.
+- Los puertos de `..domain.port..` no exponen tipos de `org.springframework.transaction..` ni nombres `*Transaction*`.
+- `..infrastructure.config..` no contiene clases anónimas que implementen puertos.
+- `..domain..` y `..application..` no dependen de `jakarta.persistence..`, `org.springframework..` ni Jackson
+  (sustituye a la comprobación provisional de `verify-quality.sh`).
+
 ## Outbox de confirmación
 
 El «evento» no tiene tipo ni payload explícitos: el tipo lo determina la tabla
