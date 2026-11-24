@@ -62,7 +62,7 @@ class OrderControllerTest {
   void should_respond_201_when_request_valid() throws Exception {
     given(createOrderUseCase.create(any(), anyList()))
         .willReturn(
-            new Order(
+            Order.restore(
                 UUID.randomUUID(),
                 UUID.fromString(CUSTOMER),
                 OrderStatus.PENDING,
@@ -251,7 +251,7 @@ class OrderControllerTest {
   void should_respond_200_cancelled_when_use_case_returns() throws Exception {
     given(cancelOrderUseCase.cancel(any(), any()))
         .willReturn(
-            new Order(
+            Order.restore(
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
                 UUID.fromString(CUSTOMER),
                 OrderStatus.CANCELLED,

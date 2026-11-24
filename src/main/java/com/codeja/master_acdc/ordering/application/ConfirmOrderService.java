@@ -1,13 +1,11 @@
 package com.codeja.master_acdc.ordering.application;
 
 import com.codeja.master_acdc.ordering.application.port.ConfirmOrderUseCase;
-import com.codeja.master_acdc.ordering.domain.exception.OrderNotConfirmableException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.exception.PaymentDeclinedException;
 import com.codeja.master_acdc.ordering.domain.exception.PaymentTimeoutException;
 import com.codeja.master_acdc.ordering.domain.exception.PaymentUnavailableException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
-import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import com.codeja.master_acdc.ordering.domain.model.PaymentResult;
 import com.codeja.master_acdc.ordering.domain.port.OrderAmountCalculator;
 import com.codeja.master_acdc.ordering.domain.port.OrderPaymentRepository;
@@ -42,9 +40,7 @@ public final class ConfirmOrderService implements ConfirmOrderUseCase {
         orders
             .findByIdAndCustomerId(orderId, customerId)
             .orElseThrow(() -> new OrderNotFoundException(orderId));
-    if (order.status() != OrderStatus.PENDING) {
-      throw new OrderNotConfirmableException(orderId);
-    }
+    order.confirm();
     var amount =
         payments.findAmount(orderId, customerId).orElseGet(() -> amounts.calculate(order.lines()));
     var attempt = transactions.begin(orderId, customerId, amount);

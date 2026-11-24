@@ -18,7 +18,7 @@ public final class OrderPersistenceMapper {
   }
 
   public static Order toDomain(OrderJpaEntity entity) {
-    return new Order(
+    return Order.restore(
         entity.id(),
         entity.customerId(),
         OrderStatus.valueOf(entity.status()),

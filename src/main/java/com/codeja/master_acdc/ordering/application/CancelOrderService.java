@@ -33,7 +33,10 @@ public class CancelOrderService implements CancelOrderUseCase {
       throw new OrderNotCancellableException(orderId);
     }
 
-    orderCancelledPublisher.publish(new OrderCancelled(orderId, cancelled.lines()));
+    cancelled.pullEvents().stream()
+        .filter(OrderCancelled.class::isInstance)
+        .map(OrderCancelled.class::cast)
+        .forEach(orderCancelledPublisher::publish);
     return cancelled;
   }
 }

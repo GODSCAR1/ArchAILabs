@@ -34,7 +34,7 @@ class CancelOrderServiceTest {
   @Test
   void should_cancel_and_publish_when_order_pending() {
     Order pending =
-        new Order(ORDER_ID, CUSTOMER_ID, OrderStatus.PENDING, List.of(new OrderLine(A, 3)));
+        Order.restore(ORDER_ID, CUSTOMER_ID, OrderStatus.PENDING, List.of(new OrderLine(A, 3)));
     given(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID))
         .willReturn(Optional.of(pending));
     given(orderRepository.cancelIfCancelable(ORDER_ID, CUSTOMER_ID)).willReturn(true);
@@ -59,7 +59,7 @@ class CancelOrderServiceTest {
   @Test
   void should_report_not_cancellable_when_order_shipped() {
     Order shipped =
-        new Order(ORDER_ID, CUSTOMER_ID, OrderStatus.SHIPPED, List.of(new OrderLine(A, 3)));
+        Order.restore(ORDER_ID, CUSTOMER_ID, OrderStatus.SHIPPED, List.of(new OrderLine(A, 3)));
     given(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID))
         .willReturn(Optional.of(shipped));
 
@@ -72,7 +72,7 @@ class CancelOrderServiceTest {
   @Test
   void should_report_not_cancellable_when_update_matches_no_row() {
     Order pending =
-        new Order(ORDER_ID, CUSTOMER_ID, OrderStatus.PENDING, List.of(new OrderLine(A, 3)));
+        Order.restore(ORDER_ID, CUSTOMER_ID, OrderStatus.PENDING, List.of(new OrderLine(A, 3)));
     given(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID))
         .willReturn(Optional.of(pending));
     given(orderRepository.cancelIfCancelable(ORDER_ID, CUSTOMER_ID)).willReturn(false);

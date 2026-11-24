@@ -23,7 +23,7 @@ class OrderConfirmationAtomicIT extends IntegrationTest {
   private final UUID id = UUID.randomUUID();
   private final UUID customer = UUID.randomUUID();
   private final Order order =
-      new Order(id, customer, OrderStatus.PAYING, List.of(new OrderLine(UUID.randomUUID(), 1)));
+      Order.restore(id, customer, OrderStatus.PAYING, List.of(new OrderLine(UUID.randomUUID(), 1)));
   @Autowired private JdbcTemplate jdbc;
   @Autowired private PaymentTransactions transactions;
 

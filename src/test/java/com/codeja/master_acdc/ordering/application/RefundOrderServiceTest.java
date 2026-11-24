@@ -33,7 +33,11 @@ class RefundOrderServiceTest {
   void should_refund_without_other_effects_when_conditional_update_wins(OrderStatus status) {
     Order order = givenOrder(status);
     when(orders.refundIfRefundable(id)).thenReturn(true);
-    assertThat(service.refund(id)).isEqualTo(order.refund());
+    Order refunded = service.refund(id);
+    assertThat(refunded.id()).isEqualTo(id);
+    assertThat(refunded.customerId()).isEqualTo(order.customerId());
+    assertThat(refunded.status()).isEqualTo(OrderStatus.REFUNDED);
+    assertThat(refunded.lines()).isEqualTo(order.lines());
     verify(orders).findVisibleById(id, OrderReadScope.Global.INSTANCE);
     verify(orders).refundIfRefundable(id);
     verifyNoMoreInteractions(orders);
@@ -67,7 +71,7 @@ class RefundOrderServiceTest {
 
   private Order givenOrder(OrderStatus status) {
     Order order =
-        new Order(id, UUID.randomUUID(), status, List.of(new OrderLine(UUID.randomUUID(), 2)));
+        Order.restore(id, UUID.randomUUID(), status, List.of(new OrderLine(UUID.randomUUID(), 2)));
     when(orders.findVisibleById(id, OrderReadScope.Global.INSTANCE)).thenReturn(Optional.of(order));
     return order;
   }

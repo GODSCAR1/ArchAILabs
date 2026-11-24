@@ -4,7 +4,6 @@ import com.codeja.master_acdc.ordering.application.ConfirmOrderService;
 import com.codeja.master_acdc.ordering.application.port.ConfirmOrderUseCase;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotConfirmableException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
-import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import com.codeja.master_acdc.ordering.domain.model.PaymentAttempt;
 import com.codeja.master_acdc.ordering.domain.port.OrderAmountCalculator;
 import com.codeja.master_acdc.ordering.domain.port.OrderConfirmationOutbox;
@@ -57,7 +56,8 @@ public class ConfirmationConfiguration {
                 throw new OrderNotConfirmableException(order.id());
               }
               outbox.append(order);
-              return new Order(order.id(), order.customerId(), OrderStatus.PAID, order.lines());
+              order.registerPayment();
+              return order;
             });
       }
     };

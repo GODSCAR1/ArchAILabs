@@ -24,14 +24,18 @@ class GetOrderServiceTest {
   @Test
   void should_return_visible_order_when_repository_matches_scope() {
     var order =
-        new Order(
+        Order.restore(
             UUID.randomUUID(),
             UUID.randomUUID(),
             OrderStatus.PAID,
             List.of(new OrderLine(UUID.randomUUID(), 2)));
     var scope = new OrderReadScope.Own(order.customerId());
     given(orders.findVisibleById(order.id(), scope)).willReturn(Optional.of(order));
-    assertThat(service.get(order.id(), scope)).isEqualTo(order);
+    Order result = service.get(order.id(), scope);
+    assertThat(result).isEqualTo(order);
+    assertThat(result.customerId()).isEqualTo(order.customerId());
+    assertThat(result.status()).isEqualTo(OrderStatus.PAID);
+    assertThat(result.lines()).isEqualTo(order.lines());
   }
 
   @Test

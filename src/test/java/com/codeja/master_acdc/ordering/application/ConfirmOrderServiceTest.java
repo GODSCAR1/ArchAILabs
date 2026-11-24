@@ -33,7 +33,8 @@ class ConfirmOrderServiceTest {
   private final UUID id = UUID.randomUUID();
   private final UUID customer = UUID.randomUUID();
   private final Order order =
-      new Order(id, customer, OrderStatus.PENDING, List.of(new OrderLine(UUID.randomUUID(), 2)));
+      Order.restore(
+          id, customer, OrderStatus.PENDING, List.of(new OrderLine(UUID.randomUUID(), 2)));
   private final PaymentAttempt attempt = new PaymentAttempt(new BigDecimal("100"), 0);
   private final OrderRepository orders = mock(OrderRepository.class);
   private final OrderPaymentRepository payments = mock(OrderPaymentRepository.class);
@@ -49,10 +50,14 @@ class ConfirmOrderServiceTest {
     prepare();
     when(payments.findAmount(id, customer)).thenReturn(Optional.of(attempt.amount()));
     when(gateway.authorize(id, attempt)).thenReturn(PaymentResult.AUTHORIZED);
-    Order paid = new Order(id, customer, OrderStatus.PAID, order.lines());
+    Order paid = Order.restore(id, customer, OrderStatus.PAID, order.lines());
     when(transactions.complete(order)).thenReturn(paid);
 
-    assertThat(service.confirm(id, customer)).isEqualTo(paid);
+    Order result = service.confirm(id, customer);
+    assertThat(result).isEqualTo(paid);
+    assertThat(result.status()).isEqualTo(OrderStatus.PAID);
+    assertThat(result.lines()).isEqualTo(paid.lines());
+    assertThat(order.status()).isEqualTo(OrderStatus.PAYING);
     verify(amounts, never()).calculate(any());
   }
 
@@ -93,7 +98,7 @@ class ConfirmOrderServiceTest {
   @DisplayName("Un pedido no pendiente no inicia autorización")
   void should_reject_confirmation_when_order_is_not_pending() {
     when(orders.findByIdAndCustomerId(id, customer))
-        .thenReturn(Optional.of(new Order(id, customer, OrderStatus.PAYING, order.lines())));
+        .thenReturn(Optional.of(Order.restore(id, customer, OrderStatus.PAYING, order.lines())));
 
     assertThatThrownBy(() -> service.confirm(id, customer))
         .isInstanceOf(OrderNotConfirmableException.class);

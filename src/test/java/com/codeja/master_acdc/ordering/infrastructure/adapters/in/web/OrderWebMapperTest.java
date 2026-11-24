@@ -69,7 +69,7 @@ class OrderWebMapperTest {
   @Test
   void should_map_public_fields_when_mapping_order_and_summary() {
     var order =
-        new Order(
+        Order.restore(
             UUID.randomUUID(),
             UUID.randomUUID(),
             OrderStatus.PAID,

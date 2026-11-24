@@ -24,7 +24,7 @@ class OrderRepositoryAdapterIT extends IntegrationTest {
 
   @Test
   void should_persist_pending_order_with_lines_when_saved() {
-    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3), new OrderLine(B, 2)));
+    Order order = Order.place(CUSTOMER, List.of(new OrderLine(A, 3), new OrderLine(B, 2)));
 
     adapter.save(order);
 
@@ -51,17 +51,20 @@ class OrderRepositoryAdapterIT extends IntegrationTest {
 
   @Test
   void should_find_order_by_id_and_customer_id_when_owned() {
-    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3), new OrderLine(B, 2)));
+    Order order = Order.place(CUSTOMER, List.of(new OrderLine(A, 3), new OrderLine(B, 2)));
     adapter.save(order);
 
     var found = adapter.findByIdAndCustomerId(order.id(), CUSTOMER);
 
     assertThat(found).contains(order);
+    assertThat(found.orElseThrow().customerId()).isEqualTo(order.customerId());
+    assertThat(found.orElseThrow().status()).isEqualTo(order.status());
+    assertThat(found.orElseThrow().lines()).isEqualTo(order.lines());
   }
 
   @Test
   void should_return_empty_when_order_belongs_to_another_customer() {
-    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3)));
+    Order order = Order.place(CUSTOMER, List.of(new OrderLine(A, 3)));
     adapter.save(order);
     UUID otherCustomer = UUID.fromString("660e8400-e29b-41d4-a716-446655440000");
 
@@ -70,7 +73,7 @@ class OrderRepositoryAdapterIT extends IntegrationTest {
 
   @Test
   void should_cancel_order_when_status_is_pending() {
-    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3)));
+    Order order = Order.place(CUSTOMER, List.of(new OrderLine(A, 3)));
     adapter.save(order);
 
     boolean cancelled = adapter.cancelIfCancelable(order.id(), CUSTOMER);
@@ -84,7 +87,7 @@ class OrderRepositoryAdapterIT extends IntegrationTest {
 
   @Test
   void should_not_cancel_order_when_status_is_shipped() {
-    Order order = Order.create(CUSTOMER, List.of(new OrderLine(A, 3)));
+    Order order = Order.place(CUSTOMER, List.of(new OrderLine(A, 3)));
     adapter.save(order);
     jdbcTemplate.update("update orders set status = 'SHIPPED' where id = ?", order.id());
 

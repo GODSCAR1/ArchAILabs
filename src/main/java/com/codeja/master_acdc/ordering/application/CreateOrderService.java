@@ -29,7 +29,7 @@ public class CreateOrderService implements CreateOrderUseCase {
         requestedLines.stream()
             .map(line -> new OrderLine(line.productId(), line.quantity()))
             .toList();
-    Order order = Order.create(customerId, lines);
+    Order order = Order.place(customerId, lines);
     // Ordenar por producto alineado con inventario evita interbloqueos entre pedidos concurrentes.
     List<OrderLine> ordered =
         order.lines().stream().sorted(comparing(OrderLine::productId)).toList();
