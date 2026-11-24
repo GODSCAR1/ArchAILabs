@@ -462,6 +462,26 @@
               <mutationThreshold>${pit.mutationThreshold}</mutationThreshold>
             </configuration>
           </execution>
+          <!-- Lab S17 (docs/lab-s17.md): mide el núcleo hexagonal de ordering (dominio y servicios
+               de aplicación) solo con sus tests unitarios. Sin umbral: es la medida antes/después del
+               refactor. Se invoca con org.pitest:pitest-maven:mutationCoverage@pit-ordering. -->
+          <execution>
+            <id>pit-ordering</id>
+            <configuration>
+              <targetClasses>
+                <param>com.codeja.master_acdc.ordering.domain.*</param>
+                <param>com.codeja.master_acdc.ordering.application.*</param>
+              </targetClasses>
+              <targetTests>
+                <param>com.codeja.master_acdc.ordering.domain.*Test</param>
+                <param>com.codeja.master_acdc.ordering.application.*Test</param>
+              </targetTests>
+              <reportsDirectory>${project.build.directory}/pit-reports/ordering</reportsDirectory>
+              <mutators>
+                <mutator>STRONGER</mutator>
+              </mutators>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
     </plugins>
