@@ -150,12 +150,17 @@ class MethodAuthorizationIT extends IdentityIntegrationSupport {
     assertThatThrownBy(
             () ->
                 createOrder.create(
-                    null,
-                    java.util.List.of(
-                        new com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine(
-                            null, 0))))
+                    new com.codeja.master_acdc.ordering.application.port.PlaceOrderCommand(
+                        null,
+                        java.util.List.of(
+                            new com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine(
+                                null, 0)))))
         .isInstanceOf(AccessDeniedException.class);
-    assertThatThrownBy(() -> cancelOrder.cancel(null, null))
+    assertThatThrownBy(
+            () ->
+                cancelOrder.cancel(
+                    new com.codeja.master_acdc.ordering.application.port.CancelOrderCommand(
+                        null, null)))
         .isInstanceOf(AccessDeniedException.class);
     assertThatThrownBy(
             () ->

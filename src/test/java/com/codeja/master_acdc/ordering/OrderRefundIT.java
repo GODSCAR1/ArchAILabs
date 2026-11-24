@@ -12,12 +12,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 class OrderRefundIT extends OrderRefundSupport {
   @org.junit.jupiter.api.BeforeEach
   void clear_effect_observations() {
-    org.mockito.Mockito.clearInvocations(spiedCancellations, spiedInventory);
+    org.mockito.Mockito.clearInvocations(spiedOrderEvents, spiedInventory);
   }
 
   @org.junit.jupiter.api.AfterEach
   void verify_refund_has_no_inventory_or_cancellation_effects() {
-    org.mockito.Mockito.verifyNoInteractions(spiedCancellations, spiedInventory);
+    org.mockito.Mockito.verifyNoInteractions(spiedOrderEvents, spiedInventory);
   }
 
   @ParameterizedTest

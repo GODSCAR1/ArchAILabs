@@ -65,6 +65,17 @@ SEC_BAD=$(grep -rnE 'anyRequest\(\)\s*\.permitAll\(\)|requestMatchers\("/(api/)?
 CUSTOMER_PARAM=$(grep -rnE '"X-Customer-Id"|@(RequestParam|RequestHeader|PathVariable)\([^)]*customerId' src/main/java/com/codeja/master_acdc/ordering || true)
 [[ -z "$CUSTOMER_PARAM" ]] \
   || { echo "AC/DC: la API de pedidos no recibe customerId: el cliente sale del sub del token (ADR 0011):" >&2; echo "$CUSTOMER_PARAM" >&2; exit 1; }
+echo "▶ Núcleo hexagonal (lab S17, ADR docs/adr/0012-arquitectura-hexagonal.md)"
+# Provisional hasta las reglas de ArchUnit de la sección 30: domain y application de cualquier módulo
+# no importan JPA, Spring ni Jackson, y la web de ordering no recibe el agregado Order.
+CORE_LEAKS=$(grep -rnE '^import (static )?(jakarta\.persistence|org\.springframework|com\.fasterxml\.jackson|tools\.jackson)' \
+  src/main/java/com/codeja/master_acdc/*/domain src/main/java/com/codeja/master_acdc/*/application 2>/dev/null || true)
+[[ -z "$CORE_LEAKS" ]] \
+  || { echo "AC/DC: domain/application importan JPA, Spring o Jackson (ADR 0012). Mueve el código técnico a un adaptador de infrastructure/ detrás de un puerto:" >&2; echo "$CORE_LEAKS" >&2; exit 1; }
+WEB_AGGREGATE=$(grep -rln '^import com\.codeja\.master_acdc\.ordering\.domain\.model\.Order;' \
+  src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/in 2>/dev/null || true)
+[[ -z "$WEB_AGGREGATE" ]] \
+  || { echo "AC/DC: un adaptador de entrada de ordering usa el agregado Order (ADR 0012). Los casos de uso devuelven OrderDetail:" >&2; echo "$WEB_AGGREGATE" >&2; exit 1; }
 echo "▶ Tests guardianes (lab S09: scripts/protected-tests.txt)"
 # Segunda capa: si un guardián desaparece por una vía que ningún hook vio, Verify falla igual.
 GUARDS_MISSING=0

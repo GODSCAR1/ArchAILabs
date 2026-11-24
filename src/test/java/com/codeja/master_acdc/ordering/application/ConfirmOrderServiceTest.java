@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.codeja.master_acdc.ordering.application.port.ConfirmOrderCommand;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotConfirmableException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.exception.PaymentDeclinedException;
@@ -18,10 +19,9 @@ import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import com.codeja.master_acdc.ordering.domain.model.PaymentAttempt;
 import com.codeja.master_acdc.ordering.domain.model.PaymentResult;
 import com.codeja.master_acdc.ordering.domain.port.OrderAmountCalculator;
-import com.codeja.master_acdc.ordering.domain.port.OrderPaymentRepository;
+import com.codeja.master_acdc.ordering.domain.port.OrderPayments;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.PaymentGateway;
-import com.codeja.master_acdc.ordering.domain.port.PaymentTransactions;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -33,26 +33,30 @@ class ConfirmOrderServiceTest {
   private final UUID id = UUID.randomUUID();
   private final UUID customer = UUID.randomUUID();
   private final Order order =
-      new Order(id, customer, OrderStatus.PENDING, List.of(new OrderLine(UUID.randomUUID(), 2)));
+      Order.restore(
+          id, customer, OrderStatus.PENDING, List.of(new OrderLine(UUID.randomUUID(), 2)));
   private final PaymentAttempt attempt = new PaymentAttempt(new BigDecimal("100"), 0);
   private final OrderRepository orders = mock(OrderRepository.class);
-  private final OrderPaymentRepository payments = mock(OrderPaymentRepository.class);
+  private final OrderPayments payments = mock(OrderPayments.class);
   private final OrderAmountCalculator amounts = mock(OrderAmountCalculator.class);
   private final PaymentGateway gateway = mock(PaymentGateway.class);
-  private final PaymentTransactions transactions = mock(PaymentTransactions.class);
   private final ConfirmOrderService service =
-      new ConfirmOrderService(orders, payments, amounts, gateway, transactions);
+      new ConfirmOrderService(orders, payments, amounts, gateway);
 
   @Test
   @DisplayName("El reintento reutiliza el importe ya fijado")
   void should_reuse_amount_when_payment_was_attempted_before() {
     prepare();
-    when(payments.findAmount(id, customer)).thenReturn(Optional.of(attempt.amount()));
+    when(payments.fixedAmount(id, customer)).thenReturn(Optional.of(attempt.amount()));
     when(gateway.authorize(id, attempt)).thenReturn(PaymentResult.AUTHORIZED);
-    Order paid = new Order(id, customer, OrderStatus.PAID, order.lines());
-    when(transactions.complete(order)).thenReturn(paid);
+    Order paid = Order.restore(id, customer, OrderStatus.PAID, order.lines());
 
-    assertThat(service.confirm(id, customer)).isEqualTo(paid);
+    var result = service.confirm(new ConfirmOrderCommand(id, customer));
+    assertThat(result.id()).isEqualTo(paid.id());
+    assertThat(result.status()).isEqualTo(OrderStatus.PAID);
+    assertThat(result.lines()).isEqualTo(paid.lines());
+    assertThat(order.status()).isEqualTo(OrderStatus.PAID);
+    verify(payments).settle(order);
     verify(amounts, never()).calculate(any());
   }
 
@@ -63,9 +67,9 @@ class ConfirmOrderServiceTest {
     when(amounts.calculate(order.lines())).thenReturn(attempt.amount());
     when(gateway.authorize(id, attempt)).thenReturn(PaymentResult.DECLINED);
 
-    assertThatThrownBy(() -> service.confirm(id, customer))
+    assertThatThrownBy(() -> service.confirm(new ConfirmOrderCommand(id, customer)))
         .isInstanceOf(PaymentDeclinedException.class);
-    verify(transactions).failed(id, customer, true);
+    verify(payments).abandonAttempt(id, customer, true);
   }
 
   @Test
@@ -76,15 +80,15 @@ class ConfirmOrderServiceTest {
     when(gateway.authorize(id, attempt))
         .thenThrow(new PaymentTimeoutException(new java.net.SocketTimeoutException()));
 
-    assertThatThrownBy(() -> service.confirm(id, customer))
+    assertThatThrownBy(() -> service.confirm(new ConfirmOrderCommand(id, customer)))
         .isInstanceOf(PaymentTimeoutException.class);
-    verify(transactions).failed(id, customer, false);
+    verify(payments).abandonAttempt(id, customer, false);
   }
 
   @Test
   @DisplayName("Un pedido ajeno o inexistente no inicia autorización")
   void should_reject_confirmation_when_order_is_not_visible() {
-    assertThatThrownBy(() -> service.confirm(id, customer))
+    assertThatThrownBy(() -> service.confirm(new ConfirmOrderCommand(id, customer)))
         .isInstanceOf(OrderNotFoundException.class);
     verify(gateway, never()).authorize(any(), any());
   }
@@ -93,15 +97,15 @@ class ConfirmOrderServiceTest {
   @DisplayName("Un pedido no pendiente no inicia autorización")
   void should_reject_confirmation_when_order_is_not_pending() {
     when(orders.findByIdAndCustomerId(id, customer))
-        .thenReturn(Optional.of(new Order(id, customer, OrderStatus.PAYING, order.lines())));
+        .thenReturn(Optional.of(Order.restore(id, customer, OrderStatus.PAYING, order.lines())));
 
-    assertThatThrownBy(() -> service.confirm(id, customer))
+    assertThatThrownBy(() -> service.confirm(new ConfirmOrderCommand(id, customer)))
         .isInstanceOf(OrderNotConfirmableException.class);
     verify(gateway, never()).authorize(any(), any());
   }
 
   private void prepare() {
     when(orders.findByIdAndCustomerId(id, customer)).thenReturn(Optional.of(order));
-    when(transactions.begin(id, customer, attempt.amount())).thenReturn(attempt);
+    when(payments.startAttempt(id, customer, attempt.amount())).thenReturn(attempt);
   }
 }

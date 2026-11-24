@@ -9,7 +9,7 @@ import com.codeja.master_acdc.IntegrationTest;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
-import com.codeja.master_acdc.ordering.domain.port.PaymentTransactions;
+import com.codeja.master_acdc.ordering.domain.port.OrderPayments;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,9 +23,9 @@ class OrderConfirmationAtomicIT extends IntegrationTest {
   private final UUID id = UUID.randomUUID();
   private final UUID customer = UUID.randomUUID();
   private final Order order =
-      new Order(id, customer, OrderStatus.PAYING, List.of(new OrderLine(UUID.randomUUID(), 1)));
+      Order.restore(id, customer, OrderStatus.PAYING, List.of(new OrderLine(UUID.randomUUID(), 1)));
   @Autowired private JdbcTemplate jdbc;
-  @Autowired private PaymentTransactions transactions;
+  @Autowired private OrderPayments payments;
 
   @BeforeEach
   void insert_order() {
@@ -36,7 +36,9 @@ class OrderConfirmationAtomicIT extends IntegrationTest {
   @Test
   @DisplayName("La confirmación y el evento se registran juntos")
   void should_save_paid_and_outbox_when_payment_is_authorized() {
-    assertThat(transactions.complete(order).status()).isEqualTo(OrderStatus.PAID);
+    order.registerPayment();
+    payments.settle(order);
+    assertThat(order.status()).isEqualTo(OrderStatus.PAID);
     assertThat(status()).isEqualTo("PAID");
     assertThat(eventCount()).isEqualTo(1);
   }
@@ -45,10 +47,11 @@ class OrderConfirmationAtomicIT extends IntegrationTest {
   @DisplayName("Fallo al registrar confirmación revierte ambos cambios")
   void should_keep_paying_when_outbox_insertion_fails() {
     doThrow(new DataIntegrityViolationException("test failure"))
-        .when(spiedConfirmations)
-        .append(any());
+        .when(spiedOrderEvents)
+        .publish(any());
 
-    assertThatThrownBy(() -> transactions.complete(order))
+    order.registerPayment();
+    assertThatThrownBy(() -> payments.settle(order))
         .isInstanceOf(DataIntegrityViolationException.class);
     assertThat(status()).isEqualTo("PAYING");
     assertThat(eventCount()).isZero();

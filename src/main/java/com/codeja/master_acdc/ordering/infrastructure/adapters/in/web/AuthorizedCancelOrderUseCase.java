@@ -1,8 +1,9 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
+import com.codeja.master_acdc.ordering.application.port.CancelOrderCommand;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
+import com.codeja.master_acdc.ordering.application.port.OrderDetail;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
-import com.codeja.master_acdc.ordering.domain.model.Order;
 import java.util.UUID;
 import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -17,11 +18,12 @@ public class AuthorizedCancelOrderUseCase implements CancelOrderUseCase {
 
   @Override
   @PreAuthorize("hasAuthority('order:cancel-own')")
-  public Order cancel(UUID orderId, UUID ignoredCustomer) {
+  public OrderDetail cancel(CancelOrderCommand command) {
+    UUID orderId = command.orderId();
     UUID customer = actor.cancellationCustomer(orderId);
     if (orderId == null) {
       throw new OrderNotFoundException(null);
     }
-    return delegate.cancel(orderId, customer);
+    return delegate.cancel(new CancelOrderCommand(orderId, customer));
   }
 }

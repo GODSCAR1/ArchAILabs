@@ -13,12 +13,15 @@ class OrderPersistenceMapperTest {
   @Test
   void should_preserve_identity_status_and_lines_when_round_tripping_order() {
     var order =
-        new Order(
+        Order.restore(
             UUID.randomUUID(),
             UUID.randomUUID(),
             OrderStatus.CANCELLED,
             List.of(new OrderLine(UUID.randomUUID(), 3)));
-    assertThat(OrderPersistenceMapper.toDomain(OrderPersistenceMapper.toEntity(order)))
-        .isEqualTo(order);
+    var restored = OrderPersistenceMapper.toDomain(OrderPersistenceMapper.toEntity(order));
+    assertThat(restored).isEqualTo(order);
+    assertThat(restored.customerId()).isEqualTo(order.customerId());
+    assertThat(restored.status()).isEqualTo(order.status());
+    assertThat(restored.lines()).isEqualTo(order.lines());
   }
 }

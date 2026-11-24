@@ -1,8 +1,8 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
+import com.codeja.master_acdc.ordering.application.port.OrderDetail;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderStatusException;
 import com.codeja.master_acdc.ordering.domain.exception.MissingOrderStatusException;
-import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderListingCriteria;
 import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
@@ -48,7 +48,7 @@ public final class OrderWebMapper {
     }
   }
 
-  public static OrderResponse response(Order order) {
+  public static OrderResponse response(OrderDetail order) {
     return new OrderResponse(
         order.id(),
         order.status(),

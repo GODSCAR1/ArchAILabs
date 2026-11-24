@@ -1,10 +1,12 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
+import com.codeja.master_acdc.ordering.application.port.CancelOrderCommand;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
-import com.codeja.master_acdc.ordering.domain.model.Order;
+import com.codeja.master_acdc.ordering.application.port.OrderDetail;
+import com.codeja.master_acdc.ordering.application.port.PlaceOrderCommand;
 import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -56,13 +58,15 @@ public class OrderController {
 
   @PostMapping("/api/orders")
   public ResponseEntity<OrderResponse> create(@RequestBody CreateOrderRequest request) {
-    Order order = createOrderUseCase.create(null, OrderWebMapper.toLines(request));
+    OrderDetail order =
+        createOrderUseCase.create(new PlaceOrderCommand(null, OrderWebMapper.toLines(request)));
     return ResponseEntity.status(HttpStatus.CREATED).body(OrderWebMapper.response(order));
   }
 
   @PostMapping("/api/orders/{id}/cancellation")
   public ResponseEntity<OrderResponse> cancel(@PathVariable("id") String orderId) {
-    Order order = cancelOrderUseCase.cancel(OrderWebMapper.orderId(orderId), null);
+    OrderDetail order =
+        cancelOrderUseCase.cancel(new CancelOrderCommand(OrderWebMapper.orderId(orderId), null));
     return ResponseEntity.ok(OrderWebMapper.response(order));
   }
 }

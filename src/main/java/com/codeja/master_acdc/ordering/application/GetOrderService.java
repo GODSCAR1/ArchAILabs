@@ -1,6 +1,7 @@
 package com.codeja.master_acdc.ordering.application;
 
 import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
+import com.codeja.master_acdc.ordering.application.port.OrderDetail;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderReadScope;
@@ -15,12 +16,14 @@ public class GetOrderService implements GetOrderUseCase {
   }
 
   @Override
-  public Order get(UUID orderId, OrderReadScope scope) {
+  public OrderDetail get(UUID orderId, OrderReadScope scope) {
     if (orderId == null || scope == OrderReadScope.None.INSTANCE) {
       throw new OrderNotFoundException(orderId);
     }
-    return orders
-        .findVisibleById(orderId, scope)
-        .orElseThrow(() -> new OrderNotFoundException(orderId));
+    Order order =
+        orders
+            .findVisibleById(orderId, scope)
+            .orElseThrow(() -> new OrderNotFoundException(orderId));
+    return new OrderDetail(order.id(), order.status(), order.lines());
   }
 }

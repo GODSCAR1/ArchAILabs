@@ -3,15 +3,15 @@ package com.codeja.master_acdc.ordering.application;
 import static java.util.Comparator.comparing;
 
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
+import com.codeja.master_acdc.ordering.application.port.OrderDetail;
+import com.codeja.master_acdc.ordering.application.port.PlaceOrderCommand;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
 import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
-import com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.StockReserver;
 import java.util.List;
-import java.util.UUID;
 
 public class CreateOrderService implements CreateOrderUseCase {
 
@@ -24,12 +24,12 @@ public class CreateOrderService implements CreateOrderUseCase {
   }
 
   @Override
-  public Order create(UUID customerId, List<RequestedOrderLine> requestedLines) {
+  public OrderDetail create(PlaceOrderCommand command) {
     List<OrderLine> lines =
-        requestedLines.stream()
+        command.lines().stream()
             .map(line -> new OrderLine(line.productId(), line.quantity()))
             .toList();
-    Order order = Order.create(customerId, lines);
+    Order order = Order.place(command.customerId(), lines);
     // Ordenar por producto alineado con inventario evita interbloqueos entre pedidos concurrentes.
     List<OrderLine> ordered =
         order.lines().stream().sorted(comparing(OrderLine::productId)).toList();
@@ -42,8 +42,8 @@ public class CreateOrderService implements CreateOrderUseCase {
     };
   }
 
-  private Order save(Order order) {
+  private OrderDetail save(Order order) {
     orderRepository.save(order);
-    return order;
+    return new OrderDetail(order.id(), order.status(), order.lines());
   }
 }

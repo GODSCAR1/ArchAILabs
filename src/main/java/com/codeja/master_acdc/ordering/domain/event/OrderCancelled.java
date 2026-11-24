@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 /** Hecho de negocio: un pedido ha sido cancelado y su stock debe liberarse. */
-public record OrderCancelled(UUID orderId, List<OrderLine> lines) {
+public record OrderCancelled(UUID orderId, List<OrderLine> lines) implements OrderEvent {
 
   public OrderCancelled {
     lines = List.copyOf(lines);

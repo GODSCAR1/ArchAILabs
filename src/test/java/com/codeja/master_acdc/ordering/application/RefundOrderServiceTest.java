@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.codeja.master_acdc.ordering.application.port.RefundOrderCommand;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotRefundableException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
@@ -32,8 +33,13 @@ class RefundOrderServiceTest {
       names = {"PAID", "SHIPPED"})
   void should_refund_without_other_effects_when_conditional_update_wins(OrderStatus status) {
     Order order = givenOrder(status);
+    UUID customer = order.customerId();
     when(orders.refundIfRefundable(id)).thenReturn(true);
-    assertThat(service.refund(id)).isEqualTo(order.refund());
+    var refunded = service.refund(new RefundOrderCommand(id));
+    assertThat(refunded.id()).isEqualTo(id);
+    assertThat(order.customerId()).isEqualTo(customer);
+    assertThat(refunded.status()).isEqualTo(OrderStatus.REFUNDED);
+    assertThat(refunded.lines()).isEqualTo(order.lines());
     verify(orders).findVisibleById(id, OrderReadScope.Global.INSTANCE);
     verify(orders).refundIfRefundable(id);
     verifyNoMoreInteractions(orders);
@@ -45,7 +51,8 @@ class RefundOrderServiceTest {
       names = {"PENDING", "CANCELLED", "REFUNDED"})
   void should_reject_without_update_when_status_is_not_refundable(OrderStatus status) {
     givenOrder(status);
-    assertThatThrownBy(() -> service.refund(id)).isInstanceOf(OrderNotRefundableException.class);
+    assertThatThrownBy(() -> service.refund(new RefundOrderCommand(id)))
+        .isInstanceOf(OrderNotRefundableException.class);
     verify(orders).findVisibleById(id, OrderReadScope.Global.INSTANCE);
     verifyNoMoreInteractions(orders);
   }
@@ -54,20 +61,22 @@ class RefundOrderServiceTest {
   void should_report_conflict_when_valid_read_is_followed_by_zero_updated_rows() {
     givenOrder(OrderStatus.PAID);
     when(orders.refundIfRefundable(id)).thenReturn(false);
-    assertThatThrownBy(() -> service.refund(id)).isInstanceOf(OrderNotRefundableException.class);
+    assertThatThrownBy(() -> service.refund(new RefundOrderCommand(id)))
+        .isInstanceOf(OrderNotRefundableException.class);
   }
 
   @Test
   void should_report_not_found_when_order_is_absent() {
     when(orders.findVisibleById(id, OrderReadScope.Global.INSTANCE)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.refund(id)).isInstanceOf(OrderNotFoundException.class);
+    assertThatThrownBy(() -> service.refund(new RefundOrderCommand(id)))
+        .isInstanceOf(OrderNotFoundException.class);
     verify(orders).findVisibleById(id, OrderReadScope.Global.INSTANCE);
     verifyNoMoreInteractions(orders);
   }
 
   private Order givenOrder(OrderStatus status) {
     Order order =
-        new Order(id, UUID.randomUUID(), status, List.of(new OrderLine(UUID.randomUUID(), 2)));
+        Order.restore(id, UUID.randomUUID(), status, List.of(new OrderLine(UUID.randomUUID(), 2)));
     when(orders.findVisibleById(id, OrderReadScope.Global.INSTANCE)).thenReturn(Optional.of(order));
     return order;
   }

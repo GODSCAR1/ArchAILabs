@@ -1,5 +1,7 @@
 package com.codeja.master_acdc.ordering.application;
 
+import com.codeja.master_acdc.ordering.application.port.OrderDetail;
+import com.codeja.master_acdc.ordering.application.port.RefundOrderCommand;
 import com.codeja.master_acdc.ordering.application.port.RefundOrderUseCase;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotRefundableException;
@@ -16,15 +18,16 @@ public class RefundOrderService implements RefundOrderUseCase {
   }
 
   @Override
-  public Order refund(UUID orderId) {
+  public OrderDetail refund(RefundOrderCommand command) {
+    UUID orderId = command.orderId();
     Order order =
         orders
             .findVisibleById(orderId, OrderReadScope.Global.INSTANCE)
             .orElseThrow(() -> new OrderNotFoundException(orderId));
-    Order refunded = order.refund();
+    order.refund();
     if (!orders.refundIfRefundable(orderId)) {
       throw new OrderNotRefundableException(orderId);
     }
-    return refunded;
+    return new OrderDetail(order.id(), order.status(), order.lines());
   }
 }

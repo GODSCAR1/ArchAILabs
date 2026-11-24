@@ -10,7 +10,12 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 - Verify: `bash ./verify-quality.sh --fast` (specs + capa 1 + tests; tarda varios minutos: ejecútalo con un timeout de al menos 600 s). Solo estilo: `bash ./mvnw -q checkstyle:check`.
 - Capa 1 completa (formato, estilo, compilación con Error Prone/NullAway, SpotBugs y PMD): `bash ./mvnw -B spotless:check checkstyle:check compile spotbugs:check pmd:check`. Sin `-q`: PMD informa como `[WARNING] PMD Failure`.
 
-## Arquitectura (hexagonal estricta)
+## Arquitectura (hexagonal estricta) — ADR `docs/adr/0012-arquitectura-hexagonal.md`, referencia: `ordering`
+- Antes de refactorizar un módulo: tests de caracterización de su API con `isStrictlyEqualTo` y en verde. Si uno cambia durante el refactor, has cambiado el comportamiento: vuelve atrás. Arrays sin orden garantizado → comparación sin orden, nunca laxa en campos.
+- Agregados: clase `final`, constructor privado, `place(...)` con las invariantes y `restore(...)` para persistencia. Las transiciones son métodos del negocio en el agregado; ni servicios, ni `@Bean`, ni adaptadores deciden estados ni hacen `new` de un agregado en un estado concreto.
+- Eventos: el agregado los acumula y el servicio publica `pullEvents()` por un único puerto (`Publish<Agregado>Events`) solo si hay alguno; el adaptador reparte con `switch` sobre el evento sellado, sin `default`.
+- Puertos de entrada: comando → resultado de aplicación (`<Agregado>Detail`); nunca devuelven el agregado a `adapters/in`. Puertos de salida con nombres de negocio y sin tipos técnicos (nada de `Transaction*`); si una operación debe ser atómica, lo garantiza el adaptador.
+- Las tablas de ubicación y de fugas (con su corrección) están en el ADR 0012; `verify-quality.sh` falla si `domain/` o `application/` importan JPA, Spring o Jackson (provisional hasta ArchUnit).
 - `domain/` NUNCA importa Spring, JPA ni Jackson (`@Entity`, `@Repository`, `@Service`, `@Component` prohibidos ahí). (pendiente: ArchUnit en S17)
 - `application/` depende solo de `domain/`; NUNCA de `infrastructure/`. (pendiente: ArchUnit en S17)
 - Puertos de salida en `domain/port/` (solo interfaces); implementaciones en `infrastructure/adapters/`.

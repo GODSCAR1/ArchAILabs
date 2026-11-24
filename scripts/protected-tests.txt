@@ -33,3 +33,5 @@ src/test/java/com/codeja/master_acdc/TestcontainersConfiguration.java
 src/test/java/com/codeja/master_acdc/IntegrationTest.java
 src/test/java/com/codeja/master_acdc/IntegrationTestInfrastructureIT.java
 src/test/java/com/codeja/master_acdc/SchemaIT.java
+# Lab S17: caracterización de la API de pedidos (red de seguridad del refactor hexagonal)
+src/test/java/com/codeja/master_acdc/ordering/OrderApiCharacterizationIT.java
