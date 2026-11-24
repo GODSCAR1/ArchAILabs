@@ -14,11 +14,10 @@ import com.codeja.master_acdc.ordering.application.port.GetOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
 import com.codeja.master_acdc.ordering.application.port.RefundOrderUseCase;
 import com.codeja.master_acdc.ordering.domain.port.OrderAmountCalculator;
-import com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher;
-import com.codeja.master_acdc.ordering.domain.port.OrderConfirmationOutbox;
-import com.codeja.master_acdc.ordering.domain.port.OrderPaymentRepository;
+import com.codeja.master_acdc.ordering.domain.port.OrderPayments;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
 import com.codeja.master_acdc.ordering.domain.port.OrderSummaryQuery;
+import com.codeja.master_acdc.ordering.domain.port.PublishOrderEvents;
 import com.codeja.master_acdc.ordering.domain.port.StockReserver;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedCancelOrderUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedCreateOrderUseCase;
@@ -27,10 +26,9 @@ import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.Authorized
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.AuthorizedRefundOrderUseCase;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderActorResolver;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.catalog.CatalogOrderAmountCalculator;
-import com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.SpringOrderCancelledPublisher;
+import com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.OrderEventsAdapter;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.OrderCancelledListener;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.StockReserverAdapter;
-import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderConfirmationOutboxJdbcAdapter;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaRepository;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderPaymentJdbcAdapter;
 import com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderRepositoryAdapter;
@@ -48,13 +46,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Configuration
 public class OrderingConfiguration {
   @Bean
-  public OrderConfirmationOutbox orderConfirmationOutbox(JdbcTemplate jdbc) {
-    return new OrderConfirmationOutboxJdbcAdapter(jdbc);
-  }
-
-  @Bean
-  public OrderPaymentRepository orderPaymentRepository(JdbcTemplate jdbc) {
-    return new OrderPaymentJdbcAdapter(jdbc);
+  public OrderPayments orderPayments(
+      JdbcTemplate jdbc, PlatformTransactionManager manager, PublishOrderEvents events) {
+    return new OrderPaymentJdbcAdapter(jdbc, new TransactionTemplate(manager), events);
   }
 
   @Bean
@@ -116,9 +110,9 @@ public class OrderingConfiguration {
   }
 
   @Bean
-  public OrderCancelledPublisher orderCancelledPublisher(
-      ApplicationEventPublisher applicationEventPublisher) {
-    return new SpringOrderCancelledPublisher(applicationEventPublisher);
+  public PublishOrderEvents orderEvents(
+      ApplicationEventPublisher applicationEventPublisher, JdbcTemplate jdbc) {
+    return new OrderEventsAdapter(applicationEventPublisher, jdbc);
   }
 
   @Bean
@@ -139,22 +133,20 @@ public class OrderingConfiguration {
     CreateOrderService delegate = new CreateOrderService(orderRepository, stockReserver);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
     CreateOrderUseCase transactional =
-        (customerId, lines) ->
-            transactionTemplate.execute(status -> delegate.create(customerId, lines));
+        command -> transactionTemplate.execute(status -> delegate.create(command));
     return new AuthorizedCreateOrderUseCase(transactional, actor);
   }
 
   @Bean
   public CancelOrderUseCase cancelOrderUseCase(
       OrderRepository orderRepository,
-      OrderCancelledPublisher orderCancelledPublisher,
+      PublishOrderEvents orderEvents,
       PlatformTransactionManager transactionManager,
       OrderActorResolver actor) {
-    CancelOrderService delegate = new CancelOrderService(orderRepository, orderCancelledPublisher);
+    CancelOrderService delegate = new CancelOrderService(orderRepository, orderEvents);
     TransactionTemplate transactionTemplate = new TransactionTemplate(transactionManager);
     CancelOrderUseCase transactional =
-        (orderId, customerId) ->
-            transactionTemplate.execute(status -> delegate.cancel(orderId, customerId));
+        command -> transactionTemplate.execute(status -> delegate.cancel(command));
     return new AuthorizedCancelOrderUseCase(transactional, actor);
   }
 }

@@ -97,8 +97,8 @@ class OrderConfirmationOutboxIT extends IntegrationTest {
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"status\":\"AUTHORIZED\"}")));
     doThrow(new DataIntegrityViolationException("test failure"))
-        .when(spiedConfirmations)
-        .append(any());
+        .when(spiedOrderEvents)
+        .publish(any());
 
     assertThatThrownBy(
             () ->
@@ -122,8 +122,9 @@ class OrderConfirmationOutboxIT extends IntegrationTest {
 
   private void seed(UUID order, UUID customer, UUID product) {
     jdbc.update(
-        "insert into orders (id, customer_id, status, payment_amount) values (?, ?, 'PENDING',"
-            + " 100)",
+        """
+        insert into orders (id, customer_id, status, payment_amount) values (?, ?, 'PENDING', 100)
+        """,
         order,
         customer);
     jdbc.update(

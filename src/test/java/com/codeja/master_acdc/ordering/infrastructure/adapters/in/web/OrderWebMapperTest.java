@@ -3,8 +3,8 @@ package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codeja.master_acdc.ordering.application.port.OrderDetail;
 import com.codeja.master_acdc.ordering.domain.exception.InvalidOrderSortException;
-import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import com.codeja.master_acdc.ordering.domain.model.OrderSummary;
@@ -69,11 +69,8 @@ class OrderWebMapperTest {
   @Test
   void should_map_public_fields_when_mapping_order_and_summary() {
     var order =
-        Order.restore(
-            UUID.randomUUID(),
-            UUID.randomUUID(),
-            OrderStatus.PAID,
-            List.of(new OrderLine(UUID.randomUUID(), 3)));
+        new OrderDetail(
+            UUID.randomUUID(), OrderStatus.PAID, List.of(new OrderLine(UUID.randomUUID(), 3)));
     assertThat(OrderWebMapper.response(order))
         .isEqualTo(
             new OrderResponse(

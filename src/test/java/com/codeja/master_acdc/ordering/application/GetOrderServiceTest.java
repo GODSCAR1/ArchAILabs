@@ -31,9 +31,8 @@ class GetOrderServiceTest {
             List.of(new OrderLine(UUID.randomUUID(), 2)));
     var scope = new OrderReadScope.Own(order.customerId());
     given(orders.findVisibleById(order.id(), scope)).willReturn(Optional.of(order));
-    Order result = service.get(order.id(), scope);
-    assertThat(result).isEqualTo(order);
-    assertThat(result.customerId()).isEqualTo(order.customerId());
+    var result = service.get(order.id(), scope);
+    assertThat(result.id()).isEqualTo(order.id());
     assertThat(result.status()).isEqualTo(OrderStatus.PAID);
     assertThat(result.lines()).isEqualTo(order.lines());
   }

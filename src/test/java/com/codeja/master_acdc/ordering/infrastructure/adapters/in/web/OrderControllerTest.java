@@ -1,7 +1,6 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -16,13 +15,13 @@ import com.codeja.master_acdc.identity.infrastructure.config.JwtConfiguration;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.ListOrdersByStatusUseCase;
+import com.codeja.master_acdc.ordering.application.port.OrderDetail;
 import com.codeja.master_acdc.ordering.domain.exception.DuplicateProductException;
 import com.codeja.master_acdc.ordering.domain.exception.EmptyOrderException;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.exception.UnknownProductException;
-import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 import com.codeja.master_acdc.ordering.domain.model.OrderSummary;
@@ -60,11 +59,10 @@ class OrderControllerTest {
 
   @Test
   void should_respond_201_when_request_valid() throws Exception {
-    given(createOrderUseCase.create(any(), anyList()))
+    given(createOrderUseCase.create(any()))
         .willReturn(
-            Order.restore(
+            new OrderDetail(
                 UUID.randomUUID(),
-                UUID.fromString(CUSTOMER),
                 OrderStatus.PENDING,
                 List.of(new OrderLine(UUID.fromString(A), 3))));
 
@@ -81,7 +79,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_forbidden_when_creation_account_has_no_customer() throws Exception {
-    given(createOrderUseCase.create(any(), anyList()))
+    given(createOrderUseCase.create(any()))
         .willThrow(new org.springframework.security.access.AccessDeniedException("forbidden"));
     perform(null, lines(line(A, "3")))
         .andExpect(status().isForbidden())
@@ -91,7 +89,7 @@ class OrderControllerTest {
 
   @Test
   void should_ignore_legacy_header_when_delegating_creation() throws Exception {
-    given(createOrderUseCase.create(any(), anyList())).willThrow(new UnknownProductException());
+    given(createOrderUseCase.create(any())).willThrow(new UnknownProductException());
     perform("no-es-uuid", lines(line(A, "3")))
         .andExpect(status().isUnprocessableEntity())
         .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
@@ -100,7 +98,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_422_empty_order_when_no_lines() throws Exception {
-    given(createOrderUseCase.create(any(), anyList())).willThrow(new EmptyOrderException());
+    given(createOrderUseCase.create(any())).willThrow(new EmptyOrderException());
 
     perform(CUSTOMER, lines())
         .andExpect(status().isUnprocessableEntity())
@@ -110,7 +108,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_422_duplicate_product_when_product_repeated() throws Exception {
-    given(createOrderUseCase.create(any(), anyList()))
+    given(createOrderUseCase.create(any()))
         .willThrow(new DuplicateProductException(UUID.fromString(A)));
 
     perform(CUSTOMER, lines(line(A, "2"), line(A, "3")))
@@ -121,7 +119,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_422_invalid_quantity_when_quantity_not_positive() throws Exception {
-    given(createOrderUseCase.create(any(), anyList()))
+    given(createOrderUseCase.create(any()))
         .willThrow(new com.codeja.master_acdc.ordering.domain.exception.InvalidQuantityException());
     perform(CUSTOMER, lines(line(A, "0"), line(B, "2")))
         .andExpect(status().isUnprocessableEntity())
@@ -131,7 +129,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_422_unknown_product_when_inventory_lacks_record() throws Exception {
-    given(createOrderUseCase.create(any(), anyList())).willThrow(new UnknownProductException());
+    given(createOrderUseCase.create(any())).willThrow(new UnknownProductException());
 
     perform(CUSTOMER, lines(line(A, "3")))
         .andExpect(status().isUnprocessableEntity())
@@ -141,7 +139,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_409_insufficient_stock_when_stock_lacking() throws Exception {
-    given(createOrderUseCase.create(any(), anyList())).willThrow(new InsufficientStockException());
+    given(createOrderUseCase.create(any())).willThrow(new InsufficientStockException());
 
     perform(CUSTOMER, lines(line(A, "3")))
         .andExpect(status().isConflict())
@@ -151,7 +149,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_forbidden_when_permission_precedes_body_and_stock_errors() throws Exception {
-    given(createOrderUseCase.create(any(), anyList()))
+    given(createOrderUseCase.create(any()))
         .willThrow(new org.springframework.security.access.AccessDeniedException("forbidden"));
 
     perform(null, lines(line(A, "0"), line(B, "2")))
@@ -186,7 +184,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_forbidden_when_cancellation_permission_is_missing() throws Exception {
-    given(cancelOrderUseCase.cancel(any(), any()))
+    given(cancelOrderUseCase.cancel(any()))
         .willThrow(new org.springframework.security.access.AccessDeniedException("forbidden"));
     mockMvc
         .perform(
@@ -198,7 +196,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_not_found_when_cancellation_account_has_no_customer() throws Exception {
-    given(cancelOrderUseCase.cancel(any(), any())).willThrow(new OrderNotFoundException(null));
+    given(cancelOrderUseCase.cancel(any())).willThrow(new OrderNotFoundException(null));
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "550e8400-e29b-41d4-a716-446655440000")
@@ -210,7 +208,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_404_order_not_found_when_order_id_not_uuid() throws Exception {
-    given(cancelOrderUseCase.cancel(any(), any())).willThrow(new OrderNotFoundException(null));
+    given(cancelOrderUseCase.cancel(any())).willThrow(new OrderNotFoundException(null));
     mockMvc
         .perform(
             post("/api/orders/{id}/cancellation", "no-uuid")
@@ -222,7 +220,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_404_order_not_found_when_use_case_throws() throws Exception {
-    given(cancelOrderUseCase.cancel(any(), any())).willThrow(new OrderNotFoundException(null));
+    given(cancelOrderUseCase.cancel(any())).willThrow(new OrderNotFoundException(null));
 
     mockMvc
         .perform(
@@ -235,8 +233,7 @@ class OrderControllerTest {
 
   @Test
   void should_respond_409_order_not_cancellable_when_use_case_throws() throws Exception {
-    given(cancelOrderUseCase.cancel(any(), any()))
-        .willThrow(new OrderNotCancellableException(null));
+    given(cancelOrderUseCase.cancel(any())).willThrow(new OrderNotCancellableException(null));
 
     mockMvc
         .perform(
@@ -249,11 +246,10 @@ class OrderControllerTest {
 
   @Test
   void should_respond_200_cancelled_when_use_case_returns() throws Exception {
-    given(cancelOrderUseCase.cancel(any(), any()))
+    given(cancelOrderUseCase.cancel(any()))
         .willReturn(
-            Order.restore(
+            new OrderDetail(
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
-                UUID.fromString(CUSTOMER),
                 OrderStatus.CANCELLED,
                 List.of(new OrderLine(UUID.fromString(A), 3))));
 

@@ -8,14 +8,15 @@ import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
+import com.codeja.master_acdc.ordering.application.port.CancelOrderCommand;
 import com.codeja.master_acdc.ordering.domain.event.OrderCancelled;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotCancellableException;
 import com.codeja.master_acdc.ordering.domain.exception.OrderNotFoundException;
 import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
-import com.codeja.master_acdc.ordering.domain.port.OrderCancelledPublisher;
 import com.codeja.master_acdc.ordering.domain.port.OrderRepository;
+import com.codeja.master_acdc.ordering.domain.port.PublishOrderEvents;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,7 +29,7 @@ class CancelOrderServiceTest {
   private static final UUID A = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
   private final OrderRepository orderRepository = mock(OrderRepository.class);
-  private final OrderCancelledPublisher publisher = mock(OrderCancelledPublisher.class);
+  private final PublishOrderEvents publisher = mock(PublishOrderEvents.class);
   private final CancelOrderService service = new CancelOrderService(orderRepository, publisher);
 
   @Test
@@ -39,10 +40,10 @@ class CancelOrderServiceTest {
         .willReturn(Optional.of(pending));
     given(orderRepository.cancelIfCancelable(ORDER_ID, CUSTOMER_ID)).willReturn(true);
 
-    Order result = service.cancel(ORDER_ID, CUSTOMER_ID);
+    var result = service.cancel(new CancelOrderCommand(ORDER_ID, CUSTOMER_ID));
 
     assertThat(result.status()).isEqualTo(OrderStatus.CANCELLED);
-    then(publisher).should().publish(any(OrderCancelled.class));
+    then(publisher).should().publish(List.of(new OrderCancelled(ORDER_ID, pending.lines())));
   }
 
   @Test
@@ -50,7 +51,7 @@ class CancelOrderServiceTest {
     given(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID))
         .willReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.cancel(ORDER_ID, CUSTOMER_ID))
+    assertThatThrownBy(() -> service.cancel(new CancelOrderCommand(ORDER_ID, CUSTOMER_ID)))
         .isInstanceOf(OrderNotFoundException.class);
     then(publisher).should(never()).publish(any());
     then(orderRepository).should(never()).cancelIfCancelable(any(), any());
@@ -63,7 +64,7 @@ class CancelOrderServiceTest {
     given(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID))
         .willReturn(Optional.of(shipped));
 
-    assertThatThrownBy(() -> service.cancel(ORDER_ID, CUSTOMER_ID))
+    assertThatThrownBy(() -> service.cancel(new CancelOrderCommand(ORDER_ID, CUSTOMER_ID)))
         .isInstanceOf(OrderNotCancellableException.class);
     then(publisher).should(never()).publish(any());
     then(orderRepository).should(never()).cancelIfCancelable(any(), any());
@@ -77,7 +78,7 @@ class CancelOrderServiceTest {
         .willReturn(Optional.of(pending));
     given(orderRepository.cancelIfCancelable(ORDER_ID, CUSTOMER_ID)).willReturn(false);
 
-    assertThatThrownBy(() -> service.cancel(ORDER_ID, CUSTOMER_ID))
+    assertThatThrownBy(() -> service.cancel(new CancelOrderCommand(ORDER_ID, CUSTOMER_ID)))
         .isInstanceOf(OrderNotCancellableException.class);
     then(publisher).should(never()).publish(any());
   }
@@ -87,7 +88,7 @@ class CancelOrderServiceTest {
     given(orderRepository.findByIdAndCustomerId(ORDER_ID, CUSTOMER_ID))
         .willReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.cancel(ORDER_ID, CUSTOMER_ID))
+    assertThatThrownBy(() -> service.cancel(new CancelOrderCommand(ORDER_ID, CUSTOMER_ID)))
         .isInstanceOf(OrderNotFoundException.class);
     then(publisher).shouldHaveNoInteractions();
   }

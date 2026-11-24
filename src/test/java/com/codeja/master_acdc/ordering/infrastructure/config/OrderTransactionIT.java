@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.codeja.master_acdc.IntegrationTest;
+import com.codeja.master_acdc.ordering.application.port.CancelOrderCommand;
 import com.codeja.master_acdc.ordering.application.port.CancelOrderUseCase;
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
+import com.codeja.master_acdc.ordering.application.port.PlaceOrderCommand;
 import com.codeja.master_acdc.ordering.domain.exception.InsufficientStockException;
 import com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine;
 import java.util.List;
@@ -49,7 +51,8 @@ class OrderTransactionIT extends IntegrationTest {
     assertThatThrownBy(
             () ->
                 createOrderUseCase.create(
-                    UUID.fromString(CUSTOMER), List.of(line(A_TEXT, 3), line(B_TEXT, 2))))
+                    new PlaceOrderCommand(
+                        UUID.fromString(CUSTOMER), List.of(line(A_TEXT, 3), line(B_TEXT, 2)))))
         .isInstanceOf(InsufficientStockException.class);
 
     assertThat(rowCount("orders")).isZero();
@@ -67,7 +70,9 @@ class OrderTransactionIT extends IntegrationTest {
     jdbcTemplate.update("delete from stock where product_id = ?", UUID.fromString(A_TEXT));
 
     assertThatThrownBy(
-            () -> cancelOrderUseCase.cancel(UUID.fromString(ORDER), UUID.fromString(CUSTOMER)))
+            () ->
+                cancelOrderUseCase.cancel(
+                    new CancelOrderCommand(UUID.fromString(ORDER), UUID.fromString(CUSTOMER))))
         .isInstanceOf(
             com.codeja.master_acdc.inventory.domain.exception.StockRecordNotFoundException.class);
 

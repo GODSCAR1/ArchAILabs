@@ -1,10 +1,8 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
 import com.codeja.master_acdc.ordering.application.port.CreateOrderUseCase;
-import com.codeja.master_acdc.ordering.domain.model.Order;
-import com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine;
-import java.util.List;
-import java.util.UUID;
+import com.codeja.master_acdc.ordering.application.port.OrderDetail;
+import com.codeja.master_acdc.ordering.application.port.PlaceOrderCommand;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 public class AuthorizedCreateOrderUseCase implements CreateOrderUseCase {
@@ -18,7 +16,7 @@ public class AuthorizedCreateOrderUseCase implements CreateOrderUseCase {
 
   @Override
   @PreAuthorize("hasAuthority('order:create')")
-  public Order create(UUID ignoredCustomer, List<RequestedOrderLine> lines) {
-    return delegate.create(actor.creationCustomer(), lines);
+  public OrderDetail create(PlaceOrderCommand command) {
+    return delegate.create(new PlaceOrderCommand(actor.creationCustomer(), command.lines()));
   }
 }

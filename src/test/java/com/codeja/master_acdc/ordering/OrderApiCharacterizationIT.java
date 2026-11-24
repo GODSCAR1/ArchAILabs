@@ -16,9 +16,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.skyscreamer.jsonassert.JSONCompareMode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.json.JsonAssert;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -121,7 +123,7 @@ class OrderApiCharacterizationIT extends IntegrationTest {
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"status\":\"AUTHORIZED\"}")));
-    assertJson(
+    assertJsonIgnoringArrayOrder(
         perform(post("/api/orders/{id}/confirmation", order), customerToken, null),
         200,
         """
@@ -129,6 +131,10 @@ class OrderApiCharacterizationIT extends IntegrationTest {
           {"productId":"%s","quantity":3},{"productId":"%s","quantity":2}]}
         """
             .formatted(order, product, second));
+    assertSingleOutboxRow(product, second);
+  }
+
+  private void assertSingleOutboxRow(UUID... productIds) {
     var rows =
         jdbc.query(
             """
@@ -141,7 +147,10 @@ class OrderApiCharacterizationIT extends IntegrationTest {
                     List.of((UUID[]) row.getArray("product_ids").getArray()),
                     row.getTimestamp("created_at") != null),
             order);
-    assertThat(rows).containsExactly(new OutboxRow(order, List.of(product, second), true));
+    assertThat(rows).hasSize(1);
+    assertThat(rows.getFirst().orderId()).isEqualTo(order);
+    assertThat(rows.getFirst().productIds()).containsExactlyInAnyOrder(productIds);
+    assertThat(rows.getFirst().hasCreatedAt()).isTrue();
   }
 
   @Test
@@ -367,6 +376,19 @@ class OrderApiCharacterizationIT extends IntegrationTest {
   private static void assertJson(MvcTestResult result, int status, String expected) {
     assertThat(result).hasStatus(status);
     assertThat(result).bodyJson().isStrictlyEqualTo(expected);
+  }
+
+  /**
+   * Lab S17: order_lines no guarda la posición y el mapeo no fija un orden; Postgres puede devolver
+   * las líneas por el índice (order_id, product_id). El contrato no garantiza el orden de las
+   * líneas: se compara sin campos de más ni de menos, pero sin exigir el orden de los arrays.
+   */
+  private static void assertJsonIgnoringArrayOrder(
+      MvcTestResult result, int status, String expected) {
+    assertThat(result).hasStatus(status);
+    assertThat(result)
+        .bodyJson()
+        .isEqualTo(expected, JsonAssert.comparator(JSONCompareMode.NON_EXTENSIBLE));
   }
 
   private static void assertProblem(

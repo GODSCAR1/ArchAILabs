@@ -78,21 +78,19 @@ public final class Order {
     return id.hashCode();
   }
 
-  public Order cancel() {
+  public void cancel() {
     if (status != OrderStatus.PENDING && status != OrderStatus.PAID) {
       throw new OrderNotCancellableException(id, status);
     }
     status = OrderStatus.CANCELLED;
     events.add(new OrderCancelled(id, lines));
-    return this;
   }
 
-  public Order refund() {
+  public void refund() {
     if (status != OrderStatus.PAID && status != OrderStatus.SHIPPED) {
       throw new OrderNotRefundableException(id);
     }
     status = OrderStatus.REFUNDED;
-    return this;
   }
 
   public void confirm() {

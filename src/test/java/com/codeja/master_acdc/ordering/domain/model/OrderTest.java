@@ -28,11 +28,9 @@ class OrderTest {
       names = {"PAID", "SHIPPED"})
   void should_refund_preserving_order_data_when_status_is_refundable(OrderStatus status) {
     Order order = Order.restore(UUID.randomUUID(), CUSTOMER, status, List.of(new OrderLine(A, 3)));
-    Order refunded = order.refund();
-    assertThat(refunded).isEqualTo(order);
-    assertThat(refunded.customerId()).isEqualTo(CUSTOMER);
-    assertThat(refunded.status()).isEqualTo(OrderStatus.REFUNDED);
-    assertThat(refunded.lines()).containsExactly(new OrderLine(A, 3));
+    order.refund();
+    assertThat(order.customerId()).isEqualTo(CUSTOMER);
+    assertThat(order.lines()).containsExactly(new OrderLine(A, 3));
     assertThat(order.status()).isEqualTo(OrderStatus.REFUNDED);
   }
 
@@ -179,12 +177,11 @@ class OrderTest {
   void should_return_cancelled_order_when_cancel_from_pending() {
     Order order = Order.place(CUSTOMER, List.of(new OrderLine(A, 3)));
 
-    Order cancelled = order.cancel();
+    order.cancel();
 
-    assertThat(cancelled.status()).isEqualTo(OrderStatus.CANCELLED);
-    assertThat(cancelled.id()).isEqualTo(order.id());
-    assertThat(cancelled.customerId()).isEqualTo(CUSTOMER);
-    assertThat(cancelled.lines()).containsExactly(new OrderLine(A, 3));
+    assertThat(order.status()).isEqualTo(OrderStatus.CANCELLED);
+    assertThat(order.customerId()).isEqualTo(CUSTOMER);
+    assertThat(order.lines()).containsExactly(new OrderLine(A, 3));
   }
 
   @Test
@@ -192,9 +189,9 @@ class OrderTest {
     Order order =
         Order.restore(UUID.randomUUID(), CUSTOMER, OrderStatus.PAID, List.of(new OrderLine(A, 3)));
 
-    Order cancelled = order.cancel();
+    order.cancel();
 
-    assertThat(cancelled.status()).isEqualTo(OrderStatus.CANCELLED);
+    assertThat(order.status()).isEqualTo(OrderStatus.CANCELLED);
   }
 
   @Test

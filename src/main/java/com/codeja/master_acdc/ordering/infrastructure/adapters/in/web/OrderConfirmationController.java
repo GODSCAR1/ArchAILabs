@@ -1,5 +1,6 @@
 package com.codeja.master_acdc.ordering.infrastructure.adapters.in.web;
 
+import com.codeja.master_acdc.ordering.application.port.ConfirmOrderCommand;
 import com.codeja.master_acdc.ordering.application.port.ConfirmOrderUseCase;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -15,6 +16,7 @@ public class OrderConfirmationController {
 
   @PostMapping("/api/orders/{id}/confirmation")
   public OrderResponse confirm(@PathVariable("id") String id) {
-    return OrderWebMapper.response(confirmation.confirm(OrderWebMapper.orderId(id), null));
+    return OrderWebMapper.response(
+        confirmation.confirm(new ConfirmOrderCommand(OrderWebMapper.orderId(id), null)));
   }
 }

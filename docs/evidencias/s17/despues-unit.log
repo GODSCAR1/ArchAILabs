@@ -1,0 +1,120 @@
+[INFO] Scanning for projects...
+[INFO] Loaded 24605 auto-discovered prefixes for remote repository central (prefixes-central.txt)
+[INFO] 
+[INFO] -----------------------< com.codeja:master-acdc >-----------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] Loaded 64 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[INFO] Loaded 24605 auto-discovered prefixes for remote repository maven-central (prefixes-maven-central.txt)
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to flyway-community-db-support (https://maven.pkg.github.com/flyway/flyway-community-db-support): HTTP Status: 401
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to MavenFeed (https://red-gate.pkgs.visualstudio.com/MavenFeed/_packaging/MavenFeed/maven/v1/): HTTP Status: 401
+[INFO] 
+[INFO] --- spotless:3.10.4:check (default) @ master-acdc ---
+[INFO] Spotless.Java is keeping 635 files clean - 0 needs changes to be clean, 0 were already clean, 635 were skipped because caching determined they were already clean
+[INFO] Spotless.Pom is keeping 1 files clean - 0 needs changes to be clean, 0 were already clean, 1 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (default) @ master-acdc ---
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to jvnet-nexus-releases (https://maven.java.net/content/repositories/releases/): (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+[INFO] Comenzando auditoría...
+Auditoría concluida.
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- jacoco:0.8.15:prepare-agent (prepare) @ master-acdc ---
+[INFO] argLine set to "-javaagent:C:\\Users\\oscar\\.m2\\repository\\org\\jacoco\\org.jacoco.agent\\0.8.15\\org.jacoco.agent-0.8.15-runtime.jar=destfile=C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\target\\jacoco.exec,excludes=**/*_.class"
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ master-acdc ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 16 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ master-acdc ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ master-acdc ---
+[INFO] Copying 8 resources from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ master-acdc ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ master-acdc ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+04:06:54.700 [main] INFO com.tngtech.archunit.ArchConfiguration -- Reading ArchUnit properties from file:/C:/Users/oscar/Desktop/Master%20Arquitecto%20IA/master-acdc/target/test-classes/archunit.properties
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderWebMapperTest
+[INFO] Running com.codeja.master_acdc.ordering.application.GetOrderServiceTest
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.out.catalog.CatalogOrderAmountCalculatorTest
+[INFO] Running com.codeja.master_acdc.ordering.application.CancelOrderServiceTest
+[INFO] Running com.codeja.master_acdc.ordering.application.RefundOrderServiceTest
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.OrderEventsAdapterTest
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryPersistenceMapperTest
+[INFO] Running com.codeja.master_acdc.ordering.application.CreateOrderServiceTest
+[INFO] Running com.codeja.master_acdc.ordering.application.ListOrdersByStatusServiceTest
+[INFO] Running com.codeja.master_acdc.ordering.domain.model.CustomerNameTest
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.out.payment.RestPaymentGatewayTest
+[INFO] Running com.codeja.master_acdc.ordering.domain.model.OrderTest
+[INFO] Running com.codeja.master_acdc.ordering.application.ConfirmOrderServiceTest
+[INFO] Running com.codeja.master_acdc.ordering.domain.model.OrderListingCriteriaTest
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderActorResolverTest
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderControllerTest
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.183 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.out.catalog.CatalogOrderAmountCalculatorTest
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.CustomerRegistrationAdapterTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.180 s -- in com.codeja.master_acdc.ordering.domain.model.CustomerNameTest
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.CustomerRegistrationPersistenceMapperTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.181 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderSummaryPersistenceMapperTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.183 s -- in com.codeja.master_acdc.ordering.domain.model.OrderListingCriteriaTest
+[INFO] Running com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderPersistenceMapperTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.006 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.CustomerRegistrationPersistenceMapperTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.011 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderPersistenceMapperTest
+04:06:55.645 [ForkJoinPool-1-worker-12] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderControllerTest]: OrderControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.239 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderActorResolverTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.248 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderWebMapperTest
+WARNING: A Java agent has been loaded dynamically (C:\Users\oscar\.m2\repository\net\bytebuddy\byte-buddy-agent\1.18.11\byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+[INFO] Tests run: 31, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.444 s -- in com.codeja.master_acdc.ordering.domain.model.OrderTest
+04:06:56.162 [ForkJoinPool-1-worker-12] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.codeja.master_acdc.MasterAcdcApplication for test class com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderControllerTest
+04:06:56.169 [ForkJoinPool-1-worker-12] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderControllerTest]: OrderControllerTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+04:06:56.203 [ForkJoinPool-1-worker-12] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.codeja.master_acdc.MasterAcdcApplication for test class com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderControllerTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.006 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.out.payment.RestPaymentGatewayTest
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.595 s -- in com.codeja.master_acdc.ordering.application.GetOrderServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.598 s -- in com.codeja.master_acdc.ordering.application.ListOrdersByStatusServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.399 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.CustomerRegistrationAdapterTest
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.660 s -- in com.codeja.master_acdc.ordering.application.RefundOrderServiceTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.075 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.out.events.OrderEventsAdapterTest
+2026-11-24T04:06:57.489-05:00  INFO 79896 --- [master-acdc] [ool-1-worker-12] c.c.m.o.i.a.in.web.OrderControllerTest   : Starting OrderControllerTest using Java 25.0.4.1 with PID 79896 (started by oscar in C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc)
+2026-11-24T04:06:57.540-05:00  INFO 79896 --- [master-acdc] [ool-1-worker-12] c.c.m.o.i.a.in.web.OrderControllerTest   : No active profile set, falling back to 1 default profile: "default"
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.335 s -- in com.codeja.master_acdc.ordering.application.CreateOrderServiceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.576 s -- in com.codeja.master_acdc.ordering.application.CancelOrderServiceTest
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.883 s -- in com.codeja.master_acdc.ordering.application.ConfirmOrderServiceTest
+2026-11-24T04:07:01.380-05:00  INFO 79896 --- [master-acdc] [ool-1-worker-12] o.s.b.t.m.w.SpringBootMockServletContext : Initializing Spring TestDispatcherServlet ''
+2026-11-24T04:07:01.381-05:00  INFO 79896 --- [master-acdc] [ool-1-worker-12] o.s.t.web.servlet.TestDispatcherServlet  : Initializing Servlet ''
+2026-11-24T04:07:01.383-05:00  INFO 79896 --- [master-acdc] [ool-1-worker-12] o.s.t.web.servlet.TestDispatcherServlet  : Completed initialization in 2 ms
+2026-11-24T04:07:01.456-05:00  INFO 79896 --- [master-acdc] [ool-1-worker-12] c.c.m.o.i.a.in.web.OrderControllerTest   : Started OrderControllerTest in 5.101 seconds (process running for 7.67)
+[INFO] Tests run: 19, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 6.529 s -- in com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderControllerTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 101, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  15.129 s
+[INFO] Finished at: 2026-11-24T04:07:02-05:00
+[INFO] ------------------------------------------------------------------------
