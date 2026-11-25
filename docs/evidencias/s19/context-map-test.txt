@@ -1,0 +1,46 @@
+# ContextMapTest sobre lab/s19 (src/main compilado; runner ArchUnit 1.4.2)
+PASS catalog_depends_on_no_other_context
+PASS inventory_depends_on_no_other_context
+PASS pricing_depends_on_no_other_context
+PASS identity_only_depends_on_the_ordering_open_host
+PASS exports_is_isolated
+PASS shared_kernel_is_limited
+PASS cross_context_calls_only_use_catalogued_ports
+PASS no_module_touches_another_modules_persistence
+
+# Con una mutación por regla (mut/)
+FAIL catalog_depends_on_no_other_context
+
+   Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package 'com.codeja.master_acdc.catalog..' should depend on classes that reside in any package ['com.codeja.master_acdc.ordering..', 'com.codeja.master_acdc.inventory..', 'com.cod
+   Field <com.codeja.master_acdc.catalog.application.MutCat.a> has type <com.codeja.master_acdc.ordering.api.CurrentOrderActor> in (MutCat.java:0)
+FAIL inventory_depends_on_no_other_context
+
+   Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package 'com.codeja.master_acdc.inventory..' should depend on classes that reside in any package ['com.codeja.master_acdc.ordering..', 'com.codeja.master_acdc.catalog..', 'com.cod
+   Field <com.codeja.master_acdc.inventory.application.MutInv.a> has type <com.codeja.master_acdc.catalog.api.CatalogPrices> in (MutInv.java:0)
+FAIL pricing_depends_on_no_other_context
+
+   Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package 'com.codeja.master_acdc.pricing..' should depend on classes that reside in any package ['com.codeja.master_acdc.ordering..', 'com.codeja.master_acdc.catalog..', 'com.codej
+   Field <com.codeja.master_acdc.pricing.application.MutPri.a> has type <com.codeja.master_acdc.ordering.api.CustomerRegistrationFacade> in (MutPri.java:0)
+FAIL identity_only_depends_on_the_ordering_open_host
+
+   Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package 'com.codeja.master_acdc.identity..' should depend on classes that reside in any package ['com.codeja.master_acdc.catalog..', 'com.codeja.master_acdc.inventory..', 'com.cod
+   Field <com.codeja.master_acdc.identity.infrastructure.MutIde.a> has type <com.codeja.master_acdc.ordering.domain.model.Order> in (MutIde.java:0)
+FAIL exports_is_isolated
+
+   Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package 'com.codeja.master_acdc.exports..' should only depend on classes that not reside in any package ['com.codeja.master_acdc.catalog..', 'com.codeja.master_acdc.inventory..', 'co
+   Field <com.codeja.master_acdc.exports.application.MutExp.a> has type <com.codeja.master_acdc.catalog.api.CatalogPrices> in (MutExp.java:0)
+FAIL shared_kernel_is_limited
+
+   Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside outside of package 'com.codeja.master_acdc.pricing..' should depend on classes that reside in a package 'com.codeja.master_acdc.pricing..' and are not in the shared kernel [PricingLine
+   Field <com.codeja.master_acdc.ordering.infrastructure.adapters.out.catalog.MutKernel.a> has type <com.codeja.master_acdc.pricing.domain.model.Coupon> in (MutKernel.java:0)
+FAIL cross_context_calls_only_use_catalogued_ports
+
+   Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package 'com.codeja.master_acdc.*..' should only use catalogued ports of other contexts, because entre contextos solo hay consultas por puertos publicados y efectos por eventos de do
+   Field <com.codeja.master_acdc.identity.infrastructure.MutIde.a> has type <com.codeja.master_acdc.ordering.domain.model.Order> in (MutIde.java:0) [com.codeja.master_acdc.ordering.domain.model.Order no es un puerto catalogado]
+   Field <com.codeja.master_acdc.ordering.infrastructure.adapters.out.catalog.MutKernel.a> has type <com.codeja.master_acdc.pricing.domain.model.Coupon> in (MutKernel.java:0) [com.codeja.master_acdc.pricing.domain.model.Coupon no es un puerto catalogado]
+   Field <com.codeja.master_acdc.ordering.infrastructure.adapters.out.catalog.MutPort.a> has type <com.codeja.master_acdc.catalog.api.CatalogNewPort> in (MutPort.java:0) [com.codeja.master_acdc.catalog.api.CatalogNewPort no es un puerto catalogado]
+   Field <com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.MutPersist.a> has type <com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence.StockJpaRepository> in (MutPersist.java:0) [com.codeja.master_acdc.inventory.infras
+FAIL no_module_touches_another_modules_persistence
+
+   Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package 'com.codeja.master_acdc.*..' should not touch the persistence of other modules, because las tablas, colecciones, entidades y repositorios son del contexto que los crea; otro 
+   Field <com.codeja.master_acdc.ordering.infrastructure.adapters.out.inventory.MutPersist.a> has type <com.codeja.master_acdc.inventory.infrastructure.adapters.out.persistence.StockJpaRepository> in (MutPersist.java:0) [persistencia de inventory]

@@ -40,3 +40,6 @@ src/test/java/com/codeja/master_acdc/ordering/OrderApiCharacterizationIT.java
 src/test/java/com/codeja/master_acdc/architecture/HexagonalArchitectureTest.java
 src/test/java/com/codeja/master_acdc/architecture/ModuleBoundariesTest.java
 src/test/java/com/codeja/master_acdc/architecture/ConventionsTest.java
+# Lab S19: dependencias prohibidas del mapa de contextos (ADR 0013 y 0014)
+src/test/java/com/codeja/master_acdc/architecture/ContextMapTest.java
+src/test/java/com/codeja/master_acdc/architecture/TableOwnershipTest.java
