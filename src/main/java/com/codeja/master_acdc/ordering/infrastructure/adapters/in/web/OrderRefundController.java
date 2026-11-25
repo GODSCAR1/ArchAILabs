@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class OrderRefundController {
+class OrderRefundController {
   private final RefundOrderUseCase refund;
 
   public OrderRefundController(RefundOrderUseCase refund) {

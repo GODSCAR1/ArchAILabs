@@ -4,7 +4,7 @@ import com.codeja.master_acdc.ordering.domain.model.Order;
 import com.codeja.master_acdc.ordering.domain.model.OrderLine;
 import com.codeja.master_acdc.ordering.domain.model.OrderStatus;
 
-public final class OrderPersistenceMapper {
+final class OrderPersistenceMapper {
   private OrderPersistenceMapper() {}
 
   public static OrderJpaEntity toEntity(Order order) {

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class OrderConfirmationController {
+class OrderConfirmationController {
   private final ConfirmOrderUseCase confirmation;
 
   public OrderConfirmationController(ConfirmOrderUseCase confirmation) {

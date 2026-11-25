@@ -1,0 +1,20 @@
+ok   Hexa.domain_is_free_of_frameworks                                 0 
+ok   Hexa.domain_only_depends_on_java_and_domain                       0 
+ok   Hexa.application_is_free_of_frameworks                            0 
+ok   Hexa.application_only_depends_on_java_domain_and_application      0 
+ok   Hexa.ports_are_interfaces_or_records                              0 
+ok   Hexa.layers_only_point_towards_the_domain                         0 
+FAIL Hexa.adapters_do_not_know_each_other                              1 {identity=1}
+ok   Hexa.inbound_adapters_do_not_use_outbound_ports                   0 
+FAIL Hexa.adapter_classes_are_public_only_when_config_wires_them      77 {catalog=27, exports=3, identity=27, inventory=5, ordering=15}
+ok   Modu.modules_are_free_of_cycles                                   0 
+FAIL Modu.modules_only_use_the_published_api_of_other_modules         10 {ordering=10}
+ok   Conv.domain_events_are_records_in_domain                          0 
+FAIL Conv.domain_events_are_created_only_inside_the_domain             2 {catalog=2}
+ok   Conv.event_listeners_live_only_in_adapters                        0 
+ok   Conv.no_field_injection                                           0 
+ok   Conv.aggregates_are_created_only_through_their_factories          0 
+ok   Conv.aggregates_are_restored_only_by_persistence_adapters         0 
+ok   Conv.inbound_adapters_never_receive_aggregates                    0 
+ok   Conv.output_ports_do_not_expose_transactions                      0 
+ok   Conv.config_does_not_implement_ports_with_anonymous_classes       0 

@@ -1,0 +1,88 @@
+[INFO] Scanning for projects...
+[INFO] Loaded 24605 auto-discovered prefixes for remote repository central (prefixes-central.txt)
+[INFO] 
+[INFO] -----------------------< com.codeja:master-acdc >-----------------------
+[INFO] Building  0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] Loaded 64 auto-discovered prefixes for remote repository apache.snapshots (prefixes-apache.snapshots.txt)
+[INFO] Loaded 24605 auto-discovered prefixes for remote repository maven-central (prefixes-maven-central.txt)
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to flyway-community-db-support (https://maven.pkg.github.com/flyway/flyway-community-db-support): HTTP Status: 401
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to MavenFeed (https://red-gate.pkgs.visualstudio.com/MavenFeed/_packaging/MavenFeed/maven/v1/): HTTP Status: 401
+[INFO] 
+[INFO] --- spotless:3.10.4:check (default) @ master-acdc ---
+[INFO] File stored in the index does not exist: src\test\java\com\codeja\master_acdc\exports\ExportApiCharacterizationIT.java
+[INFO] Spotless.Java is keeping 638 files clean - 0 needs changes to be clean, 19 were already clean, 619 were skipped because caching determined they were already clean
+[INFO] Spotless.Pom is keeping 1 files clean - 0 needs changes to be clean, 0 were already clean, 1 were skipped because caching determined they were already clean
+[INFO] 
+[INFO] --- checkstyle:3.6.0:check (default) @ master-acdc ---
+[WARNING] Could not transfer metadata /.meta/prefixes.txt from/to jvnet-nexus-releases (https://maven.java.net/content/repositories/releases/): (certificate_unknown) PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
+[INFO] Comenzando auditoría...
+Auditoría concluida.
+[INFO] You have 0 Checkstyle violations.
+[INFO] 
+[INFO] --- jacoco:0.8.15:prepare-agent (prepare) @ master-acdc ---
+[INFO] argLine set to "-javaagent:C:\\Users\\oscar\\.m2\\repository\\org\\jacoco\\org.jacoco.agent\\0.8.15\\org.jacoco.agent-0.8.15-runtime.jar=destfile=C:\\Users\\oscar\\Desktop\\Master Arquitecto IA\\master-acdc\\target\\jacoco.exec,excludes=**/*_.class"
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ master-acdc ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 16 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ master-acdc ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 427 source files with javac [debug parameters release 25] to target\classes
+[INFO] Hibernate compile-time tooling 7.4.5.Final
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogIndexInitializer.java:[21,20] ensureIndex(org.springframework.data.mongodb.core.index.IndexDefinition) in org.springframework.data.mongodb.core.index.IndexOperations has been deprecated and marked for removal
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/mongo/CatalogIndexInitializer.java:[23,20] ensureIndex(org.springframework.data.mongodb.core.index.IndexDefinition) in org.springframework.data.mongodb.core.index.IndexOperations has been deprecated and marked for removal
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/exports/domain/model/ExportContent.java:[6,36] [ArrayRecordComponent] Record components should not be arrays.
+    (see https://errorprone.info/bugpattern/ArrayRecordComponent)
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/identity/domain/model/Role.java:[18,29] [ImmutableEnumChecker] enums should be immutable: 'Role' has field 'permissions' of type 'java.util.Set<java.lang.String>', 'Set' is mutable
+    (see https://errorprone.info/bugpattern/ImmutableEnumChecker)
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/persistence/UserSummaryRow.java:[5,62] [ArrayRecordComponent] Record components should not be arrays.
+    (see https://errorprone.info/bugpattern/ArrayRecordComponent)
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/ordering/domain/model/Order.java:[73,58] [OperatorPrecedence] Use grouping parenthesis to make the operator precedence explicit
+    (see https://errorprone.info/bugpattern/OperatorPrecedence)
+  Did you mean 'return this == other || (other instanceof Order order && id.equals(order.id));'?
+[WARNING] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/ordering/infrastructure/adapters/out/persistence/OrderSummaryQueryAdapter.java:[40,43] [StringSplitter] String.split(String) has surprising behavior
+    (see https://errorprone.info/bugpattern/StringSplitter)
+  Did you mean 'List<String> parts = Splitter.on(Pattern.compile("\\s+")).splitToList(criteria.sort());'?
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/RedisProductDetailCache.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/RedisProductDetailCache.java: Recompile with -Xlint:deprecation for details.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductDetailCache.java: C:\Users\oscar\Desktop\Master Arquitecto IA\master-acdc\src\main\java\com\codeja\master_acdc\catalog\infrastructure\adapters\out\cache\ProductDetailCache.java uses unchecked or unsafe operations.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/main/java/com/codeja/master_acdc/catalog/infrastructure/adapters/out/cache/ProductDetailCache.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ master-acdc ---
+[INFO] Copying 8 resources from src\test\resources to target\test-classes
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ master-acdc ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 211 source files with javac [debug parameters release 25] to target\test-classes
+[INFO] Hibernate compile-time tooling 7.4.5.Final
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/test/java/com/codeja/master_acdc/SchemaIT.java: Some input files use or override a deprecated API.
+[INFO] /C:/Users/oscar/Desktop/Master Arquitecto IA/master-acdc/src/test/java/com/codeja/master_acdc/SchemaIT.java: Recompile with -Xlint:deprecation for details.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ master-acdc ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+18:45:10.454 [main] INFO com.tngtech.archunit.ArchConfiguration -- Reading ArchUnit properties from file:/C:/Users/oscar/Desktop/Master%20Arquitecto%20IA/master-acdc/target/test-classes/archunit.properties
+[INFO] Running com.codeja.master_acdc.architecture.ConventionsTest
+18:45:11.017 [main] INFO com.tngtech.archunit.core.PluginLoader -- Detected Java version 25.0.4.1
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.413 s -- in com.codeja.master_acdc.architecture.ConventionsTest
+[INFO] Running com.codeja.master_acdc.architecture.HexagonalArchitectureTest
+[INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.539 s -- in com.codeja.master_acdc.architecture.HexagonalArchitectureTest
+[INFO] Running com.codeja.master_acdc.architecture.ModuleBoundariesTest
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.147 s -- in com.codeja.master_acdc.architecture.ModuleBoundariesTest
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 20, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  33.825 s
+[INFO] Finished at: 2026-11-24T18:45:14-05:00
+[INFO] ------------------------------------------------------------------------

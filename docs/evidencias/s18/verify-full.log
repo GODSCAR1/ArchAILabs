@@ -1,0 +1,53 @@
+▶ Specs
+✓ spec/admin-exports
+✓ spec/api-security
+✓ spec/authentication
+✓ spec/authorization
+✓ spec/catalog-read-store
+✓ spec/customer-name
+✓ spec/inventory
+✓ spec/order-payment
+✓ spec/ordering
+✓ spec/password-recovery
+✓ spec/product-detail
+✓ spec/product-editing
+✓ spec/product-search
+✓ spec/static-security-analysis
+✓ spec/user-administration
+Totals: 15 passed, 0 failed (15 items)
+✓ change/2026-10-17-add-order-cancellation
+✓ change/2026-10-17-add-order-placement
+✓ change/2026-10-24-add-paid-orders-listing
+✓ change/2026-10-31-add-product-editing
+✓ change/2026-10-31-add-product-search
+✓ change/2026-10-31-add-stock-reservation
+✓ change/2026-11-02-add-product-detail
+✓ change/2026-11-02-migrate-catalog-reads-to-mongodb
+✓ change/2026-11-02-move-catalog-writes-to-mongodb
+✓ change/2026-11-02-retire-catalog-postgres
+✓ change/2026-11-03-add-two-level-product-cache
+✓ change/2026-11-08-add-authentication
+✓ change/2026-11-09-add-rbac-and-object-authorization
+✓ change/2026-11-09-add-session-version-revocation
+✓ change/2026-11-10-remediate-s13-audit-vulnerabilities
+✓ change/2026-11-10-seed-s13-audit-vulnerabilities
+✓ change/2026-11-17-confirm-order-payment-outbox
+✓ change/2026-11-17-expand-customer-name
+Totals: 18 passed, 0 failed (18 items)
+Spec-trace: todos los escenarios tienen test.
+▶ Configuración JPA (ADR docs/decisiones/listado-de-pedidos.md)
+▶ Catálogo Mongo (ADR docs/adr/0009-catalogo-en-mongodb.md)
+▶ Cache multinivel (ADR docs/adr/0010-cache-multinivel.md)
+▶ Seguridad (ADR docs/adr/0011-autenticacion-refresh-y-version-de-sesion.md)
+▶ Tests guardianes (lab S09: scripts/protected-tests.txt)
+▶ Migraciones publicadas (lab S16: expandir-contraer)
+▶ Capa 2: SAST y secretos (lab S13, docs/lab-s13.md)
+open-findings: 0 hallazgo(s) en .acdc/open-findings.md
+▶ Capa 1: formato, estilo, bugs y malas prácticas (lab S16b, docs/lab-s16b.md)
+▶ Tests y cobertura de ramas de identity (lab S14, docs/lab-s14.md)
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+▶ Contextos de Spring en los IT (lab S16)
+  1 contexto(s) de integración
+▶ Capa 3: mutation testing de pricing (lab S15, docs/lab-s15.md)
+  pricing: >> Generated 53 mutations Killed 51 (96%)
