@@ -72,6 +72,10 @@ if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
     if grep -qE 'archunit|master_acdc[\\/]+arch(itecture)?[\\/]' <<<"$CMD"; then
       echo "AC/DC: las reglas de ArchUnit (src/test/java/com/codeja/master_acdc/arch/ y architecture/), archunit.properties y archunit_store/ son zona protegida (lab S18, ADR 0012). No se relajan, no se congelan de nuevo ni se regenera la línea base: corrige el diseño como indica el because de la regla y, si crees que la regla está mal, explícalo a la persona y detente." >&2; exit 2
     fi
+    # Lab S19: los ADR y el mapa de contextos son decisiones humanas (ADR 0013-0015).
+    if grep -qE 'docs[\\/]+(adr[\\/]|domain[\\/]+context-map)' <<<"$CMD"; then
+      echo "AC/DC: docs/adr/ y docs/domain/context-map.md son zona protegida (lab S19): registran decisiones de arquitectura y de negocio. No se editan desde la shell. Si crees que una decisión debe cambiar, explícalo a la persona y detente." >&2; exit 2
+    fi
     if grep -qF "CatalogSchemaValidator" <<<"$CMD"; then
       echo "AC/DC: CatalogSchemaValidator está en la zona protegida (validador \$jsonSchema del catálogo, ADR 0009). No se edita, no se desactiva ni se sortea: explica el problema a la persona y detente." >&2; exit 2
     fi
@@ -109,6 +113,7 @@ case "$REL" in
   src/main/java/com/codeja/master_acdc/identity/domain/model/Role.java|\
   src/test/java/com/codeja/master_acdc/arch/*|src/test/java/com/codeja/master_acdc/architecture/*|\
   src/test/resources/archunit.properties|src/test/resources/archunit_store/*|\
+  docs/adr/*|docs/domain/context-map.md|\
   config/*|.mvn/*|.claude/*|.opencode/*|.github/*|scripts/*|pom.xml|verify-quality.sh|lefthook.yml|openspec/config.yaml|src/main/resources/application*|.env|.env.*|\
   semgrep-rules/*|.semgrepignore|.gitleaks.toml|.gitleaksignore|gitleaks-baseline.json|.acdc/open-findings.md)
     echo "AC/DC: $REL está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente." >&2
