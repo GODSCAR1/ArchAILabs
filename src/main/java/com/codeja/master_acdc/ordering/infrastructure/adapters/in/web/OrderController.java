@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-public class OrderController {
+class OrderController {
 
   private final CreateOrderUseCase createOrderUseCase;
   private final CancelOrderUseCase cancelOrderUseCase;

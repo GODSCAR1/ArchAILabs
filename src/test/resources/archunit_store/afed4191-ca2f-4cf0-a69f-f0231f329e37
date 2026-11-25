@@ -1,0 +1,2 @@
+Method <com.codeja.master_acdc.catalog.application.EditProductService.edit(java.util.UUID, java.lang.String, java.math.BigDecimal, java.lang.Long)> calls constructor <com.codeja.master_acdc.catalog.domain.event.ProductChanged.<init>(java.lang.String)> in (EditProductService.java:43)
+Method <com.codeja.master_acdc.catalog.infrastructure.adapters.out.mongo.CatalogStockProjectionJob.synchronizeBatch(java.util.List, boolean)> calls constructor <com.codeja.master_acdc.catalog.domain.event.ProductChanged.<init>(java.lang.String)> in (CatalogStockProjectionJob.java:109)

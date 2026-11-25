@@ -1,0 +1,268 @@
+### @Entity en Order
+esperada: domain_is_free_of_frameworks
+fallan (nuevas): ['domain_is_free_of_frameworks', 'domain_only_depends_on_java_and_domain']
+.domain_is_free_of_frameworks                                 1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package '..domain..' should depend on classes that reside in any package ['org.springframework..', 'jakarta.persistence..', 'jakarta.transaction..', 'jakarta.validation..', 'jakarta.servlet..', 'org.hibernate..', 'com.fasterxml.jackson..', 'tools.jackson..', 'org.bson..', 'com.mongodb..', 'io.micrometer..'], because el dominio es Java puro (ADR 0012): quita la anotación o el tipo técnico del dominio, crea su equivalente en un adaptador de infrastructure/adapters y traduce con un mapper estático; si el núcleo necesita algo del exterior, declara un puerto en domain/port' was violated (1 times):
+Class <com.codeja.master_acdc.ordering.domain.model.Order> is annotated with <jakarta.persistence.Entity> in (Order.java:0)
+FAIL Hexa.domain_only_depends_on_java_and_domain                       1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package '..domain..' should only depend on classes that reside in any package ['java..', '..domain..', 'org.jspecify..'], because lista blanca del dominio (ADR 0012, concesión 7: solo JSpecify además de java.*): cualquier otra dependencia es una fuga; tradúcela en un adaptador o pide la concesión en el ADR antes de añadirla aquí' was violated (1 times):
+Class <com.codeja.master_acdc.ordering.domain.model.Order> is annotated with <jakarta.persistence.Entity
+…
+.domain_only_depends_on_java_and_domain                       1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package '..domain..' should only depend on classes that reside in any package ['java..', '..domain..', 'org.jspecify..'], because lista blanca del dominio (ADR 0012, concesión 7: solo JSpecify además de java.*): cualquier otra dependencia es una fuga; tradúcela en un adaptador o pide la concesión en el ADR antes de añadirla aquí' was violated (1 times):
+Class <com.codeja.master_acdc.ordering.domain.model.Order> is annotated with <jakarta.persistence.Entity> in (Order.java:0)
+ok   Hexa.application_is_free_of_frameworks                            0 
+ok   Hexa.application_only_depends_on_java_domain_and_application      0 
+ok   Hexa.ports_are_interfaces_or_records                              0 
+ok   Hexa.layers_only_point_towards_the_domain                         0 
+ok   Hexa.adapters_do_not_know_each_other                              0 
+ok   Hexa.inbound_adapters_do_not_use_outbound_ports                   0 
+ok   Hexa.adapter_classes_are_public_only_when_config_wires_them       0 
+ok   Modu.modules_are_free_of_cycles                                   0 
+ok   Modu.modules_only_use_the_published_api_of_other_modules          0 
+ok   Conv.domain_events_are_records_in_domain                          0 
+ok   Conv.domain_events_are_created_only_inside_the_domain             0 
+ok   Conv.event_listeners_live_only_in_adapters       
+…
+### @JsonProperty en Money (pricing)
+esperada: domain_is_free_of_frameworks
+fallan (nuevas): ['domain_is_free_of_frameworks', 'domain_only_depends_on_java_and_domain']
+.domain_is_free_of_frameworks                                 9 {pricing=9}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package '..domain..' should depend on classes that reside in any package ['org.springframework..', 'jakarta.persistence..', 'jakarta.transaction..', 'jakarta.validation..', 'jakarta.servlet..', 'org.hibernate..', 'com.fasterxml.jackson..', 'tools.jackson..', 'org.bson..', 'com.mongodb..', 'io.micrometer..'], because el dominio es Java puro (ADR 0012): quita la anotación o el tipo técnico del dominio, crea su equivalente en un adaptador de infrastructure/adapters y traduce con un mapper estático; si el núcleo necesita algo del exterior, declara un puerto en domain/port' was violated (9 times):
+Field <com.codeja.master_acdc.pricing.domain.model.Money.amount> has annotation member of type <com.fasterxml.jackson.annotation.JsonProperty$Access> in (Money.java:0)
+Field <com.codeja.master_acdc.pricing.domain.model.Money.amount> has annotation member of type <com.fasterxml.jackson.annotation.OptBoolean> in (Money.java:0)
+Field <com.codeja.master_acdc.pricing.domain.model.Money.amount> is annotated with <com.fasterxml.jackson.annotation.JsonProperty> in (Money.java:0)
+Method <com.codeja.master_acdc.pricing.domain.model.Money.amount()> has annotation member of type <com.fasterxml.jackson.annotation.JsonProperty$Access> in (Money.java:0)
+Method <com.codeja.master_acdc.pricing.domain.model.Money.amount()> has annotation member of type <
+…
+.domain_only_depends_on_java_and_domain                       9 {pricing=9}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package '..domain..' should only depend on classes that reside in any package ['java..', '..domain..', 'org.jspecify..'], because lista blanca del dominio (ADR 0012, concesión 7: solo JSpecify además de java.*): cualquier otra dependencia es una fuga; tradúcela en un adaptador o pide la concesión en el ADR antes de añadirla aquí' was violated (9 times):
+Field <com.codeja.master_acdc.pricing.domain.model.Money.amount> has annotation member of type <com.fasterxml.jackson.annotation.JsonProperty$Access> in (Money.java:0)
+Field <com.codeja.master_acdc.pricing.domain.model.Money.amount> has annotation member of type <com.fasterxml.jackson.annotation.OptBoolean> in (Money.java:0)
+Field <com.codeja.master_acdc.pricing.domain.model.Money.amount> is annotated with <com.fasterxml.jackson.annotation.JsonProperty> in (Money.java:0)
+Method <com.codeja.master_acdc.pricing.domain.model.Money.amount()> has annotation member of type <com.fasterxml.jackson.annotation.JsonProperty$Access> in (Money.java:0)
+Method <com.codeja.master_acdc.pricing.domain.model.Money.amount()> has annotation member of type <com.fasterxml.jackson.annotation.OptBoolean> in (Money.java:0)
+Method <com.codeja.master_acdc.pricing.domain.model.Money.amount()> is annotated with <com.fasterxml.jackson.annotation.JsonProperty> in (Money.java:0)
+Parameter <java.math.BigDecimal>
+…
+### Page<Order> en OrderRepository (OrderStore)
+esperada: domain_is_free_of_frameworks
+fallan (nuevas): ['domain_is_free_of_frameworks']
+.domain_is_free_of_frameworks                                 2 {ordering=2}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package '..domain..' should depend on classes that reside in any package ['org.springframework..', 'jakarta.persistence..', 'jakarta.transaction..', 'jakarta.validation..', 'jakarta.servlet..', 'org.hibernate..', 'com.fasterxml.jackson..', 'tools.jackson..', 'org.bson..', 'com.mongodb..', 'io.micrometer..'], because el dominio es Java puro (ADR 0012): quita la anotación o el tipo técnico del dominio, crea su equivalente en un adaptador de infrastructure/adapters y traduce con un mapper estático; si el núcleo necesita algo del exterior, declara un puerto en domain/port' was violated (2 times):
+Method <com.codeja.master_acdc.ordering.domain.port.OrderRepository.page(org.springframework.data.domain.Pageable)> has parameter of type <org.springframework.data.domain.Pageable> in (OrderRepository.java:0)
+Method <com.codeja.master_acdc.ordering.domain.port.OrderRepository.page(org.springframework.data.domain.Pageable)> has return type <org.springframework.data.domain.Page> in (OrderRepository.java:0)
+ok   Hexa.domain_only_depends_on_java_and_domain                       0 
+ok   Hexa.application_is_free_of_frameworks                            0 
+ok   Hexa.application_only_depends_on_java_domain_and_application      0 
+ok   Hexa.ports_are_interfaces_or_records                              0 
+ok   Hexa.layers_only_point_towards_the_d
+…
+### @Cacheable en GetOrderService
+esperada: application_is_free_of_frameworks
+fallan (nuevas): ['application_is_free_of_frameworks', 'application_only_depends_on_java_domain_and_application']
+.application_is_free_of_frameworks                            1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package '..application..' should depend on classes that reside in any package ['org.springframework..', 'jakarta.persistence..', 'jakarta.transaction..', 'jakarta.validation..', 'jakarta.servlet..', 'org.hibernate..', 'com.fasterxml.jackson..', 'tools.jackson..', 'org.bson..', 'com.mongodb..', 'io.micrometer..'], because los casos de uso son Java puro (ADR 0012 §5): las transacciones se aplican en infrastructure/config con TransactionTemplate, y la cache, la seguridad o los listeners van en un decorador o un adaptador de infrastructure/adapters' was violated (1 times):
+Method <com.codeja.master_acdc.ordering.application.GetOrderService.get(java.util.UUID, com.codeja.master_acdc.ordering.domain.model.OrderReadScope)> is annotated with <org.springframework.cache.annotation.Cacheable> in (GetOrderService.java:0)
+FAIL Hexa.application_only_depends_on_java_domain_and_application      1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package '..application..' should only depend on classes that reside in any package ['java..', '..domain..', '..application..', 'org.jspecify..'], because la aplicación orquesta el dominio a través de puertos: si necesitas una librería, ponla detrás de un puerto de domain/port implementado en infrastructure/adapters/out' was violated (1 times):
+Method <com.codej
+…
+.application_only_depends_on_java_domain_and_application      1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package '..application..' should only depend on classes that reside in any package ['java..', '..domain..', '..application..', 'org.jspecify..'], because la aplicación orquesta el dominio a través de puertos: si necesitas una librería, ponla detrás de un puerto de domain/port implementado en infrastructure/adapters/out' was violated (1 times):
+Method <com.codeja.master_acdc.ordering.application.GetOrderService.get(java.util.UUID, com.codeja.master_acdc.ordering.domain.model.OrderReadScope)> is annotated with <org.springframework.cache.annotation.Cacheable> in (GetOrderService.java:0)
+ok   Hexa.ports_are_interfaces_or_records                              0 
+ok   Hexa.layers_only_point_towards_the_domain                         0 
+ok   Hexa.adapters_do_not_know_each_other                              0 
+ok   Hexa.inbound_adapters_do_not_use_outbound_ports                   0 
+ok   Hexa.adapter_classes_are_public_only_when_config_wires_them       0 
+ok   Modu.modules_are_free_of_cycles                                   0 
+ok   Modu.modules_only_use_the_published_api_of_other_modules          0 
+ok   Conv.domain_events_are_records_in_domain                          0 
+ok   Conv.domain_events_are_created_only_inside_the_domain             0 
+ok   Conv.event_listeners_live_only_in_adapters                        0 
+ok   Conv.no_fiel
+…
+### OrderController usa OrderJpaRepository
+esperada: adapters_do_not_know_each_other
+fallan (nuevas): ['adapters_do_not_know_each_other']
+.adapters_do_not_know_each_other                              1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'slices matching 'com.codeja.master_acdc.(*).infrastructure.adapters.(*).(*)..' should not depend on each other, because cada adaptador habla solo con el núcleo: si uno necesita algo de otro, sube esa necesidad a un puerto (o a un caso de uso) y deja que config los conecte' was violated (1 times):
+Slice ordering - in - web depends on Slice ordering - out - persistence:
+Field <com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderController.jpa> has type <com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaRepository> in (OrderController.java:0)
+ok   Hexa.inbound_adapters_do_not_use_outbound_ports                   0 
+ok   Hexa.adapter_classes_are_public_only_when_config_wires_them       0 
+ok   Modu.modules_are_free_of_cycles                                   0 
+ok   Modu.modules_only_use_the_published_api_of_other_modules          0 
+ok   Conv.domain_events_are_records_in_domain                          0 
+ok   Conv.domain_events_are_created_only_inside_the_domain             0 
+ok   Conv.event_listeners_live_only_in_adapters                        0 
+ok   Conv.no_field_injection                                           0 
+ok   Conv.aggregates_are_created_only_through_their_factories          0 
+ok   Conv.aggregates_are_restored_only_by_persistence_adapters         0 
+ok   Conv.inbound_adapters_never_receive_
+…
+### OrderJpaEntity pasa a ser public
+esperada: adapter_classes_are_public_only_when_config_wires_them
+fallan (nuevas): ['adapter_classes_are_public_only_when_config_wires_them']
+.adapter_classes_are_public_only_when_config_wires_them       1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package '..infrastructure.adapters..' and are top level classes and do not have simple name 'package-info' and are not annotated with @StaticMetamodel should be package-private unless infrastructure.config wires them, because un adaptador es un detalle de su paquete: solo es público si infrastructure/config lo instancia con @Bean; quita el public a DTOs, mappers, entidades y controladores, y si algo deja de compilar, lo que falta es un puerto' was violated (1 times):
+com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderJpaEntity es public y ninguna clase de infrastructure.config lo usa
+ok   Modu.modules_are_free_of_cycles                                   0 
+ok   Modu.modules_only_use_the_published_api_of_other_modules          0 
+ok   Conv.domain_events_are_records_in_domain                          0 
+ok   Conv.domain_events_are_created_only_inside_the_domain             0 
+ok   Conv.event_listeners_live_only_in_adapters                        0 
+ok   Conv.no_field_injection                                           0 
+ok   Conv.aggregates_are_created_only_through_their_factories          0 
+ok   Conv.aggregates_are_restored_only_by_persistence_adapters         0 
+ok   Conv.inbound_adapters_never_receive_aggregates                    0 
+ok   Conv.output_ports_do_not_expose_transactions                
+…
+### catalog usa CreateOrderService (PlaceOrderService) directamente
+esperada: modules_only_use_the_published_api_of_other_modules
+fallan (nuevas): ['modules_are_free_of_cycles', 'modules_only_use_the_published_api_of_other_modules']
+.modules_are_free_of_cycles                                   1 {catalog=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'slices matching 'com.codeja.master_acdc.(*)..' should be free of cycles, because un ciclo entre módulos los convierte en uno solo: invierte la dependencia con un puerto en el módulo que la necesita, o publica un evento de dominio en lugar de llamar de vuelta (docs/context-map.md)' was violated (1 times):
+Cycle detected: Slice catalog -> 
+                Slice ordering -> 
+                Slice catalog
+  1. Dependencies of Slice catalog
+    - Field <com.codeja.master_acdc.catalog.infrastructure.adapters.in.web.ProductDetailController.createOrder> has type <com.codeja.master_acdc.ordering.application.CreateOrderService> in (ProductDetailController.java:0)
+  2. Dependencies of Slice ordering
+    - Constructor <com.codeja.master_acdc.ordering.infrastructure.adapters.out.catalog.CatalogOrderAmountCalculator.<init>(com.codeja.master_acdc.catalog.api.CatalogPrices, com.codeja.master_acdc.pricing.domain.model.OrderPricing)> has parameter of type <com.codeja.master_acdc.catalog.api.CatalogPrices> in (CatalogOrderAmountCalculator.java:0)
+    - Constructor <com.codeja.master_acdc.ordering.infrastructure.adapters.out.persistence.OrderConfirmationRelay.<init>(org.springframework.jdbc.core.JdbcTemplate, com.codeja.master_acdc.catalog.api.CatalogStockProjection)> has parameter of type <com.codeja.master_acdc.catalog.api.CatalogStockProjection> in (OrderConfirmationRe
+…
+.modules_only_use_the_published_api_of_other_modules          1 {catalog=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package 'com.codeja.master_acdc.*..' should only use the published api of other modules, and only from infrastructure, because un módulo solo ve de otro su paquete publicado (api; en pricing, domain.model) y solo desde infrastructure: el núcleo pide lo que necesita a un puerto propio de domain/port y un adaptador de infrastructure/adapters/out/<modulo> llama a la api del otro (docs/context-map.md)' was violated (1 times):
+Field <com.codeja.master_acdc.catalog.infrastructure.adapters.in.web.ProductDetailController.createOrder> has type <com.codeja.master_acdc.ordering.application.CreateOrderService> in (ProductDetailController.java:0) [ordering no publica ese paquete]
+ok   Conv.domain_events_are_records_in_domain                          0 
+ok   Conv.domain_events_are_created_only_inside_the_domain             0 
+ok   Conv.event_listeners_live_only_in_adapters                        0 
+ok   Conv.no_field_injection                                           0 
+ok   Conv.aggregates_are_created_only_through_their_factories          0 
+ok   Conv.aggregates_are_restored_only_by_persistence_adapters         0 
+ok   Conv.inbound_adapters_never_receive_aggregates                    0 
+ok   Conv.output_ports_do_not_expose_transactions                      0 
+ok   Conv.config_does_not_implement_ports_with_anonymous_classes       0 
+
+…
+### El dominio de ordering importa catalog.domain.model.Product
+esperada: modules_only_use_the_published_api_of_other_modules
+fallan (nuevas): ['modules_only_use_the_published_api_of_other_modules']
+.modules_only_use_the_published_api_of_other_modules          1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package 'com.codeja.master_acdc.*..' should only use the published api of other modules, and only from infrastructure, because un módulo solo ve de otro su paquete publicado (api; en pricing, domain.model) y solo desde infrastructure: el núcleo pide lo que necesita a un puerto propio de domain/port y un adaptador de infrastructure/adapters/out/<modulo> llama a la api del otro (docs/context-map.md)' was violated (1 times):
+Field <com.codeja.master_acdc.ordering.domain.model.OrderLine.product> has type <com.codeja.master_acdc.catalog.domain.model.Product> in (OrderLine.java:0) [catalog no publica ese paquete]
+ok   Conv.domain_events_are_records_in_domain                          0 
+ok   Conv.domain_events_are_created_only_inside_the_domain             0 
+ok   Conv.event_listeners_live_only_in_adapters                        0 
+ok   Conv.no_field_injection                                           0 
+ok   Conv.aggregates_are_created_only_through_their_factories          0 
+ok   Conv.aggregates_are_restored_only_by_persistence_adapters         0 
+ok   Conv.inbound_adapters_never_receive_aggregates                    0 
+ok   Conv.output_ports_do_not_expose_transactions                      0 
+ok   Conv.config_does_not_implement_ports_with_anonymous_classes       0 
+
+…
+### @TransactionalEventListener en CancelOrderService
+esperada: event_listeners_live_only_in_adapters
+fallan (nuevas): ['application_is_free_of_frameworks', 'application_only_depends_on_java_domain_and_application', 'event_listeners_live_only_in_adapters']
+.application_is_free_of_frameworks                            2 {ordering=2}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package '..application..' should depend on classes that reside in any package ['org.springframework..', 'jakarta.persistence..', 'jakarta.transaction..', 'jakarta.validation..', 'jakarta.servlet..', 'org.hibernate..', 'com.fasterxml.jackson..', 'tools.jackson..', 'org.bson..', 'com.mongodb..', 'io.micrometer..'], because los casos de uso son Java puro (ADR 0012 §5): las transacciones se aplican en infrastructure/config con TransactionTemplate, y la cache, la seguridad o los listeners van en un decorador o un adaptador de infrastructure/adapters' was violated (2 times):
+Method <com.codeja.master_acdc.ordering.application.CancelOrderService.on(com.codeja.master_acdc.ordering.domain.event.OrderCancelled)> has annotation member of type <org.springframework.transaction.event.TransactionPhase> in (CancelOrderService.java:0)
+Method <com.codeja.master_acdc.ordering.application.CancelOrderService.on(com.codeja.master_acdc.ordering.domain.event.OrderCancelled)> is annotated with <org.springframework.transaction.event.TransactionalEventListener> in (CancelOrderService.java:0)
+FAIL Hexa.application_only_depends_on_java_domain_and_application      2 {ordering=2}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package '..application..' should only depend on classes that reside in any package ['java..', '..domai
+…
+.application_only_depends_on_java_domain_and_application      2 {ordering=2}
+Architecture Violation [Priority: MEDIUM] - Rule 'classes that reside in a package '..application..' should only depend on classes that reside in any package ['java..', '..domain..', '..application..', 'org.jspecify..'], because la aplicación orquesta el dominio a través de puertos: si necesitas una librería, ponla detrás de un puerto de domain/port implementado en infrastructure/adapters/out' was violated (2 times):
+Method <com.codeja.master_acdc.ordering.application.CancelOrderService.on(com.codeja.master_acdc.ordering.domain.event.OrderCancelled)> has annotation member of type <org.springframework.transaction.event.TransactionPhase> in (CancelOrderService.java:0)
+Method <com.codeja.master_acdc.ordering.application.CancelOrderService.on(com.codeja.master_acdc.ordering.domain.event.OrderCancelled)> is annotated with <org.springframework.transaction.event.TransactionalEventListener> in (CancelOrderService.java:0)
+ok   Hexa.ports_are_interfaces_or_records                              0 
+ok   Hexa.layers_only_point_towards_the_domain                         0 
+ok   Hexa.adapters_do_not_know_each_other                              0 
+ok   Hexa.inbound_adapters_do_not_use_outbound_ports                   0 
+ok   Hexa.adapter_classes_are_public_only_when_config_wires_them       0 
+ok   Modu.modules_are_free_of_cycles                                   0 
+ok   Modu.modules_only_use_the_published_api_of_othe
+…
+.event_listeners_live_only_in_adapters                        1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'methods that are meta-annotated with @EventListener or are annotated with @EventListener should be declared in classes that reside in a package '..infrastructure.adapters..', because escuchar un evento de Spring es un detalle de entrega: el listener es un adaptador de infrastructure/adapters que traduce el evento y llama a un puerto; un caso de uso nunca lleva @EventListener ni @TransactionalEventListener' was violated (1 times):
+Method <com.codeja.master_acdc.ordering.application.CancelOrderService.on(com.codeja.master_acdc.ordering.domain.event.OrderCancelled)> is not declared in classes that reside in a package '..infrastructure.adapters..' in (CancelOrderService.java:15)
+ok   Conv.no_field_injection                                           0 
+ok   Conv.aggregates_are_created_only_through_their_factories          0 
+ok   Conv.aggregates_are_restored_only_by_persistence_adapters         0 
+ok   Conv.inbound_adapters_never_receive_aggregates                    0 
+ok   Conv.output_ports_do_not_expose_transactions                      0 
+ok   Conv.config_does_not_implement_ports_with_anonymous_classes       0 
+
+…
+### if de negocio en OrderController
+esperada: (ninguna: ArchUnit no ve lógica)
+fallan (nuevas): []
+### S17: estado fijado desde config (restore con PAID en ConfirmationConfiguration)
+esperada: aggregates_are_restored_only_by_persistence_adapters
+fallan (nuevas): ['aggregates_are_restored_only_by_persistence_adapters']
+.aggregates_are_restored_only_by_persistence_adapters         1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside outside of packages ['..domain..', '..infrastructure.adapters.out.persistence..'] should call method where target name 'restore' and target owner aggregates (domain.model classes with a static restore factory), because restore(...) reconstruye sin reglas de negocio y solo lo usa el mapper de persistencia (ADR 0012 §4): para crear usa place(...) y para cambiar de estado, una transición del agregado (confirm, cancel, refund...)' was violated (1 times):
+Method <com.codeja.master_acdc.ordering.infrastructure.config.ConfirmationConfiguration.paid(java.util.UUID, java.util.UUID)> calls method <com.codeja.master_acdc.ordering.domain.model.Order.restore(java.util.UUID, java.util.UUID, com.codeja.master_acdc.ordering.domain.model.OrderStatus, java.util.List)> in (ConfirmationConfiguration.java:17)
+ok   Conv.inbound_adapters_never_receive_aggregates                    0 
+ok   Conv.output_ports_do_not_expose_transactions                      0 
+ok   Conv.config_does_not_implement_ports_with_anonymous_classes       0 
+
+…
+### S17: constructor del agregado accesible desde fuera
+esperada: aggregates_are_created_only_through_their_factories
+fallan (nuevas): ['aggregates_are_created_only_through_their_factories']
+.aggregates_are_created_only_through_their_factories          1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside outside of package '..domain..' should call constructor where target owner aggregates (domain.model classes with a static restore factory), because un agregado nace con place(...), que valida sus invariantes, o vuelve de la base de datos con restore(...) (ADR 0012 §4): su constructor es privado y nadie fija el estado desde fuera' was violated (1 times):
+Method <com.codeja.master_acdc.ordering.application.CancelOrderService.paid(java.util.UUID)> calls constructor <com.codeja.master_acdc.ordering.domain.model.Order.<init>(java.util.UUID, java.util.UUID, com.codeja.master_acdc.ordering.domain.model.OrderStatus, java.util.List)> in (CancelOrderService.java:15)
+ok   Conv.aggregates_are_restored_only_by_persistence_adapters         0 
+ok   Conv.inbound_adapters_never_receive_aggregates                    0 
+ok   Conv.output_ports_do_not_expose_transactions                      0 
+ok   Conv.config_does_not_implement_ports_with_anonymous_classes       0 
+
+…
+### S17: el agregado llega a la web
+esperada: inbound_adapters_never_receive_aggregates
+fallan (nuevas): ['inbound_adapters_never_receive_aggregates']
+.inbound_adapters_never_receive_aggregates                    2 {ordering=2}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package '..infrastructure.adapters.in..' should depend on classes that aggregates (domain.model classes with a static restore factory), because los casos de uso devuelven un resultado de aplicación (OrderDetail, OrderSummary), nunca el agregado (ADR 0012 §3): añade al resultado el dato que necesite la web' was violated (2 times):
+Method <com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderWebMapper.id(com.codeja.master_acdc.ordering.domain.model.Order)> calls method <com.codeja.master_acdc.ordering.domain.model.Order.id()> in (OrderWebMapper.java:16)
+Method <com.codeja.master_acdc.ordering.infrastructure.adapters.in.web.OrderWebMapper.id(com.codeja.master_acdc.ordering.domain.model.Order)> has parameter of type <com.codeja.master_acdc.ordering.domain.model.Order> in (OrderWebMapper.java:0)
+ok   Conv.output_ports_do_not_expose_transactions                      0 
+ok   Conv.config_does_not_implement_ports_with_anonymous_classes       0 
+
+…
+### S17: PaymentTransactions en un puerto de salida
+esperada: output_ports_do_not_expose_transactions
+fallan (nuevas): ['output_ports_do_not_expose_transactions']
+.output_ports_do_not_expose_transactions                      1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package '..domain.port..' should have simple name containing 'Transaction' or should depend on classes that reside in any package ['org.springframework.transaction..', 'java.sql..', 'javax.sql..'], because un puerto de salida habla en términos del negocio: si una operación debe ser atómica, lo dice su contrato y lo garantiza el adaptador (OrderPayments, ADR 0012 §3)' was violated (1 times):
+Class <com.codeja.master_acdc.ordering.domain.port.PaymentTransactions> has simple name containing 'Transaction' in (PaymentTransactions.java:0)
+ok   Conv.config_does_not_implement_ports_with_anonymous_classes       0 
+
+…
+### S17: clase anónima que implementa un puerto en config
+esperada: config_does_not_implement_ports_with_anonymous_classes
+fallan (nuevas): ['config_does_not_implement_ports_with_anonymous_classes']
+.config_does_not_implement_ports_with_anonymous_classes       1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside in a package '..infrastructure.config..' and anonymous classes should implement reside in any package ['..domain.port..', '..application.port..'], because un puerto se implementa en un adaptador con nombre de infrastructure/adapters/out, que se puede probar y encontrar; config solo lo instancia con @Bean (ADR 0012, fuga de PaymentTransactions)' was violated (1 times):
+Class <com.codeja.master_acdc.ordering.infrastructure.config.OrderingConfiguration$1> does implement reside in any package ['..domain.port..', '..application.port..'] in (OrderingConfiguration.java:0)
+
+…
+### S17: el servicio construye el evento
+esperada: domain_events_are_created_only_inside_the_domain
+fallan (nuevas): ['domain_events_are_created_only_inside_the_domain']
+.domain_events_are_created_only_inside_the_domain             1 {ordering=1}
+Architecture Violation [Priority: MEDIUM] - Rule 'no classes that reside outside of package '..domain..' should call constructor where target owner reside in a package '..domain.event..', because el agregado registra sus eventos en cada transición y el servicio los recoge con pullEvents() (ADR 0012 §3): no construyas el evento en el servicio ni en un adaptador' was violated (1 times):
+Method <com.codeja.master_acdc.ordering.application.CancelOrderService.cancel(com.codeja.master_acdc.ordering.application.port.CancelOrderCommand)> calls constructor <com.codeja.master_acdc.ordering.domain.event.OrderCancelled.<init>(java.util.UUID, java.util.List)> in (CancelOrderService.java:33)
+ok   Conv.event_listeners_live_only_in_adapters                        0 
+ok   Conv.no_field_injection                                           0 
+ok   Conv.aggregates_are_created_only_through_their_factories          0 
+ok   Conv.aggregates_are_restored_only_by_persistence_adapters         0 
+ok   Conv.inbound_adapters_never_receive_aggregates                    0 
+ok   Conv.output_ports_do_not_expose_transactions                      0 
+ok   Conv.config_does_not_implement_ports_with_anonymous_classes       0 
+
+…

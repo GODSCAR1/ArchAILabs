@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /** Traduce los errores de creación de pedido a {@code ProblemDetail} con un type propio. */
 @RestControllerAdvice
-public class OrderExceptionHandler {
+class OrderExceptionHandler {
 
   private static final String TYPE_BASE = "https://api.master-acdc.dev/problems/";
 

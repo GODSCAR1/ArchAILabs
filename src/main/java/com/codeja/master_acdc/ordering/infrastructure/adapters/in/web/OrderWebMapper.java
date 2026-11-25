@@ -11,7 +11,7 @@ import com.codeja.master_acdc.ordering.domain.model.RequestedOrderLine;
 import java.util.List;
 import java.util.UUID;
 
-public final class OrderWebMapper {
+final class OrderWebMapper {
   private OrderWebMapper() {}
 
   public static OrderListingCriteria listingCriteria(String status, String sort) {

@@ -35,3 +35,8 @@ src/test/java/com/codeja/master_acdc/IntegrationTestInfrastructureIT.java
 src/test/java/com/codeja/master_acdc/SchemaIT.java
 # Lab S17: caracterización de la API de pedidos (red de seguridad del refactor hexagonal)
 src/test/java/com/codeja/master_acdc/ordering/OrderApiCharacterizationIT.java
+# Lab S18: reglas de ArchUnit del hexágono (además, todo arch/, architecture/, archunit.properties y archunit_store/
+# están en la zona protegida de protect-verify.sh y verify-quality.ts)
+src/test/java/com/codeja/master_acdc/architecture/HexagonalArchitectureTest.java
+src/test/java/com/codeja/master_acdc/architecture/ModuleBoundariesTest.java
+src/test/java/com/codeja/master_acdc/architecture/ConventionsTest.java

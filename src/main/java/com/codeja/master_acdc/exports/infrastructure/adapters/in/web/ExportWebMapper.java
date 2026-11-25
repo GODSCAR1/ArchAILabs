@@ -4,7 +4,7 @@ import com.codeja.master_acdc.exports.domain.model.ExportContent;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-public final class ExportWebMapper {
+final class ExportWebMapper {
   private ExportWebMapper() {}
 
   public static ResponseEntity<byte[]> response(ExportContent content) {

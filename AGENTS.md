@@ -15,17 +15,41 @@ Las reglas marcadas "(pendiente: … Sxx)" aún NO tienen verificador automátic
 - Agregados: clase `final`, constructor privado, `place(...)` con las invariantes y `restore(...)` para persistencia. Las transiciones son métodos del negocio en el agregado; ni servicios, ni `@Bean`, ni adaptadores deciden estados ni hacen `new` de un agregado en un estado concreto.
 - Eventos: el agregado los acumula y el servicio publica `pullEvents()` por un único puerto (`Publish<Agregado>Events`) solo si hay alguno; el adaptador reparte con `switch` sobre el evento sellado, sin `default`.
 - Puertos de entrada: comando → resultado de aplicación (`<Agregado>Detail`); nunca devuelven el agregado a `adapters/in`. Puertos de salida con nombres de negocio y sin tipos técnicos (nada de `Transaction*`); si una operación debe ser atómica, lo garantiza el adaptador.
-- Las tablas de ubicación y de fugas (con su corrección) están en el ADR 0012; `verify-quality.sh` falla si `domain/` o `application/` importan JPA, Spring o Jackson (provisional hasta ArchUnit).
-- `domain/` NUNCA importa Spring, JPA ni Jackson (`@Entity`, `@Repository`, `@Service`, `@Component` prohibidos ahí). (pendiente: ArchUnit en S17)
-- `application/` depende solo de `domain/`; NUNCA de `infrastructure/`. (pendiente: ArchUnit en S17)
+- Las tablas de ubicación y de fugas (con su corrección) están en el ADR 0012. Las reglas las verifica ArchUnit (abajo).
+- `domain/` NUNCA importa Spring, JPA ni Jackson (`@Entity`, `@Repository`, `@Service`, `@Component` prohibidos ahí). (verificador: `domain_is_free_of_frameworks`)
+- `application/` depende solo de `domain/`; NUNCA de `infrastructure/`. (verificador: `application_only_depends_on_java_domain_and_application`)
 - Puertos de salida en `domain/port/` (solo interfaces); implementaciones en `infrastructure/adapters/`.
 - Casos de uso: interfaz en `application/port/` (`<Accion>UseCase`) + implementación `<Accion>Service` en `application/`. Adaptadores en `infrastructure/adapters/in/<tecnología>` y `infrastructure/adapters/out/<tecnología>`.
 - Los beans se ensamblan en `infrastructure/config/` con `@Bean`. Sin lógica de negocio en métodos `@Bean`.
-- NUNCA `ApplicationContext.getBean()` ni campos estáticos para acceder a beans fuera de `infrastructure/config/`. (pendiente: ArchUnit en S17)
+- NUNCA `ApplicationContext.getBean()` ni campos estáticos para acceder a beans fuera de `infrastructure/config/`. (verificador: `ArchitectureTest.no_application_context_get_bean_outside_config`)
 - La conversión entre capas vive en mappers dedicados de infraestructura: `adapters/in/<tecnología>/<Agregado><Tecnología>Mapper` (petición → criterio/comando de aplicación; resultado → DTO de respuesta), `adapters/out/persistence/<Agregado>PersistenceMapper` (entidad JPA ↔ modelo de dominio o fila de lectura) y `adapters/out/mongo/<Agregado>MongoMapper` (documento ↔ modelo de dominio). Clases `final`, sin estado, con métodos estáticos y test unitario. Motivo: el código generado reparte la conversión entre entidades, DTO y adaptadores; un único sitio por frontera la hace revisable y testeable. (pendiente: ArchUnit en S17)
 - Las entidades JPA y los DTO web NO tienen métodos de conversión (`from`, `toDomain`, `toRow`…), ni los controllers ni los adaptadores contienen la lógica de mapeo. `domain` y `application` nunca conocen los mappers. (pendiente: ArchUnit en S17)
 - Sin librerías de mapeo (MapStruct y similares): una dependencia nueva es decisión de una persona. (pendiente: ArchUnit en S17)
 - Lee el `package-info.java` de un paquete antes de añadir clases en él.
+
+### Reglas de ArchUnit (lab S18, `docs/lab-s18.md`): `src/test/java/com/codeja/master_acdc/architecture/`
+Cada línea es el nombre del test que falla. Fuente: ADR `docs/adr/0012-arquitectura-hexagonal.md`. Fronteras: `docs/context-map.md`. Si una regla falla, corrige el diseño como dice su mensaje (`because`). Las reglas, `archunit.properties` y `archunit_store/` son zona protegida: NUNCA las ajustes para que pasen.
+- `domain_is_free_of_frameworks`: el dominio no depende de Spring, JPA, Jackson, Hibernate, Mongo ni Micrometer.
+- `domain_only_depends_on_java_and_domain`: el dominio solo usa `java.*`, `..domain..` y JSpecify (concesión 7 del ADR 0012).
+- `application_is_free_of_frameworks`: la aplicación no depende de frameworks; las transacciones van en `config` con `TransactionTemplate`.
+- `application_only_depends_on_java_domain_and_application`: la aplicación solo usa `java.*`, el dominio, la propia aplicación y JSpecify.
+- `ports_are_interfaces_or_records`: en `application/port` y `domain/port` solo hay interfaces y records.
+- `layers_only_point_towards_the_domain`: Domain ← Application ← Api ← Adapters ← Config; nadie depende de `config`.
+- `adapters_do_not_know_each_other`: un adaptador no depende de otro adaptador; los conecta `config` a través de puertos.
+- `inbound_adapters_do_not_use_outbound_ports`: `adapters/in` solo llama a casos de uso, nunca a `domain/port`.
+- `adapter_classes_are_public_only_when_config_wires_them`: DTOs, mappers, entidades y controladores son package-private; solo es público lo que `config` instancia.
+- `modules_are_free_of_cycles`: no hay ciclos entre módulos.
+- `modules_only_use_the_published_api_of_other_modules`: de otro módulo solo se usa su paquete publicado (`api`; en pricing, `domain.model`) y solo desde `infrastructure`.
+- `domain_events_are_records_in_domain`: los eventos de dominio son records de `domain/event`.
+- `domain_events_are_created_only_inside_the_domain`: solo el agregado crea sus eventos; el servicio los recoge con `pullEvents()`.
+- `event_listeners_live_only_in_adapters`: `@EventListener` y `@TransactionalEventListener` solo en `infrastructure/adapters`.
+- `no_field_injection`: inyección por constructor, nunca `@Autowired` en un campo.
+- `aggregates_are_created_only_through_their_factories`: nadie fuera del dominio llama al constructor de un agregado.
+- `aggregates_are_restored_only_by_persistence_adapters`: `restore(...)` solo se llama desde `adapters/out/persistence`.
+- `inbound_adapters_never_receive_aggregates`: `adapters/in` nunca depende de un agregado; usa el resultado de aplicación.
+- `output_ports_do_not_expose_transactions`: ningún puerto de salida se llama `*Transaction*` ni usa tipos de transacción o JDBC.
+- `config_does_not_implement_ports_with_anonymous_classes`: un puerto se implementa en un adaptador con nombre, no en una clase anónima de un `@Bean`.
+- La deuda de los módulos sin migrar está congelada (`freeze`). Una violación nueva rompe el build aunque la regla esté congelada. Al corregir una congelada, desaparece sola de la línea base: nunca la regeneres para meter una nueva.
 
 ## Código y tests
 - Spring Boot 4 / Java 25: en tests usa `@MockitoBean` (no `@MockBean`) y `spring-boot-starter-webmvc-test` para `@WebMvcTest`.
@@ -186,7 +210,7 @@ Spring Security 7 — APIs eliminadas (no las uses aunque aparezcan en ejemplos 
 - Antes de dar por terminado el encargo de la persona (no cada casilla de `tasks.md`): `bash ./verify-quality.sh --fast` en verde; resume su resultado (la salida completa queda en el log). Entre tareas de un mismo encargo, ejecuta solo los tests de la tarea.
 - Si Verify falla: corrige la CAUSA indicada (archivo, línea, regla).
 - PROHIBIDO para ponerlo en verde: desactivar reglas, bajar umbrales, `@Disabled`, borrar o debilitar tests, excluir archivos, `git commit --no-verify`.
-- PROHIBIDO editar `config/`, `.mvn/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `semgrep-rules/`, `.semgrepignore`, `.gitleaks.toml`, `gitleaks-baseline.json`, `.acdc/open-findings.md`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`. Si hace falta, detente y pide permiso a una persona.
+- PROHIBIDO editar `config/`, `.mvn/`, `.claude/`, `.opencode/`, `.github/`, `pom.xml` (incluye dependencias nuevas), `.env*`, `verify-quality.sh`, `scripts/`, `semgrep-rules/`, `.semgrepignore`, `.gitleaks.toml`, `gitleaks-baseline.json`, `.acdc/open-findings.md`, `lefthook.yml`, `openspec/config.yaml`, `src/main/resources/application*`, `CatalogSchemaValidator.java`, `CacheTtlPolicy.java`, `ProductDetailCache.java`, `HttpSecurityConfiguration.java`, `JwtTokenAdapter.java`, `JwtDecoderFactory.java`, `SessionVersionValidator.java`, `Role.java`, las reglas de ArchUnit (`src/test/java/com/codeja/master_acdc/arch/` y `architecture/`), `src/test/resources/archunit.properties` y `src/test/resources/archunit_store/`. Si hace falta, detente y pide permiso a una persona.
 
 ## graphify
 - Para preguntas sobre el código, consulta primero el grafo (sus nodos están en inglés: pregunta en inglés): `graphify query "<pregunta>"`, `graphify path "<A>" "<B>"`, `graphify explain "<concepto>"`. Lee `graphify-out/GRAPH_REPORT.md` solo para una visión general.

@@ -5,7 +5,7 @@ import jakarta.persistence.Embeddable;
 import java.util.UUID;
 
 @Embeddable
-public class OrderLineJpaEmbeddable {
+class OrderLineJpaEmbeddable {
 
   @Column(name = "product_id", nullable = false)
   private UUID productId;

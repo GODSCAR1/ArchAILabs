@@ -29,6 +29,10 @@ if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
   if grep -qE 'mutationThreshold|-Dmutators' <<<"$CMD"; then
     echo "AC/DC: el umbral de mutation testing (pit.mutationThreshold en pom.xml) y los mutadores no se cambian desde la línea de comandos. Mide con la execution pit-pricing; si un superviviente no es una regla, clasifícalo en docs/lab-s15.md y detente." >&2; exit 2
   fi
+  # Lab S18: la línea base de ArchUnit no se regenera ni se recongela desde la línea de comandos.
+  if grep -qiE 'allowStoreCreation|freeze\.refreeze|freeze\.store' <<<"$CMD"; then
+    echo "AC/DC: la línea base de ArchUnit (archunit_store/) no se crea, se recongela ni se redirige desde la línea de comandos: solo puede bajar al corregir violaciones. Corrige el diseño como indica el because y, si crees que la regla está mal, explícalo a la persona y detente." >&2; exit 2
+  fi
   if grep -qE '(^|[^[:alnum:]_])PATH=.*verify-quality\.sh' <<<"$CMD"; then
     echo "AC/DC: verify-quality.sh se ejecuta con el PATH de la persona. Si una herramienta (semgrep, gitleaks) no arranca, explícalo a la persona y detente; no la sustituyas." >&2; exit 2
   fi
@@ -63,6 +67,10 @@ if [[ "$TOOL" == "Bash" || "$TOOL" == "PowerShell" ]]; then
     # Lab S16: las migraciones no se escriben desde la shell (las nuevas, con la herramienta de edición).
     if grep -qE 'db[\\/]+migration' <<<"$CMD"; then
       echo "AC/DC: las migraciones de Flyway no se escriben, mueven ni borran desde la shell. Crea las nuevas con la herramienta de edición; las existentes no se tocan (expandir-contraer)." >&2; exit 2
+    fi
+    # Lab S18: reglas de ArchUnit, su configuración y la deuda congelada (línea base).
+    if grep -qE 'archunit|master_acdc[\\/]+arch(itecture)?[\\/]' <<<"$CMD"; then
+      echo "AC/DC: las reglas de ArchUnit (src/test/java/com/codeja/master_acdc/arch/ y architecture/), archunit.properties y archunit_store/ son zona protegida (lab S18, ADR 0012). No se relajan, no se congelan de nuevo ni se regenera la línea base: corrige el diseño como indica el because de la regla y, si crees que la regla está mal, explícalo a la persona y detente." >&2; exit 2
     fi
     if grep -qF "CatalogSchemaValidator" <<<"$CMD"; then
       echo "AC/DC: CatalogSchemaValidator está en la zona protegida (validador \$jsonSchema del catálogo, ADR 0009). No se edita, no se desactiva ni se sortea: explica el problema a la persona y detente." >&2; exit 2
@@ -99,6 +107,8 @@ case "$REL" in
   src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/JwtDecoderFactory.java|\
   src/main/java/com/codeja/master_acdc/identity/infrastructure/adapters/out/security/SessionVersionValidator.java|\
   src/main/java/com/codeja/master_acdc/identity/domain/model/Role.java|\
+  src/test/java/com/codeja/master_acdc/arch/*|src/test/java/com/codeja/master_acdc/architecture/*|\
+  src/test/resources/archunit.properties|src/test/resources/archunit_store/*|\
   config/*|.mvn/*|.claude/*|.opencode/*|.github/*|scripts/*|pom.xml|verify-quality.sh|lefthook.yml|openspec/config.yaml|src/main/resources/application*|.env|.env.*|\
   semgrep-rules/*|.semgrepignore|.gitleaks.toml|.gitleaksignore|gitleaks-baseline.json|.acdc/open-findings.md)
     echo "AC/DC: $REL está en la zona protegida: solo la edita una persona. No la modifiques por ninguna otra vía (shell, scripts, renombrados). Explica el cambio que propones y detente." >&2

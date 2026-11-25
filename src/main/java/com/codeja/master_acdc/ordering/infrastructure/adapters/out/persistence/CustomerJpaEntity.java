@@ -8,7 +8,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "customers")
-public class CustomerJpaEntity {
+class CustomerJpaEntity {
 
   @Id private UUID id;
 
