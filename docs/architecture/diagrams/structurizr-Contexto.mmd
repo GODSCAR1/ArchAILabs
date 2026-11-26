@@ -1,0 +1,44 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["System Context View: Tienda online"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Cliente</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Compra productos y consulta o<br />cancela sus pedidos.</div>"]
+    style 1 fill:#ffffff,stroke:#444444,color:#444444
+    10["<div style='font-weight: bold'>Fabricante o proveedor</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Comunica alertas de seguridad<br />sobre productos.</div>"]
+    style 10 fill:#999999,stroke:#6b6b6b,color:#444444
+    11["<div style='font-weight: bold'>Proveedor de correo y SMS</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Envía comunicaciones a<br />clientes.</div>"]
+    style 11 fill:#999999,stroke:#6b6b6b,color:#444444
+    12["<div style='font-weight: bold'>Tienda online</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Gestiona el catálogo, los<br />pedidos, el inventario y el<br />acceso a la tienda.</div>"]
+    style 12 fill:#ffffff,stroke:#444444,color:#444444
+    2["<div style='font-weight: bold'>Gestor de catálogo</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona productos, precios<br />de venta, promociones y<br />cupones.</div>"]
+    style 2 fill:#ffffff,stroke:#444444,color:#444444
+    3["<div style='font-weight: bold'>Operario de almacén</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona mercancía,<br />preparación de pedidos y<br />revisión de devoluciones.</div>"]
+    style 3 fill:#ffffff,stroke:#444444,color:#444444
+    4["<div style='font-weight: bold'>Analista de fraude</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Revisa pedidos retenidos por<br />sospecha de fraude.</div>"]
+    style 4 fill:#ffffff,stroke:#444444,color:#444444
+    5["<div style='font-weight: bold'>Contable</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona pérdidas por fraude<br />y decisiones de reembolso.</div>"]
+    style 5 fill:#ffffff,stroke:#444444,color:#444444
+    6["<div style='font-weight: bold'>Agente de atención</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Atiende incidencias y<br />devoluciones de clientes.</div>"]
+    style 6 fill:#ffffff,stroke:#444444,color:#444444
+    7["<div style='font-weight: bold'>Administrador</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona cuentas de usuario y<br />descarga exportaciones.</div>"]
+    style 7 fill:#ffffff,stroke:#444444,color:#444444
+    8["<div style='font-weight: bold'>Pasarela de pagos</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Autoriza pagos de pedidos; la<br />notificación de contracargos<br />está pendiente de<br />integración.</div>"]
+    style 8 fill:#999999,stroke:#6b6b6b,color:#444444
+    9["<div style='font-weight: bold'>Transportista</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Recoge y entrega envíos y<br />devoluciones.</div>"]
+    style 9 fill:#999999,stroke:#6b6b6b,color:#444444
+
+    3-. "<div>Gestiona mercancía y prepara<br />pedidos</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->12
+    4-. "<div>Revisa pedidos sospechosos</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->12
+    5-. "<div>Gestiona pérdidas por fraude</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->12
+    12-. "<div>Intercambia información de<br />envíos y devoluciones</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->9
+    10-. "<div>Comunica alertas de seguridad</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->12
+    12-. "<div>Solicita comunicaciones a<br />clientes</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->11
+    1-- "<div>Busca productos y consulta<br />fichas</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->12
+    2-- "<div>Gestiona productos y precios</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->12
+    6-- "<div>Consulta cualquier pedido y<br />solicita reembolsos</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->12
+    7-- "<div>Gestiona cuentas</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->12
+    12-- "<div>Solicita autorización de pago</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->8
+
+  end

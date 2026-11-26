@@ -25,6 +25,7 @@ workspace "Tienda online de electrónica" "Contexto, contenedores, componentes y
         correo = softwareSystem "Proveedor de correo y SMS" "Envía comunicaciones a clientes." "External,Futuro"
 
         tienda = softwareSystem "Tienda online" "Gestiona el catálogo, los pedidos, el inventario y el acceso a la tienda." {
+            !docs README.md
             api = container "Aplicación de la tienda" "Expone la API y ejecuta los módulos de la tienda." "Spring Boot 4.1.1, Java 25" {
                 catalogo = component "Catálogo" "Productos, precios de venta y disponibilidad visible." "Java / Spring"
                 inventario = component "Inventario" "Saldos y reservas de stock." "Java / Spring"

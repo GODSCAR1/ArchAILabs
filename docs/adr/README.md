@@ -17,5 +17,6 @@ decisión.
 | [0013](0013-limites-de-los-bounded-contexts.md) | Límites de los bounded contexts, subdominios y shared kernel | aceptado | `ContextMapTest` |
 | [0014](0014-integracion-entre-contextos.md) | Consultas por puertos publicados, efectos por eventos, sin tablas ajenas | aceptado | `ContextMapTest`, `TableOwnershipTest`, `ModuleBoundariesTest` |
 | [0015](0015-stock-insuficiente-tras-el-cobro.md) | Stock insuficiente tras el cobro: el cliente elige en 48 h y las roturas parciales se anulan por línea | aceptado (negocio: Oscar Torrens) | escenarios del change `handle-stock-shortage-after-payment` |
+| [0016](0016-efectos-sincronos-de-liberacion-y-alta-de-cliente.md) | Liberación de stock y alta de cliente como efectos síncronos catalogados (amplía el 0014) | aceptado | `ContextMapTest`, `validate` de Structurizr |
 
 Mapa de contextos y glosario: `docs/domain/`.

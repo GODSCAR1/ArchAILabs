@@ -1,0 +1,55 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Dynamic View: Tienda online - Aplicación de la tienda"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Cliente</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Compra productos y consulta o<br />cancela sus pedidos.</div>"]
+    style 1 fill:#ffffff,stroke:#444444,color:#444444
+
+    8["<div style='font-weight: bold'>Pasarela de pagos</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Autoriza pagos de pedidos; la<br />notificación de contracargos<br />está pendiente de<br />integración.</div>"]
+    style 8 fill:#999999,stroke:#6b6b6b,color:#444444
+
+    subgraph 12 ["Tienda online"]
+      style 12 fill:#ffffff,stroke:#444444,color:#444444
+
+      subgraph 13 ["Aplicación de la tienda"]
+        style 13 fill:#ffffff,stroke:#444444,color:#444444
+
+        14["<div style='font-weight: bold'>Catálogo</div><div style='font-size: 70%; margin-top: 0px'>[Component: Java / Spring]</div><div style='font-size: 80%; margin-top:10px'>Productos, precios de venta y<br />disponibilidad visible.</div>"]
+        style 14 fill:#ffffff,stroke:#444444,color:#444444
+        16["<div style='font-weight: bold'>Pedidos</div><div style='font-size: 70%; margin-top: 0px'>[Component: Java / Spring]</div><div style='font-size: 80%; margin-top:10px'>Ciclo del pedido; incluye<br />actualmente pagos y riesgo,<br />el outbox y su relay.</div>"]
+        style 16 fill:#ffffff,stroke:#444444,color:#444444
+        17["<div style='font-weight: bold'>Precios y promociones</div><div style='font-size: 70%; margin-top: 0px'>[Component: Java]</div><div style='font-size: 80%; margin-top:10px'>Cálculo de importes y gestión<br />de promociones.</div>"]
+        style 17 fill:#ffffff,stroke:#444444,color:#444444
+      end
+
+      20[("<div style='font-weight: bold'>PostgreSQL</div><div style='font-size: 70%; margin-top: 0px'>[Container: PostgreSQL 17]</div><div style='font-size: 80%; margin-top:10px'>Guarda pedidos, clientes,<br />intentos de pago y outbox de<br />Pedidos; saldos de stock de<br />Inventario; cuentas de<br />usuario y tokens de<br />Identidad. Catálogo lee el<br />stock para su proyección.</div>")]
+      style 20 fill:#ffffff,stroke:#444444,color:#444444
+      21[("<div style='font-weight: bold'>MongoDB</div><div style='font-size: 70%; margin-top: 0px'>[Container: MongoDB 7]</div><div style='font-size: 80%; margin-top:10px'>Guarda productos, reseñas y<br />disponibilidad visible de<br />Catálogo.</div>")]
+      style 21 fill:#ffffff,stroke:#444444,color:#444444
+    end
+
+    1["<div style='font-weight: bold'>Cliente</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Compra productos y consulta o<br />cancela sus pedidos.</div>"]
+    style 1 fill:#ffffff,stroke:#444444,color:#444444
+    8["<div style='font-weight: bold'>Pasarela de pagos</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Autoriza pagos de pedidos; la<br />notificación de contracargos<br />está pendiente de<br />integración.</div>"]
+    style 8 fill:#999999,stroke:#6b6b6b,color:#444444
+    20[("<div style='font-weight: bold'>PostgreSQL</div><div style='font-size: 70%; margin-top: 0px'>[Container: PostgreSQL 17]</div><div style='font-size: 80%; margin-top:10px'>Guarda pedidos, clientes,<br />intentos de pago y outbox de<br />Pedidos; saldos de stock de<br />Inventario; cuentas de<br />usuario y tokens de<br />Identidad. Catálogo lee el<br />stock para su proyección.</div>")]
+    style 20 fill:#ffffff,stroke:#444444,color:#444444
+    21[("<div style='font-weight: bold'>MongoDB</div><div style='font-size: 70%; margin-top: 0px'>[Container: MongoDB 7]</div><div style='font-size: 80%; margin-top:10px'>Guarda productos, reseñas y<br />disponibilidad visible de<br />Catálogo.</div>")]
+    style 21 fill:#ffffff,stroke:#444444,color:#444444
+
+    1-- "<div>1. Solicita confirmar la<br />compra</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->16
+    16-- "<div>2. Lee el pedido y busca un<br />importe fijado</div><div style='font-size: 70%'>[JPA / JDBC]</div>" -->20
+    16-- "<div>3. Si no hay importe fijado,<br />consulta precios</div><div style='font-size: 70%'>[CatalogPrices (puerto publicado)]</div>" -->14
+    16-- "<div>4. Calcula el subtotal</div><div style='font-size: 70%'>[Shared kernel OrderPricing, PricingOrder y PricingLine]</div>" -->17
+    16-- "<div>5. Fija el importe e inicia<br />el intento</div><div style='font-size: 70%'>[JPA / JDBC]</div>" -->20
+    16-- "<div>6. Solicita autorización; la<br />pasarela responde autorizado</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->8
+    16-- "<div>7. Registra PAID y<br />OrderConfirmed en el outbox,<br />en una transacción</div><div style='font-size: 70%'>[JPA / JDBC]</div>" -->20
+    16-- "<div>8. El relay programado lee el<br />outbox</div><div style='font-size: 70%'>[JPA / JDBC]</div>" -->20
+    16-- "<div>9. El relay solicita<br />sincronizar la disponibilidad</div><div style='font-size: 70%'>[CatalogStockProjection (puerto publicado)]</div>" -->14
+    14-- "<div>10. Consulta el stock de<br />Inventario</div><div style='font-size: 70%'>[SQL directo]</div>" -->20
+    14-- "<div>11. Actualiza la<br />disponibilidad visible</div><div style='font-size: 70%'>[Protocolo MongoDB]</div>" -->21
+    16-- "<div>12. El relay marca procesado<br />el evento</div><div style='font-size: 70%'>[JPA / JDBC]</div>" -->20
+
+  end

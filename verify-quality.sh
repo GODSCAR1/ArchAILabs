@@ -212,6 +212,17 @@ MATRIX_REPORT=target/failsafe-reports/TEST-com.codeja.master_acdc.identity.Secur
 MATRIX_RUN=$(grep -o 'tests="[0-9]*"' "$MATRIX_REPORT" 2>/dev/null | head -1 | tr -dc '0-9')
 (( ${MATRIX_RUN:-0} >= 90 )) \
   || { echo "AC/DC: SecurityMatrixIT no se ejecutó completo (${MATRIX_RUN:-0} casos, mínimo 90). No la excluyas ni la recortes." >&2; exit 1; }
+echo "▶ Arquitectura: workspace de Structurizr (lab S20, docs/lab-s20.md)"
+# Solo en --full y solo si la rama toca docs/architecture/ (arrancar un contenedor es lento para el inner loop).
+ARCH_TOUCHED=$( { git diff --name-only origin/main...HEAD -- docs/architecture/; git ls-files -m -o --exclude-standard -- docs/architecture/; } 2>/dev/null)
+if [[ "${1:---fast}" == "--full" && -n "$ARCH_TOUCHED" ]]; then
+  command -v docker >/dev/null || { echo "AC/DC: falta docker; no puedo validar docs/architecture/workspace.dsl." >&2; exit 1; }
+  MSYS_NO_PATHCONV=1 docker run --rm -v "$(pwd -W 2>/dev/null || pwd)/docs/architecture:/usr/local/structurizr" \
+    structurizr/structurizr validate -workspace workspace.dsl \
+    || { echo "AC/DC: workspace.dsl no valida. Si protesta por una relación de una vista dinámica, esa relación no existe en el modelo: añádela allí o revisa si el flujo es real." >&2; exit 1; }
+else
+  echo "  (modo --fast o sin cambios en docs/architecture/: se omite)"
+fi
 echo "▶ Capa 3: mutation testing de pricing (lab S15, docs/lab-s15.md)"
 # --full siempre; --fast solo si la rama toca pricing (PIT tarda < 1 min con targetTests, pero no se paga en cada turno).
 PIT_DIRS=(src/main/java/com/codeja/master_acdc/pricing src/test/java/com/codeja/master_acdc/pricing)

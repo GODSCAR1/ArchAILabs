@@ -49,3 +49,31 @@ No se ha confirmado una captura de cobro independiente (paso 15 del tablero), ni
 de `OrderConfirmed` en Catálogo, ni una invitación explícita a reintentar. El código devuelve
 una excepción de pago rechazado. Las policies de riesgo, facturación y envío posteriores a la
 confirmación tampoco están implementadas en este flujo.
+
+## Validación y exportación (paso 3)
+
+| Comando | Resultado |
+|---|---|
+| `validate` | Sin errores |
+| `inspect -severity error,warning` | Sin errores ni avisos, tras tres correcciones (abajo) |
+| `export -format mermaid` | 5 ficheros en `docs/architecture/diagrams/`, uno por vista |
+
+Lo que señaló `inspect` y cómo se resolvió:
+
+| Inspección | Resolución |
+|---|---|
+| `workspace.scope`: el workspace no tenía alcance | `configuration { scope softwaresystem }` |
+| `model.softwaresystem.documentation`: el sistema no tenía documentación | `!docs README.md` importa el README de arquitectura |
+| `model.softwaresystem.decisions`: el sistema no tenía decisiones | Ignorada con motivo en el DSL: los ADR viven en `docs/adr/` con formato propio (no adr-tools), `!adrs` no admite `../adr` y no se duplican a mano. El README enlaza el índice |
+
+Las relaciones se definen solo a nivel de componente; las de contenedor las deduce Structurizr. Solo
+las relaciones `Futuro` quedan a nivel de contenedor, porque aún no tienen componente.
+
+## Loop protegido (paso 5)
+
+| Capa | Qué se añadió |
+|---|---|
+| Guide | `AGENTS.md`: sección «Arquitectura documentada» (mapa del sistema, objetivos de calidad, regla de actualizar `workspace.dsl` en el mismo PR) y excepciones del ADR 0014 ampliadas con el ADR 0016 |
+| Verify | `verify-quality.sh --full`: `validate` de Structurizr, solo si la rama toca `docs/architecture/` |
+| Verify (zona protegida) | Sin cambios: `src/test/java/com/codeja/master_acdc/architecture/` y `docs/adr/` ya estaban en `protect-verify.sh` desde los labs S18 y S19. El paquete real es `com.codeja.master_acdc`, no el `dev.codeja.shop` del enunciado |
+| Solve | Columna «Decisión» de la tabla de diferencias: tres deudas ya catalogadas sin cambio y dos efectos síncronos nuevos resueltos con el ADR 0016 y la corrección del mapa (filas 2 y 4) |
