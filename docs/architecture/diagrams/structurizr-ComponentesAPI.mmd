@@ -1,0 +1,75 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: Tienda online - Aplicación de la tienda"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Cliente</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Compra productos y consulta o<br />cancela sus pedidos.</div>"]
+    style 1 fill:#ffffff,stroke:#444444,color:#444444
+    2["<div style='font-weight: bold'>Gestor de catálogo</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona productos, precios<br />de venta, promociones y<br />cupones.</div>"]
+    style 2 fill:#ffffff,stroke:#444444,color:#444444
+    6["<div style='font-weight: bold'>Agente de atención</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Atiende incidencias y<br />devoluciones de clientes.</div>"]
+    style 6 fill:#ffffff,stroke:#444444,color:#444444
+    7["<div style='font-weight: bold'>Administrador</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona cuentas de usuario y<br />descarga exportaciones.</div>"]
+    style 7 fill:#ffffff,stroke:#444444,color:#444444
+
+    8["<div style='font-weight: bold'>Pasarela de pagos</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Autoriza pagos de pedidos; la<br />notificación de contracargos<br />está pendiente de<br />integración.</div>"]
+    style 8 fill:#999999,stroke:#6b6b6b,color:#444444
+
+    subgraph 12 ["Tienda online"]
+      style 12 fill:#ffffff,stroke:#444444,color:#444444
+
+      subgraph 13 ["Aplicación de la tienda"]
+        style 13 fill:#ffffff,stroke:#444444,color:#444444
+
+        14["<div style='font-weight: bold'>Catálogo</div><div style='font-size: 70%; margin-top: 0px'>[Component: Java / Spring]</div><div style='font-size: 80%; margin-top:10px'>Productos, precios de venta y<br />disponibilidad visible.</div>"]
+        style 14 fill:#ffffff,stroke:#444444,color:#444444
+        15["<div style='font-weight: bold'>Inventario</div><div style='font-size: 70%; margin-top: 0px'>[Component: Java / Spring]</div><div style='font-size: 80%; margin-top:10px'>Saldos y reservas de stock.</div>"]
+        style 15 fill:#ffffff,stroke:#444444,color:#444444
+        16["<div style='font-weight: bold'>Pedidos</div><div style='font-size: 70%; margin-top: 0px'>[Component: Java / Spring]</div><div style='font-size: 80%; margin-top:10px'>Ciclo del pedido; incluye<br />actualmente pagos y riesgo,<br />el outbox y su relay.</div>"]
+        style 16 fill:#ffffff,stroke:#444444,color:#444444
+        17["<div style='font-weight: bold'>Precios y promociones</div><div style='font-size: 70%; margin-top: 0px'>[Component: Java]</div><div style='font-size: 80%; margin-top:10px'>Cálculo de importes y gestión<br />de promociones.</div>"]
+        style 17 fill:#ffffff,stroke:#444444,color:#444444
+        18["<div style='font-weight: bold'>Identidad y acceso</div><div style='font-size: 70%; margin-top: 0px'>[Component: Java / Spring Security]</div><div style='font-size: 80%; margin-top:10px'>Cuentas, autenticación y<br />autorización.</div>"]
+        style 18 fill:#ffffff,stroke:#444444,color:#444444
+        19["<div style='font-weight: bold'>Exportaciones</div><div style='font-size: 70%; margin-top: 0px'>[Component: Java / Spring]</div><div style='font-size: 80%; margin-top:10px'>Descarga de archivos; módulo<br />técnico, no bounded context.</div>"]
+        style 19 fill:#ffffff,stroke:#444444,color:#444444
+      end
+
+      20[("<div style='font-weight: bold'>PostgreSQL</div><div style='font-size: 70%; margin-top: 0px'>[Container: PostgreSQL 17]</div><div style='font-size: 80%; margin-top:10px'>Guarda pedidos, clientes,<br />intentos de pago y outbox de<br />Pedidos; saldos de stock de<br />Inventario; cuentas de<br />usuario y tokens de<br />Identidad. Catálogo lee el<br />stock para su proyección.</div>")]
+      style 20 fill:#ffffff,stroke:#444444,color:#444444
+      21[("<div style='font-weight: bold'>MongoDB</div><div style='font-size: 70%; margin-top: 0px'>[Container: MongoDB 7]</div><div style='font-size: 80%; margin-top:10px'>Guarda productos, reseñas y<br />disponibilidad visible de<br />Catálogo.</div>")]
+      style 21 fill:#ffffff,stroke:#444444,color:#444444
+      22[("<div style='font-weight: bold'>Redis</div><div style='font-size: 70%; margin-top: 0px'>[Container: Redis 7]</div><div style='font-size: 80%; margin-top:10px'>Guarda la caché de fichas de<br />Catálogo y las versiones de<br />sesión de Identidad;<br />distribuye invalidaciones de<br />caché entre instancias<br />mediante pub/sub.</div>")]
+      style 22 fill:#ffffff,stroke:#444444,color:#444444
+      23[("<div style='font-weight: bold'>Archivos locales</div><div style='font-size: 70%; margin-top: 0px'>[Container: Sistema de archivos local]</div><div style='font-size: 80%; margin-top:10px'>Contiene archivos de<br />exportación que lee exports.</div>")]
+      style 23 fill:#ffffff,stroke:#444444,color:#444444
+    end
+
+    1-- "<div>Busca productos y consulta<br />fichas</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->14
+    1-- "<div>Se registra, inicia sesión y<br />renueva su sesión</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->18
+    1-- "<div>Crea, consulta, confirma y<br />cancela sus pedidos</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->16
+    2-- "<div>Gestiona productos y precios</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->14
+    2-- "<div>Reserva stock</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->15
+    6-- "<div>Consulta cualquier pedido y<br />solicita reembolsos</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->16
+    7-- "<div>Gestiona cuentas</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->18
+    7-- "<div>Descarga exportaciones</div><div style='font-size: 70%'>[HTTP]</div>" -->19
+    16-- "<div>Consulta precios</div><div style='font-size: 70%'>[CatalogPrices (puerto publicado)]</div>" -->14
+    16-- "<div>Solicita actualizar la<br />proyección de stock desde el<br />relay</div><div style='font-size: 70%'>[CatalogStockProjection (puerto publicado)]</div>" -->14
+    16-- "<div>Reserva stock</div><div style='font-size: 70%'>[InventoryFacade.reserve (puerto publicado)]</div>" -->15
+    16-- "<div>Libera stock desde<br />OrderCancelledListener</div><div style='font-size: 70%'>[InventoryFacade.release (puerto publicado; evento Spring interno)]</div>" -->15
+    16-- "<div>Calcula el subtotal</div><div style='font-size: 70%'>[Shared kernel OrderPricing, PricingOrder y PricingLine]</div>" -->17
+    18-- "<div>Implementa el actor actual</div><div style='font-size: 70%'>[CurrentOrderActor (puerto publicado)]</div>" -->16
+    18-- "<div>Registra clientes</div><div style='font-size: 70%'>[CustomerRegistrationFacade.register (puerto publicado)]</div>" -->16
+    14-- "<div>Consulta su tabla stock, sin<br />invocar el módulo</div><div style='font-size: 70%'>[SQL directo en PostgreSQL]</div>" -->15
+    14-- "<div>Lee y escribe productos y<br />disponibilidad; consulta<br />reseñas</div><div style='font-size: 70%'>[Protocolo MongoDB]</div>" -->21
+    14-- "<div>Usa caché de fichas y<br />distribuye invalidaciones</div><div style='font-size: 70%'>[RESP]</div>" -->22
+    15-- "<div>Lee y escribe saldos y<br />reservas</div><div style='font-size: 70%'>[JPA / JDBC]</div>" -->20
+    16-- "<div>Lee y escribe pedidos,<br />intentos y outbox; el relay<br />procesa confirmaciones</div><div style='font-size: 70%'>[JPA / JDBC]</div>" -->20
+    18-- "<div>Lee y escribe cuentas y<br />tokens</div><div style='font-size: 70%'>[JPA / JDBC]</div>" -->20
+    14-- "<div>Consulta stock de Inventario<br />para proyectar disponibilidad</div><div style='font-size: 70%'>[SQL directo]</div>" -->20
+    18-- "<div>Lee y publica versiones de<br />sesión</div><div style='font-size: 70%'>[RESP]</div>" -->22
+    19-- "<div>Lee archivos de exportación</div><div style='font-size: 70%'>[Sistema de archivos]</div>" -->23
+    16-- "<div>Solicita autorización de pago</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->8
+
+  end

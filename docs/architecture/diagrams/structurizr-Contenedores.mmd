@@ -1,0 +1,61 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Container View: Tienda online"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    1["<div style='font-weight: bold'>Cliente</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Compra productos y consulta o<br />cancela sus pedidos.</div>"]
+    style 1 fill:#ffffff,stroke:#444444,color:#444444
+    2["<div style='font-weight: bold'>Gestor de catálogo</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona productos, precios<br />de venta, promociones y<br />cupones.</div>"]
+    style 2 fill:#ffffff,stroke:#444444,color:#444444
+    3["<div style='font-weight: bold'>Operario de almacén</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona mercancía,<br />preparación de pedidos y<br />revisión de devoluciones.</div>"]
+    style 3 fill:#ffffff,stroke:#444444,color:#444444
+    4["<div style='font-weight: bold'>Analista de fraude</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Revisa pedidos retenidos por<br />sospecha de fraude.</div>"]
+    style 4 fill:#ffffff,stroke:#444444,color:#444444
+    5["<div style='font-weight: bold'>Contable</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona pérdidas por fraude<br />y decisiones de reembolso.</div>"]
+    style 5 fill:#ffffff,stroke:#444444,color:#444444
+    6["<div style='font-weight: bold'>Agente de atención</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Atiende incidencias y<br />devoluciones de clientes.</div>"]
+    style 6 fill:#ffffff,stroke:#444444,color:#444444
+    7["<div style='font-weight: bold'>Administrador</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Gestiona cuentas de usuario y<br />descarga exportaciones.</div>"]
+    style 7 fill:#ffffff,stroke:#444444,color:#444444
+    8["<div style='font-weight: bold'>Pasarela de pagos</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Autoriza pagos de pedidos; la<br />notificación de contracargos<br />está pendiente de<br />integración.</div>"]
+    style 8 fill:#999999,stroke:#6b6b6b,color:#444444
+    9["<div style='font-weight: bold'>Transportista</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Recoge y entrega envíos y<br />devoluciones.</div>"]
+    style 9 fill:#999999,stroke:#6b6b6b,color:#444444
+    10["<div style='font-weight: bold'>Fabricante o proveedor</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Comunica alertas de seguridad<br />sobre productos.</div>"]
+    style 10 fill:#999999,stroke:#6b6b6b,color:#444444
+    11["<div style='font-weight: bold'>Proveedor de correo y SMS</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Envía comunicaciones a<br />clientes.</div>"]
+    style 11 fill:#999999,stroke:#6b6b6b,color:#444444
+
+    subgraph 12 ["Tienda online"]
+      style 12 fill:#ffffff,stroke:#444444,color:#444444
+
+      13["<div style='font-weight: bold'>Aplicación de la tienda</div><div style='font-size: 70%; margin-top: 0px'>[Container: Spring Boot 4.1.1, Java 25]</div><div style='font-size: 80%; margin-top:10px'>Expone la API y ejecuta los<br />módulos de la tienda.</div>"]
+      style 13 fill:#ffffff,stroke:#444444,color:#444444
+      20[("<div style='font-weight: bold'>PostgreSQL</div><div style='font-size: 70%; margin-top: 0px'>[Container: PostgreSQL 17]</div><div style='font-size: 80%; margin-top:10px'>Guarda pedidos, clientes,<br />intentos de pago y outbox de<br />Pedidos; saldos de stock de<br />Inventario; cuentas de<br />usuario y tokens de<br />Identidad. Catálogo lee el<br />stock para su proyección.</div>")]
+      style 20 fill:#ffffff,stroke:#444444,color:#444444
+      21[("<div style='font-weight: bold'>MongoDB</div><div style='font-size: 70%; margin-top: 0px'>[Container: MongoDB 7]</div><div style='font-size: 80%; margin-top:10px'>Guarda productos, reseñas y<br />disponibilidad visible de<br />Catálogo.</div>")]
+      style 21 fill:#ffffff,stroke:#444444,color:#444444
+      22[("<div style='font-weight: bold'>Redis</div><div style='font-size: 70%; margin-top: 0px'>[Container: Redis 7]</div><div style='font-size: 80%; margin-top:10px'>Guarda la caché de fichas de<br />Catálogo y las versiones de<br />sesión de Identidad;<br />distribuye invalidaciones de<br />caché entre instancias<br />mediante pub/sub.</div>")]
+      style 22 fill:#ffffff,stroke:#444444,color:#444444
+      23[("<div style='font-weight: bold'>Archivos locales</div><div style='font-size: 70%; margin-top: 0px'>[Container: Sistema de archivos local]</div><div style='font-size: 80%; margin-top:10px'>Contiene archivos de<br />exportación que lee exports.</div>")]
+      style 23 fill:#ffffff,stroke:#444444,color:#444444
+    end
+
+    3-. "<div>Gestiona mercancía y prepara<br />pedidos</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->13
+    4-. "<div>Revisa pedidos sospechosos</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->13
+    5-. "<div>Gestiona pérdidas por fraude</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->13
+    13-. "<div>Intercambia información de<br />envíos y devoluciones</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->9
+    10-. "<div>Comunica alertas de seguridad</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->13
+    13-. "<div>Solicita comunicaciones a<br />clientes</div><div style='font-size: 70%'>[Protocolo por definir]</div>" .->11
+    1-- "<div>Busca productos y consulta<br />fichas</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->13
+    2-- "<div>Gestiona productos y precios</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->13
+    6-- "<div>Consulta cualquier pedido y<br />solicita reembolsos</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->13
+    7-- "<div>Gestiona cuentas</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->13
+    13-- "<div>Lee y escribe productos y<br />disponibilidad; consulta<br />reseñas</div><div style='font-size: 70%'>[Protocolo MongoDB]</div>" -->21
+    13-- "<div>Usa caché de fichas y<br />distribuye invalidaciones</div><div style='font-size: 70%'>[RESP]</div>" -->22
+    13-- "<div>Lee y escribe saldos y<br />reservas</div><div style='font-size: 70%'>[JPA / JDBC]</div>" -->20
+    13-- "<div>Lee archivos de exportación</div><div style='font-size: 70%'>[Sistema de archivos]</div>" -->23
+    13-- "<div>Solicita autorización de pago</div><div style='font-size: 70%'>[HTTP/JSON]</div>" -->8
+
+  end

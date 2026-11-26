@@ -68,9 +68,9 @@ contextos futuros.
 | # | Upstream → Downstream | Patrón | Se integra por | Desde (código) | Estado |
 |---|---|---|---|---|---|
 | 1 | Catálogo → Pedidos | Cliente-proveedor, Pedidos con ACL | `catalog.api.CatalogPrices` | `ordering.infrastructure.adapters.out.catalog`, `config` | ✅ |
-| 2 | Inventario → Pedidos | Cliente-proveedor, Pedidos con ACL | `inventory.api.InventoryFacade` | `ordering.infrastructure.adapters.out.inventory`, `config` | ✅ con deuda (abajo) |
+| 2 | Inventario → Pedidos | Cliente-proveedor, Pedidos con ACL | `inventory.api.InventoryFacade` (`reserve` al crear; `release` desde `OrderCancelledListener`, ADR 0016) | `ordering.infrastructure.adapters.out.inventory`, `config` | ✅ con deuda (abajo) |
 | 3 | Precios ⇄ Pedidos | Shared kernel | `pricing.domain.model` | `ordering.infrastructure.adapters.out.catalog`, `config` | ✅ |
-| 4 | Pedidos → Identidad | Open host service (Pedidos publica `ordering.api` e Identidad lo implementa) | `CurrentOrderActor`, `CustomerRegistrationFacade` | `identity.infrastructure.adapters.out.ordering`, `config` | ✅ |
+| 4 | Pedidos → Identidad | Open host service (Pedidos publica `ordering.api` e Identidad lo implementa) | `CurrentOrderActor`, `CustomerRegistrationFacade` (`register` es un efecto síncrono, ADR 0016) | `identity.infrastructure.adapters.out.ordering`, `config` | ✅ |
 | 5 | Pasarela de pagos → Pagos | ACL | `PaymentGateway` | `ordering.infrastructure.adapters.out.payment` | ✅ |
 | 6 | Pedidos → Catálogo | Lenguaje publicado (evento) | `Pedido confirmado` → disponibilidad visible | hoy: `ordering` llama a `catalog.api.CatalogStockProjection` | ⚠️ al revés (deuda) |
 | 6b | Inventario → Catálogo | ninguno: acceso a una tabla ajena | tabla `stock` por SQL | `catalog.infrastructure.adapters.out.mongo.CatalogStockProjectionJob` | ❌ deuda |
@@ -123,6 +123,9 @@ contextos futuros.
   permitida. Se corrige cuando Catálogo consuma eventos de Inventario (ADR 0014, Sección 39).
 - **Pagos y riesgo vive dentro de `ordering`**, y `Order.refund` mezcla *Cobro anulado* y *Reembolso*
   (prueba del cambio del lab S19). Se separa al partir en servicios (Sección 35).
+- **Liberación de stock y alta de cliente síncronas** (lab S20, ADR 0016). `ordering` llama a
+  `InventoryFacade.release` e `identity` a `CustomerRegistrationFacade.register`: son órdenes a otro
+  contexto, no reacciones a un evento. Pasan a evento en la Sección 39.
 
 ## Prueba del cambio (lab S19)
 

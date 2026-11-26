@@ -46,3 +46,7 @@ bench/results/
 .env.*
 !.env.example
 .acdc/pit-survivors.md
+
+# Lab S20: generados por el visor de Structurizr (la fuente es workspace.dsl)
+docs/architecture/.structurizr/
+docs/architecture/workspace.json
